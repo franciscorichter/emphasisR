@@ -82,7 +82,7 @@ sim.extinct <- function(tree,pars,model='dd',seed=0, adjustment=FALSE){
   ms = NULL # missing species, for now we just add time. When we consider topology we do it with species as well
   e.lims = NULL # limits on extinctions
   cbt = 0
-  N = 1
+  N = 2
   nm= 0 # number of missing species
   rprob = NULL # true probability of Missing|observed
   sprob = NULL # sampling probability of Missing|observed
@@ -205,7 +205,7 @@ sim.extinct <- function(tree,pars,model='dd',seed=0, adjustment=FALSE){
   logweight = log(rprob)-log(sprob)
   tree$logweight = sum(logweight)
   E = tree$E
-  n = c(1,1+cumsum(E)+cumsum(E-1))
+  n = c(2,2+cumsum(E)+cumsum(E-1))
   tree$n = n
   return(tree)
 }
