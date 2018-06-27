@@ -214,12 +214,17 @@ nllik.tree = function(pars,tree){
   b = c(pars[1],(pars[1]-pars[2])/pars[3],pars[2])
   ldt = tree$wt[length(tree$wt)]
   dt = tree$wt[1:(length(tree$wt)-1)]
+  E = tree$E
+  if(is.null(tree$n)){
+    n = c(2,2+cumsum(E)+cumsum(E-1))
+    tree$n = n
+  }
   lastn = tree$n[length(tree$n)]
   n = tree$n[1:(length(tree$n)-1)]
-  E = tree$E
   sigma = n*(b[1]-b[2]*n + b[3]) #n-dimentional
+  lastsigma = lastn*(b[1]-b[2]*lastn + b[3])
   rho = pmax(b[1]*E-b[2]*n*E+b[3]*(1-E),0)
-  l = -sum(-sigma*dt+log(rho)-lastn*ldt)
+  l = -(sum(-sigma*dt+log(rho))-lastsigma*ldt)
   if(min(b)<0){l = Inf}
   return(l)
 }
@@ -233,7 +238,9 @@ nllik.st = function(pars, st){
     w[i] = st$w[i]
     l[i] = nllik.tree(pars,tree=s)
   }
-  L = sum(l*w)/m
+  #L = sum(l*w)/m
+  w = w/sum(w)
+  L = sum(l*w)
   return(L)
 }
 # relative likelihood
@@ -467,5 +474,126 @@ sim.tree <- function(ct=15, lambda0=0.8, mu0=0.1, K=40, model="dd", printEv=FALS
   newick.extant.p = phylo2vectors(newick.extant) # is it validated?
   reboot2 = reboot2 + reboot
   return(list(tree=list(wt=Tm, E=E, n=n, S=S, br = cumsum(Tm)), phylo = phy, tree.extant = newick.extant.p, phylo.extant=newick.extant, r=reboot2, L=L,sigmas=sigmas)) #validate reboot 2
+}
+
+
+###  simulation of extincted new version
+sim.extinct2 <- function(tree,pars,model='dd',seed=0, adjustment=FALSE){
+  if(seed>0) set.seed(seed)
+  wt = tree$wt
+  ct = sum(wt)
+  tree$E = rep(1,(length(wt)-1))
+  lambda0 = pars[1]
+  mu0 = pars[2]
+  K = pars[3]
+  dim = length(wt)
+  ms = NULL # missing speciations, for now we just add time. When we consider topology we do it with species as well
+  cbt = 0
+  N = 2
+  rprob = NULL # true probability of Missing|observed
+  sprob = NULL # sampling probability of Missing|observed
+  et = NULL # event type
+  h = 1 # index to fill probabilities
+  extinction.processes <- function(u,inits){
+    nm = length(u)
+    t.ext = vector(mode='numeric',length=nm)
+    if(nm > 0){
+      for(i in 1:nm){
+        t.ext[i] = inits[i] + u[i]/mu0  #Inverse of the intensity function for constant extinction rate
+      }
+    }
+    return(t.ext)
+  }
+  for(i in 1:dim){
+    cwt = wt[i]
+    cbt = sum(wt[0:(i-1)])
+    key = 0
+    last='nothing'
+    while(key == 0){
+      if(model == "dd"){  # diversity-dependence model
+        lambda = max(0,lambda0 - (lambda0-mu0)*N/K)
+        mu = mu0
+        lambda = rep(lambda,N)
+      }else{print('Model not implemented yet, try dd')}
+      s = sum(lambda)
+      if (s == 0){
+        t.spe = Inf
+      }
+      else{
+        t.spe = rexp(1,s)
+      }
+      t.ext = extinction.processes(u,inits)
+      extinctedone = which(t.ext == min(t.ext))
+      t_ext = min(t.ext)
+      if(t_ext ==Inf & t.spe == Inf){
+        print('try another K!')
+      }
+      t.ext = cbt - t_ext
+      mint = min(t.spe,t.ext)
+      if(mint < cwt){
+        if(mint == t.spe & mint != t.ext){#speciation
+          acep = runif(1)
+          thre = pexp(ct-cbt,mu)
+          if(acep < thre){
+            ms = c(ms,cbt+t.spe)
+            rprob[h] = dexp(x = t.spe, rate = (s+nm*mu))*(s/(s+nm*mu))
+            sp = sampprob(t = mint,s = s,mu = mu,r = ct-cbt)#/integrate(sampprob,lower = 0, upper = ct-cbt,s=s,mu=mu,r=ct-cbt)$value
+            #sprob[h] = prod(probs)*sp
+            sprob[h] = sp # probability of not having any missing speciation on that interval
+            et[h] = 'speciation'
+            h = h + 1
+            nm = nm + 1 # number of missing species
+            N = N+1
+            #print(paste('at branching time',cbt+t.spe,'a missing species arises, resulting on',N,'current species, happening before the current waiting time',cwt))
+            last = 'speciation'
+          }
+          else{last = 'nothing'}
+          cwt = cwt - t.spe
+          cbt = cbt + t.spe
+        }
+        else{#extinction
+          t_spe = ms[extinctedone]
+          tree = update.tree(tree,t_spe=t_spe,t_ext=t_ext)
+          rprob[h] = dexp(x = mint, rate = (s+nm*mu))*(mu/(s+nm*mu))
+          et[h] = 'extinction'
+          #probs = probs[-extinctedone]
+          #sprob[h] = prod(probs)*truncdist::dtrunc(mint,'exp',a=0,b=(e.lims[extinctedone]-cbt),rate=mu)*(1-integrate(sampprob,lower = 0, upper = mint,s=s,mu=mu,r=ct-cbt)$value)#/integrate(sampprob,lower = 0, upper = ct-cbt,s=s,mu=mu,r=ct-cbt)$value)
+          sprob[h] = dexp(x = t_ext-t_spe,rate = mu0)*(1-integrate(sampprob,lower = 0, upper = mint,s=s,mu=mu,r=ct-cbt)$value) #?
+          ms = ms[-extinctedone]
+          cwt = cwt - t.ext
+          cbt = cbt + t.ext
+          N = N-1
+          h = h+1
+          last = 'extinction'
+        }
+      }
+      else{
+        key = 1
+        rprob[h] = pexp(q = cwt, rate = (s+nm*mu0),lower.tail = FALSE)
+        et[h] = 'nothing'
+        sprob[h] = prod(probs)*(1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt,s=s,mu=mu,r=ct-cbt)$value)
+        h = h+1
+        dif1[i] = cwt/wt[i]
+        dif2[i] = (mint - cwt)/wt[i]
+        if(adjustment & cwt<(mint - cwt) & last=='speciation'){ #Adjusting last speciation
+          ms = ms[-length(ms)]
+          e.lims = e.lims[-length(e.lims)]
+          nm = nm - 1
+          N = N-1
+        }
+      }
+    }
+    N= N+1
+  }
+  tree$rprob = rprob
+  tree$sprob = sprob
+  tree$et = et
+  tree$weight = prod(rprob)/prod(sprob)
+  logweight = log(rprob)-log(sprob)
+  tree$logweight = sum(logweight)
+  E = tree$E
+  n = c(2,2+cumsum(E)+cumsum(E-1))
+  tree$n = n
+  return(tree)
 }
 
