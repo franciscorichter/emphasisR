@@ -476,7 +476,16 @@ sim.tree <- function(ct=15, lambda0=0.8, mu0=0.1, K=40, model="dd", printEv=FALS
   return(list(tree=list(wt=Tm, E=E, n=n, S=S, br = cumsum(Tm)), phylo = phy, tree.extant = newick.extant.p, phylo.extant=newick.extant, r=reboot2, L=L,sigmas=sigmas)) #validate reboot 2
 }
 
-
+extinction.processes <- function(u,inits,mu0){
+  nm = length(u)
+  t.ext = vector(mode='numeric',length=nm)
+  if(nm > 0){
+    for(i in 1:nm){
+      t.ext[i] = inits[i] + u[i]/mu0  #Inverse of the intensity function for constant extinction rate
+    }
+  }
+  return(t.ext)
+}
 ###  simulation of extincted new version
 sim.extinct2 <- function(tree,pars,model='dd',seed=0, adjustment=FALSE){
   if(seed>0) set.seed(seed)
@@ -488,80 +497,73 @@ sim.extinct2 <- function(tree,pars,model='dd',seed=0, adjustment=FALSE){
   K = pars[3]
   dim = length(wt)
   ms = NULL # missing speciations, for now we just add time. When we consider topology we do it with species as well
+  me = NULL # missing extinctions (in the uniform plane)
+  mc = NULL # aceptance probablities for missing species
+  bt = NULL
+  to = NULL
   cbt = 0
   N = 2
-  rprob = NULL # true probability of Missing|observed
-  sprob = NULL # sampling probability of Missing|observed
-  et = NULL # event type
-  h = 1 # index to fill probabilities
-  extinction.processes <- function(u,inits){
-    nm = length(u)
-    t.ext = vector(mode='numeric',length=nm)
-    if(nm > 0){
-      for(i in 1:nm){
-        t.ext[i] = inits[i] + u[i]/mu0  #Inverse of the intensity function for constant extinction rate
-      }
-    }
-    return(t.ext)
-  }
+  #rprob = NULL # true probability of Missing|observed
+  #sprob = NULL # sampling probability of Missing|observed
+  #et = NULL # event type
+  #h = 1 # index to fill probabilities
   for(i in 1:dim){
     cwt = wt[i]
     cbt = sum(wt[0:(i-1)])
     key = 0
-    last='nothing'
+    last = 'nothing'
     while(key == 0){
       if(model == "dd"){  # diversity-dependence model
-        lambda = max(0,lambda0 - (lambda0-mu0)*N/K)
+        lambda = max(1e-99, lambda0 - (lambda0-mu0)*N/K)
         mu = mu0
-        lambda = rep(lambda,N)
+        #lambda = rep(lambda,N)
+        s = N*lambda
       }else{print('Model not implemented yet, try dd')}
-      s = sum(lambda)
-      if (s == 0){
-        t.spe = Inf
-      }
-      else{
-        t.spe = rexp(1,s)
-      }
-      t.ext = extinction.processes(u,inits)
-      extinctedone = which(t.ext == min(t.ext))
-      t_ext = min(t.ext)
-      if(t_ext ==Inf & t.spe == Inf){
-        print('try another K!')
-      }
-      t.ext = cbt - t_ext
-      mint = min(t.spe,t.ext)
+      t.spe = rexp(1,s)
+      t.ext = extinction.processes(u=me,inits=ms,mu0=mu0)
+      #sometimes parameters does not make sense. write a warning when that happens
+      t_ext = min(t.ext)-cbt
+      mint = min(t.spe,t_ext)
       if(mint < cwt){
-        if(mint == t.spe & mint != t.ext){#speciation
-          acep = runif(1)
+        if(mint == t.spe){#speciation
+          u = runif(1)
           thre = pexp(ct-cbt,mu)
-          if(acep < thre){
+          if(u < thre){
             ms = c(ms,cbt+t.spe)
-            rprob[h] = dexp(x = t.spe, rate = (s+nm*mu))*(s/(s+nm*mu))
-            sp = sampprob(t = mint,s = s,mu = mu,r = ct-cbt)#/integrate(sampprob,lower = 0, upper = ct-cbt,s=s,mu=mu,r=ct-cbt)$value
-            #sprob[h] = prod(probs)*sp
-            sprob[h] = sp # probability of not having any missing speciation on that interval
-            et[h] = 'speciation'
-            h = h + 1
-            nm = nm + 1 # number of missing species
-            N = N+1
+            me = c(me,u)
+            mc = c(mc,thre)
+            bt = c(bt,cbt+mint)
+            to = c(to,1)
+            #rprob[h] = dexp(x = t.spe, rate = (s+nm*mu))*(s/(s+nm*mu))
+            #sp = sampprob(t = mint,s = s,mu = mu,r = ct-cbt)
+            #sprob[h] = (exp(-mu0*mint)^{length(t.ext)})*sp # probability of not having any missing speciation on that interval
+            #et[h] = 'speciation'
+            #h = h + 1
+            #nm = nm + 1 # number of missing species
+            N = N + 1
             #print(paste('at branching time',cbt+t.spe,'a missing species arises, resulting on',N,'current species, happening before the current waiting time',cwt))
-            last = 'speciation'
+            #last = 'speciation'
           }
-          else{last = 'nothing'}
+          #else{last = 'nothing'}
           cwt = cwt - t.spe
           cbt = cbt + t.spe
+          ##  ??? what about probabilities?
         }
         else{#extinction
-          t_spe = ms[extinctedone]
-          tree = update.tree(tree,t_spe=t_spe,t_ext=t_ext)
-          rprob[h] = dexp(x = mint, rate = (s+nm*mu))*(mu/(s+nm*mu))
-          et[h] = 'extinction'
+          extinctone = which(t.ext == min(t.ext))
+          tspe_u = ms[extinctone]
+          bt = c(bt,cbt+mint)
+          to = c(to,0)
+          #tree = update.tree(tree,t_spe=t_spe,t_ext=min(t.ext))
+          #rprob[h] = dexp(x = mint, rate = (s+nm*mu))*(mu/(s+nm*mu))
+          #et[h] = 'extinction'
           #probs = probs[-extinctedone]
           #sprob[h] = prod(probs)*truncdist::dtrunc(mint,'exp',a=0,b=(e.lims[extinctedone]-cbt),rate=mu)*(1-integrate(sampprob,lower = 0, upper = mint,s=s,mu=mu,r=ct-cbt)$value)#/integrate(sampprob,lower = 0, upper = ct-cbt,s=s,mu=mu,r=ct-cbt)$value)
-          sprob[h] = dexp(x = t_ext-t_spe,rate = mu0)*(1-integrate(sampprob,lower = 0, upper = mint,s=s,mu=mu,r=ct-cbt)$value) #?
-          ms = ms[-extinctedone]
-          cwt = cwt - t.ext
-          cbt = cbt + t.ext
+          #sprob[h] = dexp(x = mint,rate = mu0)*(exp(-mu0*mint)^{length(t.ext)-1})*(1-integrate(sampprob,lower = 0, upper = mint,s=s,mu=mu,r=ct-cbt)$value)
+          ms = ms[-extinctone]
+          me = me[-extinctone]
+          cwt = cwt - mint
+          cbt = cbt + mint
           N = N-1
           h = h+1
           last = 'extinction'
@@ -569,18 +571,11 @@ sim.extinct2 <- function(tree,pars,model='dd',seed=0, adjustment=FALSE){
       }
       else{
         key = 1
-        rprob[h] = pexp(q = cwt, rate = (s+nm*mu0),lower.tail = FALSE)
-        et[h] = 'nothing'
-        sprob[h] = prod(probs)*(1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt,s=s,mu=mu,r=ct-cbt)$value)
-        h = h+1
-        dif1[i] = cwt/wt[i]
-        dif2[i] = (mint - cwt)/wt[i]
-        if(adjustment & cwt<(mint - cwt) & last=='speciation'){ #Adjusting last speciation
-          ms = ms[-length(ms)]
-          e.lims = e.lims[-length(e.lims)]
-          nm = nm - 1
-          N = N-1
-        }
+        #rprob[h] = pexp(q = cwt, rate = (s+length(t.ext)*mu0),lower.tail = FALSE)
+        #et[h] = 'nothing'
+        #sprob[h] = prod(probs)*(1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt,s=s,mu=mu,r=ct-cbt)$value)
+        #sprob[h] = exp(-mu0*cwt)^{length(t.ext)}*(1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt,s=s,mu=mu,r=ct-cbt)$value)
+        #h = h+1
       }
     }
     N= N+1
@@ -598,9 +593,9 @@ sim.extinct2 <- function(tree,pars,model='dd',seed=0, adjustment=FALSE){
 }
 
 
-post.pro <-function(file){
+post.pro <-function(file,extrafile=NULL){
 load(file)
-pars = DDD::dd_ML(brts = btdd, idparsopt = 1:3,soc=2,cond=0)
+#pars = DDD::dd_ML(brts = btdd, idparsopt = 1:3,soc=2,cond=0)
 MLE = p$MLE
 M = mcem$PARS
 
@@ -632,13 +627,14 @@ gamLambda = gam(lambda ~ s(it), data=MCEMc)
 gamMu = gam(mu ~ s(it), data=MCEMc)
 gamK = gam(K ~ s(it), data=MCEMc)
 
-hessL = c(rep(NaN,10),mcem$H[,1])
+ex = dim(MCEMc)[1] - dim(mcem$H)[1] - 100
+hessL = c(rep(NaN,ex),mcem$H[,1])
 SDl = c(SDl,sqrt(hessL+gamLambda$sig2))
 
-hessM = c(rep(NaN,10),mcem$H[,2])
+hessM = c(rep(NaN,ex),mcem$H[,2])
 SDm = c(SDm,sqrt(hessM+gamMu$sig2))
 
-hessK = c(rep(NaN,10),mcem$H[,3])
+hessK = c(rep(NaN,ex),mcem$H[,3])
 SDk = c(SDk,sqrt(hessK+gamK$sig2))
 
 MCEMc$SDl = SDl
@@ -647,10 +643,16 @@ MCEMc$SDk = SDk
 
 MCEM = rbind(MCEMc,data.frame(it=(-9:0),lambda=p$PM[,1],mu=p$PM[,2],K=p$PM[,3],col=rep('blue',10),SDl=rep(NaN,10),SDm=rep(NaN,10),SDk=rep(NaN,10)))
 
-gl=ggplot(MCEM) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle('Plethodon')+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
-gm=ggplot(MCEM) + geom_point(aes(it,mu),colour=MCEM$col) + geom_errorbar(aes(x=it, y=mu, ymin = mu-1.96*SDm, ymax = mu + 1.96*SDm), colour='darkgreen') + geom_hline(yintercept = pars$mu)+ ggtitle('Plethodon')+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(mu[0]))
-gk=ggplot(MCEM) + geom_point(aes(it,K),colour=MCEM$col) + geom_errorbar(aes(x=it, y=K, ymin = K-1.96*SDk, ymax = K + 1.96*SDk), colour='darkgreen') + geom_hline(yintercept = pars$K) + ggtitle('Plethodon')+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(K))
-
-return(list(gl=gl,gm=gm,gk=gk))
+gl=ggplot(MCEM) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
+gm=ggplot(MCEM) + geom_point(aes(it,mu),colour=MCEM$col) + geom_errorbar(aes(x=it, y=mu, ymin = mu-1.96*SDm, ymax = mu + 1.96*SDm), colour='darkgreen') + geom_hline(yintercept = pars$mu)+ ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(mu[0]))
+gk=ggplot(MCEM) + geom_point(aes(it,K),colour=MCEM$col) + geom_errorbar(aes(x=it, y=K, ymin = K-1.96*SDk, ymax = K + 1.96*SDk), colour='darkgreen') + geom_hline(yintercept = pars$K) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(K))
+gLLmcem = ggplot(data=d)+geom_line(aes(x=it,y=llik))+geom_hline(yintercept = pars$loglik)
+gLLmcem2 = ggplot(df, aes(lambda, mu))+ geom_contour(aes(z = llik,color=..level..),bins=100) +geom_point(data=mcem$PARS,aes(x=lambda,y=mu,size=it))+  ggtitle(d.name)
+if(!is.null(extrafile)){
+  load(extrafile)
+  gLLmcem2 = gLLmcem2 + geom_point(data=mcem$PARS,aes(x=lambda,y=mu,size=it),col='red')
+  gLLmcem = gLLmcem + geom_line(data=d,aes(x=it,y=llik),col='red')
+}
+return(list(gl=gl,gm=gm,gk=gk, gLLmcem=gLLmcem, gLLmcem3d=gLLmcem2))
 }
 
