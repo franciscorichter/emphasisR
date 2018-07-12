@@ -1,71 +1,5 @@
 ### functions
 
-update.tree <- function(tree,t_spe,t_ext){
-  wt = tree$wt
-  E = tree$E
-  ct = sum(wt)
-  if(t_ext > ct){
-    stop('Extinction beyond present!')
-  }
-  if(t_ext < t_spe){
-    stop('Speciation after extinction!')
-  }
-  # speciation
-  K = length(wt)
-  k = length(wt[cumsum(wt) < t_spe])
-  if((k+1)<K){
-    lastbit = E[(k+1):(K-1)]
-  }
-  else{
-    lastbit = NULL
-  }
-  E = c(E[0:k],1,lastbit)
-  # (this can be witten in one line, is convinent?)
-  if(k==0){
-    wt = c(t_spe, wt[1]-t_spe, wt[2:K])
-  }
-  if(k > 0 & k < (K-1)){
-    wt = c(wt[1:k], t_spe - sum(wt[1:k]), wt[k+1]-(t_spe - sum(wt[1:k])), wt[(k+2):K])
-  }
-  if(k == (K-1)){
-    wt = c(wt[1:(K-1)],t_spe-sum(wt[1:(K-1)]),ct-t_spe)
-  }
-  #extinction
-  K = length(wt)
-  k = length(wt[cumsum(wt) < t_ext])
-  if((k+1)<K){
-    lastbit = E[(k+1):(K-1)]
-  }
-  else{
-    lastbit = NULL
-  }
-  E = c(E[0:k],0,lastbit)
-  # (this can be witten in one line, is convinent?)
-  if(k==0){
-    wt = c(t_ext, wt[1]-t_ext, wt[2:K])
-  }
-  if(k > 0 & k < (K-1)){
-    wt = c(wt[1:k], t_ext - sum(wt[1:k]), wt[k+1]-(t_ext - sum(wt[1:k])), wt[(k+2):K])
-  }
-  if(k == (K-1)){
-    wt = c(wt[1:(K-1)],t_ext-sum(wt[1:(K-1)]),ct-t_ext)
-  }
-  tree = list(wt=wt,E=E)
-  return(tree)
-}
-
-sampprob <- function(t,s,mu,r){  ## equation (*)
-  term1 = s*(1-exp(-mu*(r-t)))
-  c = exp(-(s/mu)*exp(-mu*r))
-  if(c==0){
-    term2 = 0
-  }else{
-    term2 = c^{-exp(mu*t)+1}
-  }
-  f = term1*exp(-s*t)*term2
-  return(f)
-}
-
 #negative logLikelihood of a tree
 nllik.tree = function(pars,tree){
   b = c(pars[1],(pars[1]-pars[2])/pars[3],pars[2])
@@ -221,126 +155,43 @@ mcem.tree <- function(brts,p){
   PARS = pars
   H = c(NULL,NULL,NULL)
   Me = p$M
+  tE = NULL
+  tM = NULL
+  efficiency = NULL
+  prop = 1
   while(abs(D)>tol){
+    if(prop<0.5) m = m*2
     time = proc.time()
     S = sim.sct(brts = brts,pars=pars,m = m)
-    
+    prop = sum(S$w>0)/length(S$w)
+    efficiency = c(efficiency,prop)
+    tE = c(tE,get.time(time))
+    time = proc.time()
     M = mle.st(S = S)
+    tM = c(tM,get.time(time))
     mle = M$par
     h1 = try(diag(solve(M$hessian))/m)
     if(is.numeric(h1)) H =  rbind(H,h1)
     D = rel.llik(S1 = S,p0 = pars,p1 = mle)
     PARS = rbind(PARS,mle)
     pars = mle
-    print(paste("iteration",k,"Q: ",M$value, " lambda: ", pars[1]," mu: ", pars[2], "K:", pars[3]))
+    print(paste("iteration",k,"Q: ",M$value,'proportion of useful trees',prop,'sampling size',m, " lambda: ", pars[1]," mu: ", pars[2], "K:", pars[3]))
     k = k+1
   }
   PARS = data.frame(it=1:(dim(Me)[1]+dim(PARS)[1]),lambda = c(Me[,1],PARS[,1]),mu=c(Me[,2],PARS[,2]),K=c(Me[,3],PARS[,3]))
-  return(list(pars=pars,PARS=PARS,H=H))
+  return(list(pars=pars,PARS=PARS,H=H,tE=tE,tM=tM,efficiency=efficiency))
 }
 ###########################
-
-### Phylogenetic tree simulation
-sim.tree <- function(ct=15, lambda0=0.8, mu0=0.1, K=40, model="dd", printEv=FALSE, seed=0){
-  ## Set up
-  if(seed>0){set.seed(seed)}
-  key=0  # key to go out of the loop
-  reboot2=0  # reboot in case that the tree is too small
-  while(key==0){
-    i = 1
-    N = 2 # Starting number of species
-    sigmas = NULL # vector with waiting times rates
-    Tm = NULL # Waiting times
-    E = NULL # vector with 0 if extinction and 1 if speciation
-    n = NULL # vector with number of species at time t_i
-    S = NULL # vector with species that went extinct/speciation # write this better
-    sumt = 0 # time in simulation
-    reboot = 0 # this is in case we want to check how many reboots the simulation had.
-    newick = paste(sl[1],";",sep="")  # Newick tree
-    identf = data.frame(Spec="aa",Time=0) # Labels of species
-    L = data.frame(spec='aa', spec_time=0, ext_time=-1, parent = '00') # is this working?
-    while (sumt < ct){
-      if(model == "dd"){  # diversity-dependence model
-        lambda = max(0,lambda0 - (lambda0-mu0)*N/K)
-        mu = mu0
-        lambda = rep(lambda,N)
-        mu = rep(mu,N)
-      }
-      if(model == 'cr'){ # constant-rate model
-        lambda = rep(lambda0,N)
-        mu = rep(mu0,N)
-      }
-      s = sum(lambda)+sum(mu)
-      sigmas = c(sigmas,s)
-      if (s == 0){break}
-      tm = rexp(1,s)  # waiting time of iteration i
-      if(tm+sumt>ct){break}
-      sumt = tm + sumt
-      prob = c(lambda,mu)/s  # Probability of extinctions and speciations
-      BD = sample(2*N,1,prob=prob)  # speciation/extinction & identification of the species.
-      n[i] = N
-      if(BD > N){   # Extinction
-        E[i] = 0
-        ## for newick output
-        species = as.character(identf[BD-N,1])
-        S[i] = species
-        ind = regexpr(species,newick)[1] + 2
-        atm = sumt-identf[which(identf[,1]==species),2]
-        identf = identf[-(BD-N),]
-        L[L$spec == species,]$ext_time = sumt #?
-        newick = paste(substr(newick,1,ind),as.character(atm),substring(newick,ind+2),sep="")
-        N = N-1
-        if(printEv){print(paste("extinction in time",sumt, sep=" "))} # put it in a log file
-      }else{  # Speciation
-        E[i] = 1
-        ## for newick output
-        species = as.character(identf[BD,1])
-        S[i] = species
-        ind = regexpr(species,newick)[1]-1
-        atm = sumt-identf[which(identf[,1]==species),2]
-        newick = paste(substr(newick,1,ind),"(",substr(newick,ind+1,ind+4),",",sl[i+1],"):",as.character(atm),substring(newick,ind+5),sep="")
-        identf = rbind(identf,data.frame(Spec=substr(sl[i+1],1,2),Time=sumt))
-        identf[identf$Spec == species,2] = sumt
-        L = rbind(L,data.frame(spec=substr(sl[i+1],1,2), spec_time=sumt, ext_time=-1, parent=species))
-        N = N+1
-        if(printEv){print(paste("speciation in time",sumt,sep=" "))}  # put it in a log file
-      }
-      if (N==0){ # In case all species got extinct: restart
-        reboot = reboot + 1
-        N = 2 # Number of species
-        i = 1
-        Tm = NULL
-        sumt = 0
-        E = NULL # vector with 0 if extinction and 1 if speciation
-        n = NULL # vector with number of species at time t_i
-        newick = paste(sl[1],";",sep="")  # Newick tree
-        identf = data.frame(Spec="aa",Time=0)
-        L = data.frame(spec='aa', spec_time=0, ext_time=-1, parent = '00')
-      }else { # Otherwise, update values and go to next iteration
-        Tm[i] = tm
-        i<-i+1
-      }
-    }
-    ####
-    if(nchar(newick)<7){
-      reboot2=reboot2+reboot+1
-    }else{
-      newick = compphyl(newi=newick,identf=identf,ct=ct) # set extant species to the present
-      phy = read.tree(text=newick)
-      dphy = drop.fossil(phy)
-      if(Ntip(dphy)>2){ #check if the extant species tree is large enough
-        key=1
-      }else{
-        reboot2=reboot2+reboot+1
-      }
-    }
+sampprob <- function(t,s,mu,r){  ## equation (*)
+  term1 = s*(1-exp(-mu*(r-t)))
+  c = exp(-(s/mu)*exp(-mu*r))
+  if(c==0){
+    term2 = 0
+  }else{
+    term2 = c^{-exp(mu*t)+1}
   }
-  Tm[i] = ct-sum(Tm)
-  n[i] = n[i-1] + E[i-1] - (1-E[i-1])
-  newick.extant = drop.fossil(phy)
-  newick.extant.p = phylo2vectors(newick.extant) # is it validated?
-  reboot2 = reboot2 + reboot
-  return(list(tree=list(wt=Tm, E=E, n=n, S=S, br = cumsum(Tm)), phylo = phy, tree.extant = newick.extant.p, phylo.extant=newick.extant, r=reboot2, L=L,sigmas=sigmas)) #validate reboot 2
+  f = term1*exp(-s*t)*term2
+  return(f)
 }
 
 extinction.processes <- function(u,inits,mu0){
