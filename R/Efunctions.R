@@ -150,8 +150,8 @@ mle.st <- function(S,init_par = c(0.5,0.5,100)){
 }
 
 # Monte-Carlo sampling / simulation of a set of complete trees
-sim.sct <- function(brts,pars,m=10){
-    no_cores <- detectCores()- 1
+sim.sct <- function(brts,pars,m=10,oc=0){
+    no_cores <- detectCores() - oc
     cl <- makeCluster(no_cores)
     registerDoParallel(cl)
     trees <- foreach(i = 1:m, combine = list) %dopar% {
@@ -159,9 +159,9 @@ sim.sct <- function(brts,pars,m=10){
       lw = ct$logweight
       return(list(wt=ct$wt,E=ct$E,logweight=ct$logweight,lw=lw))
     }
+    stopCluster(cl)
     lw = sapply(trees,function(list) list$lw)
     dim = sapply(trees,function(list) length(list$wt))
-    stopCluster(cl)
     lw = lw - max(lw)
     w = exp(lw)
   return(list(rec = trees, w=w,dim=dim))
