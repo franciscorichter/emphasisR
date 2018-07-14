@@ -160,7 +160,7 @@ mcem.tree <- function(brts,p){
   efficiency = NULL
   prop = 1
   while(abs(D)>tol){
-    if(prop<0.5) m = m*2
+    if(m*prop<p$m) m = m/prop
     time = proc.time()
     S = sim.sct(brts = brts,pars=pars,m = m)
     prop = sum(S$w>0)/length(S$w)
