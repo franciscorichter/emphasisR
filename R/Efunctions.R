@@ -14,30 +14,30 @@ nllik.tree = function(pars,tree){
   n = tree$n[1:(length(tree$n)-1)]
   sigma = n*(b[1]-b[2]*n + b[3]) #n-dimentional
   lastsigma = lastn*(b[1]-b[2]*lastn + b[3])
-  rho = pmax(b[1]*E-b[2]*n*E+b[3]*(1-E),0)
+  rho = pmax((b[1]-b[2]*n)*E+b[3]*(1-E),0)
   l = -(sum(-sigma*dt+log(rho))-lastsigma*ldt)
   if(min(b)<0){l = Inf}
   return(l)
 }
 
 #logLikelihood of a tree (2nd process)
-llik.tree = function(pars,tree){
-  b = c(pars[1],(pars[1]-pars[2])/pars[3],pars[2])
-  ldt = tree$wt[length(tree$wt)]
-  dt = tree$wt[1:(length(tree$wt)-1)]
-  E = tree$E
-  if(is.null(tree$n)){
-    tree$n = c(2,2+cumsum(E)+cumsum(E-1))
-  }
-  lastn = tree$n[length(tree$n)]
-  n = tree$n[1:(length(tree$n)-1)]
-  sigma = n*(b[1]-b[2]*n + b[3]) #n-dimentional
-  lastsigma = lastn*(b[1]-b[2]*lastn + b[3])
-  rho = pmax((b[1]-b[2]*n)*n*E+b[3]*(1-E),0)
-  l = sum(-sigma*dt+log(rho))-lastsigma*ldt
-  if(min(b)<0){l = Inf}
-  return(l)
-}
+# llik.tree = function(pars,tree){
+#   b = c(pars[1],(pars[1]-pars[2])/pars[3],pars[2])
+#   ldt = tree$wt[length(tree$wt)]
+#   dt = tree$wt[1:(length(tree$wt)-1)]
+#   E = tree$E
+#   if(is.null(tree$n)){
+#     tree$n = c(2,2+cumsum(E)+cumsum(E-1))
+#   }
+#   lastn = tree$n[length(tree$n)]
+#   n = tree$n[1:(length(tree$n)-1)]
+#   sigma = n*(b[1]-b[2]*n + b[3]) #n-dimentional
+#   lastsigma = lastn*(b[1]-b[2]*lastn + b[3])
+#   rho = pmax((b[1]-b[2]*n)*n*E+b[3]*(1-E),0)
+#   l = sum(-sigma*dt+log(rho))-lastsigma*ldt
+#   if(min(b)<0){l = Inf}
+#   return(l)
+# }
 
 # negative logLikelihood of a set of trees
 nllik.st = function(pars, st){
@@ -175,15 +175,15 @@ mcem.tree <- function(brts,p){
     D = rel.llik(S1 = S,p0 = pars,p1 = mle)
     PARS = rbind(PARS,mle)
     pars = mle
-    print(paste("iteration",k,"Q: ",M$value,'proportion of useful trees',prop,'sampling size',m, " lambda: ", pars[1]," mu: ", pars[2], "K:", pars[3]))
+    print(paste("iteration",k,"Q: ",M$value,'proportion of useful trees',prop,'sampling size',m*prop, " lambda: ", pars[1]," mu: ", pars[2], "K:", pars[3]))
     k = k+1
   }
   PARS = data.frame(it=1:(dim(Me)[1]+dim(PARS)[1]),lambda = c(Me[,1],PARS[,1]),mu=c(Me[,2],PARS[,2]),K=c(Me[,3],PARS[,3]))
   return(list(pars=pars,PARS=PARS,H=H,tE=tE,tM=tM,efficiency=efficiency))
 }
 ###########################
-sampprob <- function(t,s,mu,r){  ## equation (*)
-  term1 = s*(1-exp(-mu*(r-t)))
+sampprob <- function(t,s,mu,r,N){  ## equation (8)
+  term1 = (s/N)*(1-exp(-mu*(r-t)))
   c = exp(-(s/mu)*exp(-mu*r))
   if(c==0){
     term2 = 0
@@ -246,7 +246,7 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
             me = c(me,u)
             bt = c(bt,cbt+t.spe)
             to = c(to,1)
-            sprob[h] = sampprob(t = t.spe+gosttime, s = s, mu = mu, r = ct-(cbt-gosttime))
+            sprob[h] = sampprob(t = t.spe+gosttime, s = s, mu = mu, r = ct-(cbt-gosttime),N=N)
             h = h + 1
             N = N + 1
           }else{gosttime = t.spe + gosttime}
@@ -259,7 +259,7 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
           text = t.ext[extinctone]
           bt = c(bt,text)
           to = c(to,0)
-          sprob[h] = truncdist::dtrunc(text-tspe,'exp',a=0,b=ct-tspe,rate=mu)*(1-integrate(sampprob,lower = 0, upper = t_ext+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime))$value)
+          sprob[h] = truncdist::dtrunc(text-tspe,'exp',a=0,b=ct-tspe,rate=mu)*(1-integrate(sampprob,lower = 0, upper = t_ext+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime),N=N)$value)#I dont need integrate
           ms = ms[-extinctone]
           me = me[-extinctone]
           cwt = cwt - mint
@@ -271,7 +271,7 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
       }
       else{
         key = 1
-        sprob[h] = (1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt+gosttime,s=s,mu=mu,r=ct-cbt)$value) # test if there is difference using vectorize
+        sprob[h] = (1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt+gosttime,s=s,mu=mu,r=ct-cbt,N=N)$value) # test if there is difference using vectorize
         h = h+1
       }
     }
@@ -282,7 +282,7 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
   n.tree = list(wt=c(diff(df$bt),ct-df$bt[length(df$bt)]),E=df$to[-length(df$to)])
   if(length(n.tree$E==1) != length(n.tree$E==0)) print('algo mal!!')
   n.tree$E[n.tree$E==2] = 1
-  lrprob = llik.tree(pars,n.tree) #f
+  lrprob = -nllik.tree(pars,n.tree) #f
   lsprob = sum(log(sprob)) #g
   logweight = lrprob-lsprob
   n.tree$weight = exp(logweight)
