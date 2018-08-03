@@ -20,25 +20,6 @@ nllik.tree = function(pars,tree){
   return(l)
 }
 
-#logLikelihood of a tree (2nd process)
-# llik.tree = function(pars,tree){
-#   b = c(pars[1],(pars[1]-pars[2])/pars[3],pars[2])
-#   ldt = tree$wt[length(tree$wt)]
-#   dt = tree$wt[1:(length(tree$wt)-1)]
-#   E = tree$E
-#   if(is.null(tree$n)){
-#     tree$n = c(2,2+cumsum(E)+cumsum(E-1))
-#   }
-#   lastn = tree$n[length(tree$n)]
-#   n = tree$n[1:(length(tree$n)-1)]
-#   sigma = n*(b[1]-b[2]*n + b[3]) #n-dimentional
-#   lastsigma = lastn*(b[1]-b[2]*lastn + b[3])
-#   rho = pmax((b[1]-b[2]*n)*n*E+b[3]*(1-E),0)
-#   l = sum(-sigma*dt+log(rho))-lastsigma*ldt
-#   if(min(b)<0){l = Inf}
-#   return(l)
-# }
-
 # negative logLikelihood of a set of trees
 nllik.st = function(pars, st){
   m = length(st$rec)
@@ -183,7 +164,7 @@ mcem.tree <- function(brts,p){
 }
 ###########################
 sampprob <- function(t,s,mu,r,N){  ## equation (8)
-  term1 = (s/N)*(1-exp(-mu*(r-t)))
+  term1 = s*(1-exp(-mu*(r-t)))
   c = exp(-(s/mu)*exp(-mu*r))
   if(c==0){
     term2 = 0
@@ -216,7 +197,11 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
   ms = NULL # missing speciations, for now we just add time. When we consider topology we do it with species as well
   me = NULL # missing extinctions (in the uniform plane)
   bt = NULL
+  bte = NULL
   to = NULL
+
+  Li = list()
+
   cbt = 0
   N = 2
   sprob = NULL # sampling probability of Missing|observed
@@ -244,22 +229,42 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
           if(u < pexp(ct-(cbt+t.spe),mu)){
             ms = c(ms,cbt+t.spe)
             me = c(me,u)
-            bt = c(bt,cbt+t.spe)
+            bt = c(bt,cbt+t.spe) #SHOULD INCLUDE GOSTTIME NO?
+            text = extinction.processes(u=u,inits=cbt+t.spe,mu0=mu0)
+            bte = c(bte,text)
             to = c(to,1)
-            sprob[h] = sampprob(t = t.spe+gosttime, s = s, mu = mu, r = ct-(cbt-gosttime),N=N)
+            tspe = cbt+t.spe
+            sprob[h] = sampprob(t = t.spe+gosttime, s = s, mu = mu, r = ct-(cbt-gosttime),N=N)*truncdist::dtrunc(text-tspe,'exp',a=0,b=ct-tspe,rate=mu)*(lambda/s)
+            Li[[h]] = list(xi='speciation',text=text,wt= t.spe+gosttime,gosttime=gosttime,s=s, r = ct-(cbt-gosttime),N=N)
+
+            if(all.equal(sprob[h],prob.ms(t.spe+gosttime,text-tspe,s,mu,r =  ct-(cbt-gosttime),n = N))){
+            #  print('paso speciacion ms')
+            }else{
+              stop('problem in speciation')
+            }
             h = h + 1
             N = N + 1
+            gosttime = 0
           }else{gosttime = t.spe + gosttime}
           cwt = cwt - t.spe
           cbt = cbt + t.spe
         }
         else{#extinction
+          #stop('extinction')
           extinctone = which(t.ext == min(t.ext))
           tspe = ms[extinctone]
           text = t.ext[extinctone]
           bt = c(bt,text)
+          bte = c(bte,Inf)
           to = c(to,0)
-          sprob[h] = truncdist::dtrunc(text-tspe,'exp',a=0,b=ct-tspe,rate=mu)*(1-integrate(sampprob,lower = 0, upper = t_ext+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime),N=N)$value)#I dont need integrate
+          sprob[h] = (1-integrate(sampprob,lower = 0, upper = t_ext+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime),N=N)$value)#I dont need integrate
+          if(all.equal(sprob[h],prob.nospecies(t_ext+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime)))){
+          #  print('paso ext ms')
+          }else{
+            stop('problem in ext')
+          }
+          Li[[h]] = list(xi='extinction', wt= t_ext+gosttime,gosttime=gosttime,s=s, r = ct-(cbt-gosttime),N=N)
+
           ms = ms[-extinctone]
           me = me[-extinctone]
           cwt = cwt - mint
@@ -270,90 +275,126 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
         }
       }
       else{
+        #stop('nada')
         key = 1
-        sprob[h] = (1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt+gosttime,s=s,mu=mu,r=ct-cbt,N=N)$value) # test if there is difference using vectorize
+        sprob[h] = (1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime),N=N)$value) # test if there is difference using vectorize
+        if(all.equal(sprob[h],prob.nospecies(cwt+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime)))){
+        #  print('paso nada ms')
+        }else{
+          stop('problem in nada')
+        }
+        Li[[h]] = list(xi='nada',wt=cwt+gosttime,gosttime=gosttime,s=s, r = ct-(cbt-gosttime),N=N)
+
+
         h = h+1
       }
     }
     N = N+1
   }
-  df = data.frame(bt = c(bt,ct-brts),to = c(to,rep(2,length(wt))))
+  df = data.frame(bt = c(bt,ct-brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
   df = df[order(df$bt),]
-  n.tree = list(wt=c(diff(df$bt),ct-df$bt[length(df$bt)]),E=df$to[-length(df$to)])
+  df$t.ext = df$bte-df$bt
+  df$xi = 0
+  df$xi[df$bte<ct] = 1
+  wtT = c(diff(df$bt),ct-df$bt[length(df$bt)])
+  df = df[-1,]
+  n.tree = list(wt=wtT,E=df$to)
+
   if(length(n.tree$E==1) != length(n.tree$E==0)) print('algo mal!!')
   n.tree$E[n.tree$E==2] = 1
+  E = n.tree$E
+  n = c(2,2+cumsum(E)+cumsum(E-1))
+  #tree$n = n
+  lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
+  mu = pars[2]
+  s = lambda*n
+  ssprob = da.prob(xi=c(df$xi,0),wt=n.tree$wt,t_ext=c(df$t.ext,Inf),s=s,mu=mu0,r=c(ct,ct-df$bt),n=n)
   lrprob = -nllik.tree(pars,n.tree) #f
   lsprob = sum(log(sprob)) #g
   logweight = lrprob-lsprob
+  lssprob = sum(log(ssprob))
+  logweight2 = lrprob-lssprob
+  if(logweight==Inf) logweight = -Inf
   n.tree$weight = exp(logweight)
+  n.tree$weight2 = exp(logweight2)
   n.tree$logweight = logweight
+  n.tree$logweight2 = logweight2
   n.tree$f=lrprob
   n.tree$g=lsprob
   return(n.tree)
 }
 
+prob.ms <- function(wt,t_ext,s,mu,r,n){
+  (s/n)*mu*exp(-s*(wt+(exp(-mu*r)-exp(-mu*(r-wt)))/mu)-mu*t_ext)
+}
+prob.nospecies <- function(wt,s,mu,r){
+  exp(-s*(wt+(exp(-mu*r)-exp(-mu*(r-wt)))/mu))
+}
+da.prob <- function(xi,wt,t_ext,s,mu,r,n){
+  g =ifelse(xi,prob.ms(wt,t_ext,s,mu,r,n),prob.nospecies(wt,s,mu,r))
+}
 
 post.pro <-function(file,extrafile=NULL){
-load(file)
-#pars = DDD::dd_ML(brts = btdd, idparsopt = 1:3,soc=2,cond=0)
-MLE = p$MLE
-M = mcem$PARS
+  load(file)
+  #pars = DDD::dd_ML(brts = btdd, idparsopt = 1:3,soc=2,cond=0)
+  MLE = p$MLE
+  M = mcem$PARS
 
-it = NULL
-lambda = NULL
-mu = NULL
-K = NULL
-for( i in 1:10){
-  MM = MLE[[i]]
-  it = c(it,rep(i+1,10))
-  lambda = c(lambda,MM[,1])
-  mu = c(mu,MM[,2])
-  K = c(K,MM[,3])
-};
-col = rep('grey',length(lambda))
-SDl = rep(NaN,length(lambda))
-SDm = rep(NaN,length(mu))
-SDk = rep(NaN,length(K))
+  it = NULL
+  lambda = NULL
+  mu = NULL
+  K = NULL
+  for( i in 1:10){
+    MM = MLE[[i]]
+    it = c(it,rep(i+1,10))
+    lambda = c(lambda,MM[,1])
+    mu = c(mu,MM[,2])
+    K = c(K,MM[,3])
+  };
+  col = rep('grey',length(lambda))
+  SDl = rep(NaN,length(lambda))
+  SDm = rep(NaN,length(mu))
+  SDk = rep(NaN,length(K))
 
-it = c(it,1:dim(M)[1])
-lambda = c(lambda,M[,2])
-mu = c(mu,M[,3])
-K = c(K,M[,4])
-col = c(col,rep('blue',dim(M)[1]))
+  it = c(it,1:dim(M)[1])
+  lambda = c(lambda,M[,2])
+  mu = c(mu,M[,3])
+  K = c(K,M[,4])
+  col = c(col,rep('blue',dim(M)[1]))
 
-MCEMc = data.frame(it=it,lambda=lambda,mu=mu,K=K,col=col)
+  MCEMc = data.frame(it=it,lambda=lambda,mu=mu,K=K,col=col)
 
-gamLambda = gam(lambda ~ s(it), data=MCEMc)
-gamMu = gam(mu ~ s(it), data=MCEMc)
-gamK = gam(K ~ s(it), data=MCEMc)
+  gamLambda = gam(lambda ~ s(it), data=MCEMc)
+  gamMu = gam(mu ~ s(it), data=MCEMc)
+  gamK = gam(K ~ s(it), data=MCEMc)
 
-ex = dim(MCEMc)[1] - dim(mcem$H)[1] - 100
-hessL = c(rep(NaN,ex),mcem$H[,1])
-SDl = c(SDl,sqrt(hessL+gamLambda$sig2))
+  ex = dim(MCEMc)[1] - dim(mcem$H)[1] - 100
+  hessL = c(rep(NaN,ex),mcem$H[,1])
+  SDl = c(SDl,sqrt(hessL+gamLambda$sig2))
 
-hessM = c(rep(NaN,ex),mcem$H[,2])
-SDm = c(SDm,sqrt(hessM+gamMu$sig2))
+  hessM = c(rep(NaN,ex),mcem$H[,2])
+  SDm = c(SDm,sqrt(hessM+gamMu$sig2))
 
-hessK = c(rep(NaN,ex),mcem$H[,3])
-SDk = c(SDk,sqrt(hessK+gamK$sig2))
+  hessK = c(rep(NaN,ex),mcem$H[,3])
+  SDk = c(SDk,sqrt(hessK+gamK$sig2))
 
-MCEMc$SDl = SDl
-MCEMc$SDm = SDm
-MCEMc$SDk = SDk
+  MCEMc$SDl = SDl
+  MCEMc$SDm = SDm
+  MCEMc$SDk = SDk
 
-MCEM = rbind(MCEMc,data.frame(it=(-9:0),lambda=p$PM[,1],mu=p$PM[,2],K=p$PM[,3],col=rep('blue',10),SDl=rep(NaN,10),SDm=rep(NaN,10),SDk=rep(NaN,10)))
+  MCEM = rbind(MCEMc,data.frame(it=(-9:0),lambda=p$PM[,1],mu=p$PM[,2],K=p$PM[,3],col=rep('blue',10),SDl=rep(NaN,10),SDm=rep(NaN,10),SDk=rep(NaN,10)))
 
-gl=ggplot(MCEM) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
-gm=ggplot(MCEM) + geom_point(aes(it,mu),colour=MCEM$col) + geom_errorbar(aes(x=it, y=mu, ymin = mu-1.96*SDm, ymax = mu + 1.96*SDm), colour='darkgreen') + geom_hline(yintercept = pars$mu)+ ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(mu[0]))
-gk=ggplot(MCEM) + geom_point(aes(it,K),colour=MCEM$col) + geom_errorbar(aes(x=it, y=K, ymin = K-1.96*SDk, ymax = K + 1.96*SDk), colour='darkgreen') + geom_hline(yintercept = pars$K) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(K))
-gLLmcem = ggplot(data=d)+geom_line(aes(x=it,y=llik))+geom_hline(yintercept = pars$loglik)
-gLLmcem2 = ggplot(df, aes(lambda, mu))+ geom_contour(aes(z = llik,color=..level..),bins=100) +geom_point(data=mcem$PARS,aes(x=lambda,y=mu,size=it))+  ggtitle(d.name)
-if(!is.null(extrafile)){
-  load(extrafile)
-  gLLmcem2 = gLLmcem2 + geom_point(data=mcem$PARS,aes(x=lambda,y=mu,size=it),col='red')
-  gLLmcem = gLLmcem + geom_line(data=d,aes(x=it,y=llik),col='red')
-}
-return(list(gl=gl,gm=gm,gk=gk, gLLmcem=gLLmcem, gLLmcem3d=gLLmcem2))
+  gl=ggplot(MCEM) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
+  gm=ggplot(MCEM) + geom_point(aes(it,mu),colour=MCEM$col) + geom_errorbar(aes(x=it, y=mu, ymin = mu-1.96*SDm, ymax = mu + 1.96*SDm), colour='darkgreen') + geom_hline(yintercept = pars$mu)+ ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(mu[0]))
+  gk=ggplot(MCEM) + geom_point(aes(it,K),colour=MCEM$col) + geom_errorbar(aes(x=it, y=K, ymin = K-1.96*SDk, ymax = K + 1.96*SDk), colour='darkgreen') + geom_hline(yintercept = pars$K) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(K))
+  gLLmcem = ggplot(data=d)+geom_line(aes(x=it,y=llik))+geom_hline(yintercept = pars$loglik)
+  gLLmcem2 = ggplot(df, aes(lambda, mu))+ geom_contour(aes(z = llik,color=..level..),bins=100) +geom_point(data=mcem$PARS,aes(x=lambda,y=mu,size=it))+  ggtitle(d.name)
+  if(!is.null(extrafile)){
+    load(extrafile)
+    gLLmcem2 = gLLmcem2 + geom_point(data=mcem$PARS,aes(x=lambda,y=mu,size=it),col='red')
+    gLLmcem = gLLmcem + geom_line(data=d,aes(x=it,y=llik),col='red')
+  }
+  return(list(gl=gl,gm=gm,gk=gk, gLLmcem=gLLmcem, gLLmcem3d=gLLmcem2))
 }
 
 get.time <- function(time,mode='sec'){
