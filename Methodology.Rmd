@@ -1072,14 +1072,20 @@ $$ p_j = \frac{\lambda_{t_{i+1},j}}{\sum_{k=1}^{n_t}\lambda_{t_{i+1},k}}$$
 
 ### A.3 Sampling from non-homogenuos exponential 
 
+The waiting time for and speciation of a missing species is distributed exponential with rate 
 
+$$ r_t = \lambda_t(1-e^{-\mu_t (T-t)}), \quad t<T $$
+where $\lambda_t$ is the speciation rate, $\mu_t$ is the extinction rate and $T$ is the time to present. To simulate random numbers from that distribution we can use two ways. The first assumes that both $lambda_t$ and $\mu_t$ are constant in a interval $(0,T)$, and the follows the steps 
 
+0. $t=0$
+1. Draw $t_{spe} \sim Exp(\lambda)$. set $t = t+t_{spe}$
+2. Draw $u \sim Unif(1)$
+3. If $u > (1-e^{(T-t)})$ go to step 1
+4. Return $t$
 
-```{r nonhomog, cache = TRUE}
-lambda = 0.5
-mu = 0.2
-Ti = r = 10
+That would be computed on the following R function 
 
+```{r}
 rnonh1 <- function(lambda,mu,Ti){
   Total = Ti
   rv = 0
@@ -1094,6 +1100,52 @@ rnonh1 <- function(lambda,mu,Ti){
   }
   return(rv)
 }
+```
+
+The second method of simulating non-homogenous poisson processes would be based on the following theorem (Cinlar, 1975)
+
+\begin{quote}
+Let $\Lambda (t), t \geq 0$ be a positive-valued, continuous, nondecreasing function. Then the random variables $T_1, T_2, ...$ are  event  times  corresponding  to  a  nonhomogeneous Poisson process with expectation function $\Lambda(t)$ if and only if $\Lambda(T_1),\Lambda(T_2), ...$ are the event times corresponding to a homogeneous Poisson process with rate one.
+\end{quote}
+
+Then the method follows the two steps 
+
+1. Draw $t_e \sim Exp(1)$
+2. Return $t = \Lambda^{-1}(t_e)$
+
+This method is more general in the sense that does not need piece-wise constant rates, so it can be applied to  time-dependent rates for instance. 
+
+To compare with the first method we need to calculate $\Lambda^{-1}(t)$ for constant rates. On this case 
+
+$$ \Lambda(t) = y = \lambda\left( t - \frac{e^{-\mu T}}{\mu}(e^{\mu t}-1) \right) $$
+to calculate $t = \Lambda^{-1}(y)$ we need to find a solution for $t$ in the equation 
+
+$$  \frac{e^{-\mu T}}{\mu}e^{\mu t}   = t + \frac{e^{-\mu T}}{\mu} - \frac{y}{\lambda} $$
+if we consider $x = t + \frac{e^{-\mu T}}{\mu} - \frac{y}{\lambda}$ then 
+
+$$  \frac{e^{-\mu T}}{\mu}e^{\mu (x - \frac{e^{-\mu T}}{\mu} + \frac{y}{\lambda})}   = x $$
+
+or 
+
+$$  -e^{-\mu T}e^{\mu (- \frac{e^{-\mu T}}{\mu} + \frac{y}{\lambda})}   = -\mu xe^{-\mu x}  $$
+
+the solution for $x$ on this equation is 
+
+$$ x = -\frac{W(-e^{-\mu T}e^{\mu (- \frac{e^{-\mu T}}{\mu} + \frac{y}{\lambda})})}{\mu}$$
+where $W(\cdot)$ is the Lambert-W function. 
+
+So
+
+$$ t = \frac{y}{\lambda} - \frac{W(-e^{-\mu T - e^{-\mu T} + \mu \frac{y}{\lambda})})}{\mu} - \frac{e^{-\mu T}}{\mu} $$
+
+and the R implementation would be 
+
+
+```{r}
+IntInv <- function(r,mu,s,u){
+  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
+  return(t)
+}
 
 rnonh2 <- function(lambda,mu,Ti){
   ex = rexp(1)
@@ -1105,31 +1157,14 @@ rnonh2 <- function(lambda,mu,Ti){
   }
   return(rv)
 }
+```
 
-rate <- function(t,mu,lambda,Ti){
-  lambda*(1-exp(-mu*(Ti-t)))
-}
+Thus, we can test both methods to see if they generate the same process 
 
-intensity <- function(t,mu,lambda,Ti){
-  int  = integrate(rate,lower=0,upper = t,mu=mu,lambda=lambda,Ti=Ti)
-  return(int)
-}
-
-t = seq(0,Ti,by=0.1)
-I = NULL
-for(s in t){
-  Int = intensity(s,mu,lambda,Ti)
-  I = c(I,Int$value)
-}
-qplot(t,I)
-
-
-IntInv <- function(r,mu,s,u){
-  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
-  return(t)
-}
-
-
+```{r nonhomog, cache = TRUE}
+lambda = 0.5
+mu = 0.2
+Ti = r = 10
 
 # exp1
 
@@ -1150,11 +1185,38 @@ t2 = get.time(time)
 r1 = r1[r1<Ti]
 r2 = r2[r2<Ti]
 
-
 dfh = data.frame(r=c(r1,r2),alg = c(rep("a1",length(r1)),rep("a2",length(r2))))
-
 ggplot(dfh,aes(x=r,fill=alg)) + geom_histogram(alpha=0.5,position='identity')
+```
 
+which seems to be the case. We can also check the computational times 
+
+```{r}
+t1
+t2
+```
+
+So we can conclude that while both methods are equivalent method one is faster, but method two is general. 
+
+On the case when a close for for the inverse of the intensity function is not available, we can still do the method on a numerical way. For instance we can vizualize $\Lambda(t)$ integrating and then calculate the inverse. 
+
+```{r}
+rate <- function(t,mu,lambda,Ti){
+  lambda*(1-exp(-mu*(Ti-t)))
+}
+
+intensity <- function(t,mu,lambda,Ti){
+  int  = integrate(rate,lower=0,upper = t,mu=mu,lambda=lambda,Ti=Ti)
+  return(int)
+}
+
+t = seq(0,Ti,by=0.1)
+I = NULL
+for(s in t){
+  Int = intensity(s,mu,lambda,Ti)
+  I = c(I,Int$value)
+}
+qplot(t,I)
 ```
 
 
