@@ -1,0 +1,322 @@
+# Alternative function for testing
+
+#negative logLikelihood of a tree
+nllik.tree2 = function(pars,tree){
+  b = c(pars[1],(pars[1]-pars[2])/pars[3],pars[2])
+  ldt = tree$wt[length(tree$wt)]
+  dt = tree$wt[1:(length(tree$wt)-1)]
+  E = tree$E
+  if(is.null(tree$n)){
+    n = c(2,2+cumsum(E)+cumsum(E-1))
+    tree$n = n
+  }
+  lastn = tree$n[length(tree$n)]
+  n = tree$n[1:(length(tree$n)-1)]
+  sigma = n*(b[1]-b[2]*n + b[3]) #n-dimentional
+  lastsigma = lastn*(b[1]-b[2]*lastn + b[3])
+  rho = pmax(b[1]*E-b[2]*n*E+b[3]*(1-E),0)
+  l = -(sum(-sigma*dt+log(rho))-lastsigma*ldt)
+  if(min(b)<0){l = Inf}
+  return(l)
+}
+
+# negative logLikelihood of a set of trees
+Q.approx2 = function(pars, st){
+  m = length(st$rec)
+  l = vector(mode = 'numeric',length = m)
+  w = vector(mode = 'numeric',length = m)
+  for(i in 1:m){
+    s = st$rec[[i]]
+    w[i] = st$w[i]
+    l[i] = nllik.tree(pars,tree=s)
+  }
+  L = sum(l*w)
+  return(L)
+}
+
+
+sim.sct2 <- function(brts,pars,m=10,oc=0){
+  no_cores <- detectCores() - oc
+  cl <- makeCluster(no_cores)
+  registerDoParallel(cl)
+  trees <- foreach(i = 1:m, combine = list) %dopar% {
+    ct =  emphasis::sim.extinct(brts = brts,pars = pars) #complete tree
+    lw = ct$logweight
+    return(list(wt=ct$wt,E=ct$E,logweight=ct$logweight,lw=lw))
+  }
+  stopCluster(cl)
+  lw = sapply(trees,function(list) list$lw)
+  dim = sapply(trees,function(list) length(list$wt))
+  lw = lw - max(lw)
+  w = exp(lw)
+  return(list(rec = trees, w=w,dim=dim))
+}
+
+
+sampprob <- function(t,s,mu,r,N){  ## equation (8)
+  term1 = (s)*(1-exp(-mu*(r-t)))
+  c = exp(-(s/mu)*exp(-mu*r))
+  if(c==0){
+    term2 = 0
+  }else{
+    term2 = c^{-exp(mu*t)+1}
+  }
+  f = term1*exp(-s*t)*term2
+  return(f)
+}
+
+#weight
+logweight <- function(pars,df,ct=NULL){
+  dim = dim(df)[1]
+  ct = df$bt[dim]
+  #  xi = rep(0,times=dim)
+  # xi[df$bte<(ct+1)] = 1
+  wtT = diff(c(0,df$bt))
+  n.tree = list(wt=wtT,E=df$to[-dim])
+  n.tree$E[n.tree$E==2] = 1
+  E = n.tree$E
+  n = c(2,2+cumsum(E)+cumsum(E-1))
+  lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
+  mu = pars[2]
+  s = lambda*n
+  #sprob = da.prob(xi=xi,wt=n.tree$wt,t_ext=df$t.ext,s=s,mu=pars[2],r=ct-c(0,df$bt[-length(df$bt)]),n=n)
+  lsprob = da.prob2(wt=wtT,t_ext=df$t.ext,s=s,mu=pars[2],r=ct-c(0,df$bt[-length(df$bt)]),n=n)
+  #lsprob = sum(log(sprob))
+  #lsprob2 = sum(log(sprob2))
+  #if(lsprob2==lsprob){
+  #  print("iguales")
+  #}else{
+  #  stop(paste(lsprob2,lsprob))
+  #}
+  lrprob = -nllik.tree(pars,n.tree)
+  logweight = lrprob-lsprob
+  return(logweight)
+}
+
+prob.ms <- function(wt,t_ext,s,mu,r,n){
+  if(mu != 0){
+    prob = (s/n)*mu*exp(-s*(wt+(exp(-mu*r)-exp(-mu*(r-wt)))/mu)-mu*t_ext)
+  }else{
+    prob = 0
+  }
+  return(prob)
+}
+prob.nospecies <- function(wt,s,mu,r){
+  if(mu != 0){
+    prob = exp(-s*(wt+(exp(-mu*r)-exp(-mu*(r-wt)))/mu))
+  }else{
+    prob = 1
+  }
+  return(prob)
+}
+da.prob <- function(xi,wt,t_ext,s,mu,r,n){
+  g =ifelse(xi,prob.ms(wt,t_ext,s,mu,r,n),prob.nospecies(wt,s,mu,r))
+  return(g)
+}
+
+
+## cool new way
+rnhe <- function(lambda,mu,Ti){  # random non-homogenous exponential
+  ex = rexp(1)
+  rv = IntInv(r=Ti,mu=mu,s=lambda,u=ex)
+  if(is.na(rv)){
+    rv = 99
+  }
+  return(list(rv=rv,ex=ex))
+}
+
+IntInv <- function(r,mu,s,u){
+  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
+  return(t)
+}
+
+sim.extinct2 <- function(brts,pars,model='dd',seed=0){
+  if(seed>0) set.seed(seed)
+  wt = -diff(c(brts,0))
+  ct = sum(wt)
+  lambda0 = pars[1]
+  mu0 = pars[2]
+  K = pars[3]
+  dim = length(wt)
+  bt = NULL
+  bte = NULL
+  to = NULL
+  N = 2
+  for(i in 1:dim){
+    cwt = wt[i]
+    cbt = sum(wt[0:(i-1)])
+    key = 0
+    while(key == 0){
+      if(model == "dd"){  # diversity-dependence model
+        lambda = max(1e-99, lambda0 - (lambda0-mu0)*N/K)
+        mu = mu0
+        s = N*lambda
+      }else{print('Model not implemented yet, try dd')}
+      rns = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
+      t.spe = rns$rv
+      ex = rns$ex
+      sbte = bte[bte>cbt]
+      t_ext = min(sbte) - cbt
+      mint = min(t.spe,t_ext)
+      if(mint < cwt){
+        if(mint == t.spe){#speciation
+          bt = c(bt,cbt+t.spe)
+          text = cbt+t.spe+ex/mu0
+          bte = c(bte,text)
+          to = c(to,1)
+          N = N + 1
+          cwt = cwt - t.spe
+          cbt = cbt + t.spe
+        }
+        else{#extinction
+          bt = c(bt,cbt+t_ext)
+          bte = c(bte,Inf)
+          to = c(to,0)
+          cwt = cwt - t_ext
+          cbt = cbt + t_ext
+          N = N-1
+        }
+      }
+      else{
+        key = 1
+      }
+    }
+    N = N+1
+  }
+  df = data.frame(bt = c(bt,ct-brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  df = df[-1,]
+  df = rbind(df,data.frame(bt=ct,bte=Inf,to=0,t.ext=Inf))
+  return(df)
+}
+
+
+##
+
+
+###  simulation of extincted old version
+sim.extinct_old <- function(brts,pars,model='dd',seed=0){
+  if(seed>0) set.seed(seed)
+  wt = -diff(c(brts,0))
+  ct = sum(wt)
+  lambda0 = pars[1]
+  mu0 = pars[2]
+  K = pars[3]
+  dim = length(wt)
+  ms = NULL # missing speciations, for now we just add time. When we consider topology we do it with species as well
+  me = NULL # missing extinctions (in the uniform plane)
+  bt = NULL
+  bte = NULL
+  to = NULL
+  Li = list()
+  cbt = 0
+  N = 2
+  sprob = NULL # sampling probability of Missing|observed
+  h = 1 # index to fill probabilities
+  for(i in 1:dim){
+    cwt = wt[i]
+    cbt = sum(wt[0:(i-1)])
+    key = 0
+    gosttime = 0
+    while(key == 0){
+      if(model == "dd"){  # diversity-dependence model
+        lambda = max(1e-99, lambda0 - (lambda0-mu0)*N/K)
+        mu = mu0
+        s = N*lambda
+      }else{print('Model not implemented yet, try dd')}
+      t.spe = rexp(1,s)
+      t.ext = extinction.processes(u=me,inits=ms,mu0=mu0)
+      t_ext = ifelse(length(t.ext)>0,min(t.ext),Inf)-cbt  # if is not empty gives the waiting time for next extinction
+      mint = min(t.spe,t_ext)
+      if(mint < cwt){
+        if(mint == t.spe){#speciation
+          u = runif(1)
+          if(u < pexp(ct-(cbt+t.spe),mu)){
+            ms = c(ms,cbt+t.spe)
+            me = c(me,u)
+            bt = c(bt,cbt+t.spe) #SHOULD INCLUDE GOSTTIME NO?
+            text = extinction.processes(u=u,inits=cbt+t.spe,mu0=mu0)
+            bte = c(bte,text)
+            to = c(to,1)
+            tspe = cbt+t.spe
+            sprob[h] = sampprob(t = t.spe+gosttime, s = s, mu = mu, r = ct-(cbt-gosttime),N=N)*truncdist::dtrunc(text-tspe,'exp',a=0,b=ct-tspe,rate=mu)*(lambda/s)
+            Li[[h]] = list(xi='speciation',text=text,wt= t.spe+gosttime,gosttime=gosttime,s=s, r = ct-(cbt-gosttime),N=N)
+            if(all.equal(sprob[h],prob.ms(t.spe+gosttime,text-tspe,s,mu,r =  ct-(cbt-gosttime),n = N))){
+              #  print('speciacion ms')
+            }else{
+              stop('problem in speciation')
+            }
+            h = h + 1
+            N = N + 1
+            gosttime = 0
+          }else{gosttime = t.spe + gosttime}
+          cwt = cwt - t.spe
+          cbt = cbt + t.spe
+        }
+        else{#extinction
+          extinctone = which(t.ext == min(t.ext))
+          tspe = ms[extinctone]
+          text = t.ext[extinctone]
+          bt = c(bt,text)
+          bte = c(bte,Inf)
+          to = c(to,0)
+          sprob[h] = (1-integrate(sampprob,lower = 0, upper = t_ext+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime),N=N)$value)#I dont need integrate
+          if(all.equal(sprob[h],prob.nospecies(t_ext+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime)))){
+          }else{
+            stop('problem in ext')
+          }
+          Li[[h]] = list(xi='extinction', wt= t_ext+gosttime,gosttime=gosttime,s=s, r = ct-(cbt-gosttime),N=N)
+          ms = ms[-extinctone]
+          me = me[-extinctone]
+          cwt = cwt - mint
+          cbt = cbt + mint
+          N = N-1
+          h = h+1
+          gosttime = 0
+        }
+      }
+      else{
+        key = 1
+        sprob[h] = (1 - integrate(Vectorize(sampprob),lower = 0, upper = cwt+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime),N=N)$value) # test if there is difference using vectorize
+        if(all.equal(sprob[h],prob.nospecies(cwt+gosttime,s=s,mu=mu,r=ct-(cbt-gosttime)))){
+          #  print('paso nada ms')
+        }else{
+          stop('problem in nada')
+        }
+        Li[[h]] = list(xi='nada',wt=cwt+gosttime,gosttime=gosttime,s=s, r = ct-(cbt-gosttime),N=N)
+        h = h+1
+      }
+    }
+    N = N+1
+  }
+  df = data.frame(bt = c(bt,ct-brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  df$xi = 0
+  df$xi[df$bte<ct] = 1
+  wtT = c(diff(df$bt),ct-df$bt[length(df$bt)])
+  df = df[-1,]
+  n.tree = list(wt=wtT,E=df$to)
+  if(length(n.tree$E==1) != length(n.tree$E==0)) print('algo mal!!')
+  n.tree$E[n.tree$E==2] = 1
+  E = n.tree$E
+  n = c(2,2+cumsum(E)+cumsum(E-1))
+  lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
+  mu = pars[2]
+  s = lambda*n
+  ssprob = da.prob(xi=c(df$xi,0),wt=n.tree$wt,t_ext=c(df$t.ext,Inf),s=s,mu=mu0,r=c(ct,ct-df$bt),n=n)
+  lrprob = -nllik.tree(pars,n.tree) #f
+  lsprob = sum(log(sprob)) #g
+  logweight = lrprob-lsprob
+  lssprob = sum(log(ssprob))
+  logweight2 = lrprob-lssprob
+  if(logweight==Inf) logweight = -Inf
+  n.tree$weight = exp(logweight)
+  n.tree$weight2 = exp(logweight2)
+  n.tree$logweight = logweight
+  n.tree$logweight2 = logweight2
+  n.tree$f=lrprob
+  n.tree$g=lsprob
+  return(n.tree)
+}

@@ -1,0 +1,56 @@
+---
+title: "Tests"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(emphasis)
+```
+
+In order to search for possible bugs and test the package we have create alternative functions to the original ones which should be equivalent. There are a series of possible test to check that the package is doing the proper things to do 
+
+
+## log-likelihood function 
+
+```{r, cache=TRUE}
+time = proc.time()
+#dendroica
+btdd = c(4.9999999998,4.806886544,4.70731246478,4.50735197578,4.37856240588,4.29594855558,4.19207515688,4.18261061218,4.11238451758,4.09640902445,3.81723693538,3.71143733895,3.48845298905,3.25729503338,3.11613886835,2.64829864145,2.63531839038,2.37990087748,1.82721570435,0.83704715535,0.64242044758,0.56121103655,0.356333544350001,0.346462849050001)
+pars = c(3.2,0.3,40)
+m = 1000
+S = sim.sct(btdd,pars,m,print=FALSE)
+l1 = vector(mode="numeric",length=m)
+l2 = vector(mode="numeric",length=m)
+for(i in 1:m){
+  s = S$rec[[i]]
+  l1[i] = nllik.tree(pars,s)
+  l2[i] = nllik.tree2(pars,s)
+}
+qplot(l1,l2)
+all.equal(l1,l2)
+get.time(time)
+```
+
+## Importance sampling weights
+
+To check if the importance sampling weights are well calculated we use the previous and the current method using the ```sim.extinct_old``` function. 
+
+
+```{r, cache=TRUE}
+lw1 = vector(mode="numeric",length=m)
+lw2 = vector(mode="numeric",length=m)
+w1 = vector(mode="numeric",length=m)
+w2 = vector(mode="numeric",length=m)
+for(i in 1:1000){
+  si = sim.extinct_old(btdd,pars)
+  w1[i] = si$weight
+  w2[i] = si$weight2
+  lw1[i] = si$logweight
+  lw2[i] = si$logweight2
+}
+qplot(lw1,lw2)
+all.equal(lw1,lw2)
+all.equal(w1,w2)
+```
+
