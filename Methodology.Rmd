@@ -1075,7 +1075,7 @@ $$ p_j = \frac{\lambda_{t_{i+1},j}}{\sum_{k=1}^{n_t}\lambda_{t_{i+1},k}}$$
 The waiting time for and speciation of a missing species is distributed exponential with rate 
 
 $$ r_t = \lambda_t(1-e^{-\mu_t (T-t)}), \quad t<T $$
-where $\lambda_t$ is the speciation rate, $\mu_t$ is the extinction rate and $T$ is the time to present. To simulate random numbers from that distribution we can use two ways. The first assumes that both $lambda_t$ and $\mu_t$ are constant in a interval $(0,T)$, and the follows the steps 
+where $\lambda_t$ is the speciation rate, $\mu_t$ is the extinction rate and $T$ is the time to present. To simulate random numbers from that distribution we can use two ways. The first assumes that both $\lambda_t$ and $\mu_t$ are constant in a interval $(0,T)$:
 
 0. $t=0$
 1. Draw $t_{spe} \sim Exp(\lambda)$. set $t = t+t_{spe}$
