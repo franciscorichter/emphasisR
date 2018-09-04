@@ -15,4 +15,5 @@ Depends:
     truncdist,
     doParallel,
     parallel,
-    mgcv
+    mgcv,
+    LambertW
