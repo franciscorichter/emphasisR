@@ -507,6 +507,12 @@ Then
 
  \begin{equation} \label{sampprob}  g_{X|Y} (x_i|y,\phi^*) = \prod_{i=1}^{d} e^{-\int_{t_i}^{t_i+t_s} n_t \lambda_{z,k}\left(1-e^{-\int_{z}^T\mu_{s,k}ds}\right)dz} \prod_{j=1}^m \lambda_{t_j+t_s,j}\mu_{t_j+t_s,j}e^{-\int_{t_j+t_s}^{t_e}\mu_{t,j}dt} \end{equation}
 
+On the case of spaciation rate piece-wise constant and extinction rate constant, this equation would be equivalent to 
+
+$$
+ g_{X|Y}(x|y,\phi) = \prod_{i=1}^d \left(e^{-s_i\left[\Delta t_i+\frac{1}{\mu_0}(e^{-\mu_0 r_i }- e^{-\mu_0(r_i-\Delta t_i)})  \right]} \right) \prod_{i=1}^{m}\left(\lambda_{t^s_i,j} \mu_0  e^{-\mu_0\Delta t^{e}_i} \right) 
+$$
+where we consider the subsets of branching times $t^s_i \subset \{t_1,...,t_d\}$ to those branching times corresponding to \emph{speciation of missing species} $i$ and $\Delta t^e_i$ it corresponding extinction waiting time. 
 
 
 We call 
