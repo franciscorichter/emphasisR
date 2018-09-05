@@ -500,20 +500,12 @@ $$
 where $\frac{1}{f_Y(y|\phi^*)}$ is just a (unknown) constant value.
 . Note that the dependence on $\phi$ (which is important for the maximization step) only occurs in the term $\log f_{X;\phi^{*}}(x_i;\phi)$.
 
-To compute $g_{X|Y} (x_i|y,\phi^*)$ we use the nonhomogeneous Poisson process characterized by equation (\ref{eq1}). We introduce the vector $\xi = (\xi_1,...,\xi_d)$ where 
+To compute $g_{X|Y} (x_i|y,\phi^*)$ we use the nonhomogeneous Poisson process characterized by equation (\ref{eq1}). 
 
-
-\[
-  \xi_i =
-  \begin{cases}
-                                   0 & \text{if a speciation of a missing species happened at the branching time $t_i$} \\
-                                   1 & \text{else (i.e speciation of observed species or extinction at time $t_i$)} 
-  \end{cases}
-\]
 
 Then 
 
- \begin{equation} \label{sampprob}  g_{X|Y} (x_i|y,\phi^*) = \prod_{i=1}^{d} \left(f_{D}(M^{t_i} = (\Delta t_i,\tau_i,t_i^e))\right)^{\xi_i}\left(  f_M^{t_i}(\Delta t_M^{t_i} > \Delta t_i)  \right)^{1-\xi_i} \end{equation}
+ \begin{equation} \label{sampprob}  g_{X|Y} (x_i|y,\phi^*) = \prod_{i=1}^{d} e^{-\int_{t_i}^{t_i+t_s} n_t \lambda_{z,k}\left(1-e^{-\int_{z}^T\mu_{s,k}ds}\right)dz} \prod_{j=1}^m \lambda_{t_j+t_s,j}\mu_{t_j+t_s,j}e^{-\int_{t_j+t_s}^{t_e}\mu_{t,j}dt} \end{equation}
 
 
 

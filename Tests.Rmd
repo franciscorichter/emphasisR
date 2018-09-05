@@ -54,3 +54,5 @@ all.equal(lw1,lw2)
 all.equal(w1,w2)
 ```
 
+## Data augmentation algorithm 
+
