@@ -116,18 +116,16 @@ da.prob <- function(xi,wt,t_ext,s,mu,r,n){
 
 
 ## cool new way
-rnhe <- function(lambda,mu,Ti){  # random non-homogenous exponential
-  ex = rexp(1)
-  rv = IntInv(r=Ti,mu=mu,s=lambda,u=ex)
-  if(is.na(rv)){
-    rv = 99
-  }
-  return(list(rv=rv,ex=ex))
-}
 
-IntInv <- function(r,mu,s,u){
-  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
-  return(t)
+extinction.processes <- function(u,inits,mu0){
+  nm = length(u)
+  t.ext = vector(mode='numeric',length=nm)
+  if(nm > 0){
+    for(i in 1:nm){
+      t.ext[i] = inits[i] - log(1-u[i])/mu0  #Inverse of the intensity function for constant extinction rate
+    }
+  }
+  return(t.ext)
 }
 
 sim.extinct2 <- function(brts,pars,model='dd',seed=0){
@@ -138,9 +136,12 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
   mu0 = pars[2]
   K = pars[3]
   dim = length(wt)
+  ms = NULL # missing speciations, for now we just add time. When we consider topology we do it with species as well
+  me = NULL # missing extinctions (in the uniform plane)
   bt = NULL
   bte = NULL
   to = NULL
+  cbt = 0
   N = 2
   for(i in 1:dim){
     cwt = wt[i]
@@ -152,27 +153,33 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
         mu = mu0
         s = N*lambda
       }else{print('Model not implemented yet, try dd')}
-      rns = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
-      t.spe = rns$rv
-      #ex = rns$ex
-      sbte = bte[bte>cbt]
-      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
+      t.spe = rexp(1,s)
+      t.ext = extinction.processes(u=me,inits=ms,mu0=mu0)
+      t_ext = ifelse(length(t.ext)>0,min(t.ext),Inf)-cbt  # if is not empty gives the waiting time for next extinction
       mint = min(t.spe,t_ext)
       if(mint < cwt){
         if(mint == t.spe){#speciation
-          bt = c(bt,cbt+t.spe)
-          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu0)
-      #    text = cbt+t.spe+ex/mu0
-          bte = c(bte,text)
-          to = c(to,1)
-          N = N + 1
+          u = runif(1)
+          if(u < pexp(ct-(cbt+t.spe),mu)){
+            ms = c(ms,cbt+t.spe)
+            me = c(me,u)
+            bt = c(bt,cbt+t.spe)
+            text = extinction.processes(u=u,inits=cbt+t.spe,mu0=mu0)
+            bte = c(bte,text)
+            to = c(to,1)
+            N = N + 1
+          }
           cwt = cwt - t.spe
           cbt = cbt + t.spe
         }
         else{#extinction
-          bt = c(bt,cbt+t_ext)
+          extinctone = which(t.ext == min(t.ext))
+          text = t.ext[extinctone]
+          bt = c(bt,text)
           bte = c(bte,Inf)
           to = c(to,0)
+          ms = ms[-extinctone]
+          me = me[-extinctone]
           cwt = cwt - t_ext
           cbt = cbt + t_ext
           N = N-1
@@ -191,7 +198,6 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
   df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
   return(df)
 }
-
 
 ##
 

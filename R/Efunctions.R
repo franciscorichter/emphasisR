@@ -63,15 +63,18 @@ sim.sct <- function(brts,pars,m=10,oc=0,print=TRUE){
 }
 
 ###########################
-extinction.processes <- function(u,inits,mu0){
-  nm = length(u)
-  t.ext = vector(mode='numeric',length=nm)
-  if(nm > 0){
-    for(i in 1:nm){
-      t.ext[i] = inits[i] - log(1-u[i])/mu0  #Inverse of the intensity function for constant extinction rate
-    }
+rnhe <- function(lambda,mu,Ti){  # random non-homogenous exponential
+  ex = rexp(1)
+  rv = IntInv(r=Ti,mu=mu,s=lambda,u=ex)
+  if(is.na(rv)){
+    rv = 99
   }
-  return(t.ext)
+  return(rv)
+}
+
+IntInv <- function(r,mu,s,u){
+  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
+  return(t)
 }
 ###  simulation of extinct species
 sim.extinct <- function(brts,pars,model='dd',seed=0){
@@ -82,12 +85,9 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
   mu0 = pars[2]
   K = pars[3]
   dim = length(wt)
-  ms = NULL # missing speciations, for now we just add time. When we consider topology we do it with species as well
-  me = NULL # missing extinctions (in the uniform plane)
   bt = NULL
   bte = NULL
   to = NULL
-  cbt = 0
   N = 2
   for(i in 1:dim){
     cwt = wt[i]
@@ -99,33 +99,24 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
         mu = mu0
         s = N*lambda
       }else{print('Model not implemented yet, try dd')}
-      t.spe = rexp(1,s)
-      t.ext = extinction.processes(u=me,inits=ms,mu0=mu0)
-      t_ext = ifelse(length(t.ext)>0,min(t.ext),Inf)-cbt  # if is not empty gives the waiting time for next extinction
+      t.spe = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
+      sbte = bte[bte>cbt]
+      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
       mint = min(t.spe,t_ext)
       if(mint < cwt){
         if(mint == t.spe){#speciation
-          u = runif(1)
-          if(u < pexp(ct-(cbt+t.spe),mu)){
-            ms = c(ms,cbt+t.spe)
-            me = c(me,u)
-            bt = c(bt,cbt+t.spe)
-            text = extinction.processes(u=u,inits=cbt+t.spe,mu0=mu0)
-            bte = c(bte,text)
-            to = c(to,1)
-            N = N + 1
-          }
+          bt = c(bt,cbt+t.spe)
+          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu0)
+          bte = c(bte,text)
+          to = c(to,1)
+          N = N + 1
           cwt = cwt - t.spe
           cbt = cbt + t.spe
         }
         else{#extinction
-          extinctone = which(t.ext == min(t.ext))
-          text = t.ext[extinctone]
-          bt = c(bt,text)
+          bt = c(bt,cbt+t_ext)
           bte = c(bte,Inf)
           to = c(to,0)
-          ms = ms[-extinctone]
-          me = me[-extinctone]
           cwt = cwt - t_ext
           cbt = cbt + t_ext
           N = N-1
@@ -146,24 +137,20 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
 }
 
 #weight
-logweight <- function(pars,df,ct=NULL){ #sacar ct
+logweight <- function(pars,df){ #sacar ct
   dim = dim(df)[1]
-  wtT = diff(c(0,df$bt))
-  n.tree = list(wt=wtT,E=df$to[-dim])
-  n.tree$E[n.tree$E==2] = 1
-  E = n.tree$E
-  n = c(2,2+cumsum(E)+cumsum(E-1))
+  wt = diff(c(0,df$bt))
+  to = df$to[-dim]
+  to[to==2] = 1
+  n = c(2,2+cumsum(to)+cumsum(to-1))
   lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
-  mu = pars[2]
-  s = lambda*n
-  lsprob = da.prob2(wt=wtT,t_ext=df$t.ext,s=s,mu=pars[2],r=df$bt[dim]-c(0,df$bt[-dim]),n=n)
-  lrprob = -nllik.tree(pars,n.tree)
+  lsprob = g_prob(wt=wt,t_ext=df$t.ext,s=lambda*n,mu=pars[2],r=df$bt[dim]-c(0,df$bt[-dim]),n=n)
+  lrprob = -nllik.tree(pars,n.tree = list(wt=wtT,E=to))
   logweight = lrprob-lsprob
-  #logweight = -lsprob
   return(logweight)
 }
 
-da.prob2 <- function(wt,t_ext,s,mu,r,n){
+g_prob <- function(wt,t_ext,s,mu,r,n){
   t1 = -s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt)))
   la = s/n
   la = la[t_ext<999]
