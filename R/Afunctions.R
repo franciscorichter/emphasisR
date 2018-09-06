@@ -154,14 +154,15 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
       }else{print('Model not implemented yet, try dd')}
       rns = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
       t.spe = rns$rv
-      ex = rns$ex
+      #ex = rns$ex
       sbte = bte[bte>cbt]
-      t_ext = min(sbte) - cbt
+      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
       mint = min(t.spe,t_ext)
       if(mint < cwt){
         if(mint == t.spe){#speciation
           bt = c(bt,cbt+t.spe)
-          text = cbt+t.spe+ex/mu0
+          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu0)
+      #    text = cbt+t.spe+ex/mu0
           bte = c(bte,text)
           to = c(to,1)
           N = N + 1
@@ -187,7 +188,7 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
   df = df[order(df$bt),]
   df$t.ext = df$bte-df$bt
   df = df[-1,]
-  df = rbind(df,data.frame(bt=ct,bte=Inf,to=0,t.ext=Inf))
+  df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
   return(df)
 }
 

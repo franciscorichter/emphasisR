@@ -1140,20 +1140,18 @@ and the R implementation would be
 
 
 ```{r}
+rnhe <- function(lambda,mu,Ti){  # random non-homogenous exponential
+  ex = rexp(1)
+  rv = IntInv(r=Ti,mu=mu,s=lambda,u=ex)
+  if(is.na(rv)){
+    rv = 99
+  }
+  return(list(rv=rv,ex=ex))
+}
+
 IntInv <- function(r,mu,s,u){
   t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
   return(t)
-}
-
-rnonh2 <- function(lambda,mu,Ti){
-  ex = rexp(1)
-  top = IntInv(Ti,mu,lambda,ex)
-  if(is.na(top)){
-    rv = 99
-  }else{
-    rv = IntInv(Ti,mu,lambda,ex)
-  }
-  return(rv)
 }
 ```
 
@@ -1166,7 +1164,7 @@ Ti = r = 10
 
 # exp1
 
-m=1000000
+m=500000
 r1 = vector(mode = "numeric",length = m)
 r2 = vector(mode = "numeric",length = m)
 time = proc.time()
@@ -1176,12 +1174,14 @@ for(i in 1:m){
 t1 = get.time(time)
 time = proc.time()
 for(i in 1:m){
-  r2[i] = rnonh2(lambda,mu,Ti)
+  r2[i] = rnhe(lambda,mu,Ti)
 }
 t2 = get.time(time)
 
 r1 = r1[r1<Ti]
 r2 = r2[r2<Ti]
+length(r1)
+length(r2)
 
 dfh = data.frame(r=c(r1,r2),alg = c(rep("a1",length(r1)),rep("a2",length(r2))))
 ggplot(dfh,aes(x=r,fill=alg)) + geom_histogram(alpha=0.5,position='identity')

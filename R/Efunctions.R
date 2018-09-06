@@ -28,7 +28,7 @@ Q.approx = function(pars, st){
       l[i] = 0
     }
   }
-  L = sum(l*w)
+  L = sum(l*w)/sum(w)
   return(L)
 }
 
@@ -141,14 +141,13 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
   df = df[order(df$bt),]
   df$t.ext = df$bte-df$bt
   df = df[-1,]
-  df = rbind(df,data.frame(bt=ct,bte=Inf,to=0,t.ext=Inf))
+  df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
   return(df)
 }
 
 #weight
-logweight <- function(pars,df,ct=NULL){
+logweight <- function(pars,df,ct=NULL){ #sacar ct
   dim = dim(df)[1]
-  ct = df$bt[dim]
   wtT = diff(c(0,df$bt))
   n.tree = list(wt=wtT,E=df$to[-dim])
   n.tree$E[n.tree$E==2] = 1
@@ -157,9 +156,10 @@ logweight <- function(pars,df,ct=NULL){
   lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
   mu = pars[2]
   s = lambda*n
-  lsprob = da.prob2(wt=wtT,t_ext=df$t.ext,s=s,mu=pars[2],r=ct-c(0,df$bt[-length(df$bt)]),n=n)
+  lsprob = da.prob2(wt=wtT,t_ext=df$t.ext,s=s,mu=pars[2],r=df$bt[dim]-c(0,df$bt[-dim]),n=n)
   lrprob = -nllik.tree(pars,n.tree)
   logweight = lrprob-lsprob
+  #logweight = -lsprob
   return(logweight)
 }
 
@@ -204,9 +204,8 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
   for(i in 1:l1){
     S = sim.sct(brts,pars,m=m1)
     mle =  mle.st(S = S)
-    L = obs.lik.approx(pars = pars,st = S)
-    S1 = sim.sct(brts,realpars,m=m1)
-    L1 = obs.lik.approx(pars = pars,st = S1)
+#    L = obs.lik.approx(pars = pars,st = S)
+    lL = log(mean(S$w))
     DDD <- DDD:::dd_loglik(pars1 = pars, pars2 = pars2,
                            brts = brts, missnumspec = 0)
     pars = mle$par
@@ -214,9 +213,9 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
     M[i,] = pars
 
     DD = c(DD,DDD)
-    LL = c(LL,L)
+    LL = c(LL,lL)
     save(DD,LL,M,file = "DyL.RData")
-    print(paste('L-log(m):',L-log(m1),'L1-log(m):',L1-log(m1),'2DDDlogLik:',2*DDD,'pars:',pars[1],pars[2],pars[3]))
+    print(paste('l:',lL,'DDDlogLik:',DDD,'pars:',pars[1],pars[2],pars[3]))
   }
   l = 10
   PM = M[1:(l1-10),]

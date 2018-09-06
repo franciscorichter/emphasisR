@@ -3,17 +3,20 @@
 
 # approximated loglikelihood using MC
 obs.lik.approx <- function(st,pars){
-  m = length(st$rec)
-  l = vector(mode = 'numeric',length = m)
-  w = vector(mode = 'numeric',length = m)
-  for(i in 1:m){
-    s = st$rec[[i]]
-    w[i] = st$w[i]
-    l[i] = -nllik.tree(pars,tree=s)
-  }
-  f = exp(l)
-  L = log(sum(f*w))
-  return(L)
+#  m = length(st$rec)
+  #l = vector(mode = 'numeric',length = m)
+ # w = vector(mode = 'numeric',length = m)
+#  for(i in 1:m){
+ #   s = st$rec[[i]]
+    w = st$w
+  #  l[i] = -nllik.tree(pars,tree=s)
+#  }
+#  w = w/exp(l)
+  f = mean(w)
+  #f = exp(l)
+  #L = log(sum(f*w))
+  l = log(f)
+  return(l)
 }
 
 #post processing
@@ -79,3 +82,42 @@ get.time <- function(time,mode='sec'){
   return(ti)
 }
 
+
+
+W <- function (z, branch = 0)
+{
+  stopifnot(length(branch) == 1, is.numeric(z))
+  if (anyNA(z)) {
+    warning("Some values of ", deparse(substitute(z)), " are NA or NaN. ",
+            "Returning 'NA' for these entries.")
+    non.na.z <- z[!is.na(z)]
+  }
+  else {
+    non.na.z <- z
+  }
+  W.non.na.z <- rep(NA, length(non.na.z))
+  if (branch == 0) {
+    W.non.na.z <- lamW::lambertW0_C(non.na.z)
+  }
+  else if (branch == -1) {
+    if (any(is.infinite(z))) {
+      warning("'Inf' is not a valid argument of the non-principal branch W",
+              " (branch = -1).")
+    }
+    W.non.na.z <- lamW::lambertWm1_C(non.na.z)
+  }
+  else {
+    stop("Branch was ", branch, "; must be either '0' or '-1'.")
+  }
+  if (length(W.non.na.z) == length(z)) {
+    dim(W.non.na.z) <- dim(z)
+    return(W.non.na.z)
+  }
+  else {
+    W.z <- rep(NA, length(z))
+    W.z[!is.na(z)] <- W.non.na.z
+    W.z[is.nan(W.z)] <- NA
+    dim(W.z) <- dim(z)
+    return(W.z)
+  }
+}
