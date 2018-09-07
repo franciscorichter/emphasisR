@@ -35,12 +35,16 @@ mle.st <-function(S,init_par =c(0.5,0.5,100)){
 lg_prob <- function(tree){
   list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
   mu = pars[2]
-  t1 = -s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt)))
-  la = s/n
-  la = la[t_ext<999]
-  text = t_ext[t_ext<999]
-  t2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
-  logg = sum(t1) + t2
+  if(mu!=0){
+    term1 = -s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt)))
+    la = s/n
+    la = la[is.finite(t_ext)]
+    text = t_ext[is.finite(t_ext)]
+    term2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
+    logg = sum(term1) + term2
+  }else{
+    logg = 0
+  }
   return(logg)
 }
 
@@ -67,20 +71,22 @@ sim.sct <- function(brts,pars,m=10,print=TRUE){
     lsprob = emphasis::lg_prob(tree)
     nl = emphasis::nllik.tree(pars,tree=tree)
     lw = -nl-lsprob
-    return(list(df=df,nl=nl,lw=lw,tree=tree))
+    return(list(df=df,nl=nl,lw=lw,tree=tree,lsprob=lsprob))
   }
   stopCluster(cl)
   lw = sapply(trees,function(list) list$lw)
-  dim = sapply(trees,function(list) dim(list$df)[1])
+  dim = sapply(trees,function(list) length(list$tree$wt))
   nl = sapply(trees,function(list) list$nl)
   df = sapply(trees, function(list) list$df)
+  lg = sapply(trees, function(list) list$lsprob)
   trees = lapply(trees, function(list) list$tree)
   w = exp(lw)
+  eg = exp(lg)
   if(print){
     g = qplot(dim,w)
     print(g)
   }
-  return(list(dfs = df, w=w, dim=dim, nl=nl, trees=trees))
+  return(list(dfs = df, w=w, dim=dim, nl=nl, trees=trees,g=eg))
 }
 
 ###########################

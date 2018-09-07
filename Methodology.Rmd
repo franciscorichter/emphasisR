@@ -1164,7 +1164,7 @@ Ti = r = 10
 
 # exp1
 
-m=500000
+m=100000
 r1 = vector(mode = "numeric",length = m)
 r2 = vector(mode = "numeric",length = m)
 time = proc.time()
