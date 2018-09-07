@@ -3,7 +3,7 @@
 #negative logLikelihood of a tree
 nllik.tree = function(pars,tree){
   wt = tree$wt
-  to = tree$E
+  to = tree$to
   n = c(2,2+cumsum(to)+cumsum(to-1))
   lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
   mu = pars[2]
@@ -15,51 +15,72 @@ nllik.tree = function(pars,tree){
 }
 
 # negative logLikelihood of a set of trees
-Q.approx = function(pars, st){
-  m = length(st$rec)
-  l = vector(mode = 'numeric',length = m)
-  w = vector(mode = 'numeric',length = m)
+Q.approx = function(pars,st){
+  m = length(st$trees)
+  l = vector(mode="numeric",length=m)
   for(i in 1:m){
-    s = st$rec[[i]]# complete tree
-    w[i] = st$w[i]# corresponding weight
-    if(w[i]!=0){# if weight is non-zero, calculate likelihood
-      l[i] = nllik.tree(pars,tree=s)
-    }else{
-      l[i] = 0
-    }
+    l[i] = nllik.tree(pars,tree=st$trees[[i]])
   }
-  L = sum(l*w)/sum(w)
-  return(L)
+  w = st$w
+  Q = sum(l*w)/sum(w)
+  return(Q)
 }
 
 # MLE for a set of trees
 mle.st <-function(S,init_par =c(0.5,0.5,100)){
-  po =subplex(par = init_par, fn = Q.approx, st=S,hessian = TRUE)
+  po = subplex(par = init_par, fn = Q.approx, st=S,hessian = TRUE)
   return(po)
 }
 
+lg_prob <- function(tree){
+  list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
+  mu = pars[2]
+  t1 = -s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt)))
+  la = s/n
+  la = la[t_ext<999]
+  text = t_ext[t_ext<999]
+  t2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
+  logg = sum(t1) + t2
+  return(logg)
+}
+
+df2tree <- function(df,pars){
+  dim = dim(df)[1]
+  wt = diff(c(0,df$bt))
+  to = df$to[-dim]
+  to[to==2] = 1
+  n = c(2,2+cumsum(to)+cumsum(to-1))
+  s = n*(pars[1]-(pars[1]-pars[2])*(n/pars[3]))
+  r=df$bt[dim]-c(0,df$bt[-dim])
+  t_ext = df$t.ext
+  return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext))
+}
+
 # Monte-Carlo sampling function / simulation of a set of complete trees
-sim.sct <- function(brts,pars,m=10,oc=0,print=TRUE){
-  no_cores <- detectCores() - oc
+sim.sct <- function(brts,pars,m=10,print=TRUE){
+  no_cores <- detectCores()
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
   trees <- foreach(i = 1:m, combine = list) %dopar% {
     df =  emphasis::sim.extinct2(brts = brts,pars = pars)
-    lw = emphasis::logweight(pars,df)
-    wtT = c(diff(c(0,df$bt)))
-    E = df$to[-length(df$to)]
-    E[E==2] = 1
-    return(list(wt=wtT,E=E,lw=lw))
+    tree = emphasis::df2tree(df,pars)
+    lsprob = emphasis::lg_prob(tree)
+    nl = emphasis::nllik.tree(pars,tree=tree)
+    lw = -nl-lsprob
+    return(list(df=df,nl=nl,lw=lw,tree=tree))
   }
   stopCluster(cl)
   lw = sapply(trees,function(list) list$lw)
-  dim = sapply(trees,function(list) length(list$wt))
+  dim = sapply(trees,function(list) dim(list$df)[1])
+  nl = sapply(trees,function(list) list$nl)
+  df = sapply(trees, function(list) list$df)
+  trees = lapply(trees, function(list) list$tree)
   w = exp(lw)
   if(print){
     g = qplot(dim,w)
     print(g)
   }
-  return(list(rec = trees, w=w,dim=dim))
+  return(list(dfs = df, w=w, dim=dim, nl=nl, trees=trees))
 }
 
 ###########################
