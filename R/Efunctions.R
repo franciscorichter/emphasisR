@@ -71,7 +71,9 @@ sim.sct <- function(brts,pars,m=10,print=TRUE){
     lsprob = emphasis::lg_prob(tree)
     nl = emphasis::nllik.tree(pars,tree=tree)
     lw = -nl-lsprob
-    return(list(df=df,nl=nl,lw=lw,tree=tree,lsprob=lsprob))
+    fms = df$bt[is.finite(df$bte)][1] #first missing speciation
+    fe = df$bt[df$to==0][1] # first extinction
+    return(list(df=df,nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
   }
   stopCluster(cl)
   lw = sapply(trees,function(list) list$lw)
@@ -79,6 +81,8 @@ sim.sct <- function(brts,pars,m=10,print=TRUE){
   nl = sapply(trees,function(list) list$nl)
   df = sapply(trees, function(list) list$df)
   lg = sapply(trees, function(list) list$lsprob)
+  fms = sapply(trees, function(list) list$fms)
+  fe = sapply(trees, function(list) list$fe)
   trees = lapply(trees, function(list) list$tree)
   w = exp(lw)
   eg = exp(lg)
@@ -86,7 +90,7 @@ sim.sct <- function(brts,pars,m=10,print=TRUE){
     g = qplot(dim,w)
     print(g)
   }
-  return(list(dfs = df, w=w, dim=dim, nl=nl, trees=trees,g=eg))
+  return(list(dfs = df, w=w, dim=dim, nl=nl, trees=trees,g=eg,fms=fms,fe=fe))
 }
 
 ###########################
@@ -94,7 +98,7 @@ rnhe <- function(lambda,mu,Ti){  # random non-homogenous exponential
   ex = rexp(1)
   rv = IntInv(r=Ti,mu=mu,s=lambda,u=ex)
   if(is.na(rv)){
-    rv = 99
+    rv = Inf
   }
   return(rv)
 }
@@ -259,6 +263,7 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
   m = floor(m) + 1
   return(list(m=m,p=M[10,],s1=s1,M=M,H=H,MLE=MLE,PM=PM,PH=PH))
 }
+
 #MCEM
 mcem.tree <- function(brts,p){
   m = p$m
