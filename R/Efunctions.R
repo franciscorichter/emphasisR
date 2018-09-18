@@ -1,7 +1,7 @@
 ### EMPHASIS functions
 
 #negative logLikelihood of a tree
-nllik.tree = function(pars,tree,topology=TRUE){
+nllik.tree = function(pars,tree,topology=FALSE){
   wt = tree$wt
   to = tree$to
   n = c(2,2+cumsum(to)+cumsum(to-1))
@@ -189,9 +189,13 @@ logweight <- function(pars,df){ #sacar ct
   return(logweight)
 }
 
-g_prob <- function(wt,t_ext,s,mu,r,n){
+g_prob <- function(wt,t_ext,s,mu,r,n,topology=FALSE){
   t1 = -s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt)))
-  la = s/n
+  if(topology){
+    la = s/n
+  }else{
+    la = s
+  }
   la = la[t_ext<999]
   text = t_ext[t_ext<999]
   t2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
@@ -228,7 +232,7 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
   DD = NULL
   LL = NULL
   for(i in 1:l1){
-    S = sim.sct(brts,pars,m=m1)
+    S = sim.sct(brts,pars,m=m1,print = F)
     mle =  mle.st(S = S)
 #    L = obs.lik.approx(pars = pars,st = S)
     lL = log(mean(S$w))
@@ -255,7 +259,7 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
     Me = matrix(ncol = 3,nrow = l)
     if(printprocess) print(paste('iteration',i))
     for(j in 1:l){
-      S = sim.sct(brts,pars=M[i,],m=m1)
+      S = sim.sct(brts,pars=M[i,],m=m1,print = F)
       mle = mle.st(S = S)
       pars = mle$par
       Me[j,] = pars
