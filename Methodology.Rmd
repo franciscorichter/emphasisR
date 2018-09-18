@@ -509,9 +509,11 @@ Then
 
 On the case of spaciation rate piece-wise constant and extinction rate constant, this equation would be equivalent to 
 
-$$
+ \begin{equation}
  g_{X|Y}(x|y,\phi) = \prod_{i=1}^d \left(e^{-s_i\left[\Delta t_i+\frac{1}{\mu_0}(e^{-\mu_0 r_i }- e^{-\mu_0(r_i-\Delta t_i)})  \right]} \right) \prod_{i=1}^{m}\left(\lambda_{t^s_i,j} \mu_0  e^{-\mu_0\Delta t^{e}_i} \right) 
-$$
+\end{equation}
+
+
 where we consider the subsets of branching times $t^s_i \subset \{t_1,...,t_d\}$ to those branching times corresponding to \emph{speciation of missing species} $i$ and $\Delta t^e_i$ it corresponding extinction waiting time. 
 
 
@@ -1144,9 +1146,9 @@ rnhe <- function(lambda,mu,Ti){  # random non-homogenous exponential
   ex = rexp(1)
   rv = IntInv(r=Ti,mu=mu,s=lambda,u=ex)
   if(is.na(rv)){
-    rv = 99
+    rv = Inf
   }
-  return(list(rv=rv,ex=ex))
+  return(rv=rv)
 }
 
 IntInv <- function(r,mu,s,u){

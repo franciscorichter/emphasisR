@@ -1,14 +1,18 @@
 ### EMPHASIS functions
 
 #negative logLikelihood of a tree
-nllik.tree = function(pars,tree){
+nllik.tree = function(pars,tree,topology=TRUE){
   wt = tree$wt
   to = tree$to
   n = c(2,2+cumsum(to)+cumsum(to-1))
   lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
   mu = pars[2]
   sigma = (lambda + mu)*n
-  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  if(topology){
+    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  }else{
+    rho = n[-length(n)]*pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  }
   nl = -(sum(-sigma*wt)+sum(log(rho)))
   if(min(pars)<0){nl = Inf}
   return(nl)
@@ -32,7 +36,7 @@ mle.st <-function(S,init_par =c(0.5,0.5,100)){
   return(po)
 }
 
-lg_prob <- function(tree){
+lg_prob <- function(tree,topology=TRUE){
   list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
   mu = pars[2]
   if(mu!=0){
@@ -40,7 +44,11 @@ lg_prob <- function(tree){
     la = s/n
     la = la[is.finite(t_ext)]
     text = t_ext[is.finite(t_ext)]
-    term2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
+    if(topology){
+      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
+    }else{
+      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(s))
+    }
     logg = sum(term1) + term2
   }else{
     logg = 0
