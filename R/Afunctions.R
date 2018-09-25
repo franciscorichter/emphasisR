@@ -327,3 +327,18 @@ sim.extinct_old <- function(brts,pars,model='dd',seed=0){
   n.tree$g=lsprob
   return(n.tree)
 }
+
+
+#weight
+#logweight <- function(pars,df){ #sacar ct
+#  dim = dim(df)[1]
+#  wt = diff(c(0,df$bt))
+#  to = df$to[-dim]
+#  to[to==2] = 1
+#  n = c(2,2+cumsum(to)+cumsum(to-1))
+#  lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
+#  lsprob = g_prob(wt=wt,t_ext=df$t.ext,s=lambda*n,mu=pars[2],r=df$bt[dim]-c(0,df$bt[-dim]),n=n)
+#  lrprob = -nllik.tree(pars,n.tree = list(wt=wtT,E=to))
+#  logweight = lrprob-lsprob
+#  return(logweight)
+#}

@@ -1,23 +1,15 @@
 # more utilities
 
 
-# approximated loglikelihood using MC
-obs.lik.approx <- function(st,pars){
-#  m = length(st$rec)
-  #l = vector(mode = 'numeric',length = m)
- # w = vector(mode = 'numeric',length = m)
-#  for(i in 1:m){
- #   s = st$rec[[i]]
-    w = st$w
-  #  l[i] = -nllik.tree(pars,tree=s)
-#  }
-#  w = w/exp(l)
-  f = mean(w)
-  #f = exp(l)
-  #L = log(sum(f*w))
-  l = log(f)
-  return(l)
+# stochastic function
+
+mc.llik <- function(pars,brts,m){
+  S = sim.sct(brts,pars,m,print=FALSE)
+  aplli = log(mean(S$w))
+  return(aplli)
 }
+
+
 
 #post processing
 post.pro <-function(file,extrafile=NULL){

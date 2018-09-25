@@ -1,42 +1,46 @@
 ### EMPHASIS functions
 
-#negative logLikelihood of a tree
-nllik.tree = function(pars,tree,topology=FALSE){
+# negative logLikelihood of a tree
+nllik.tree = function(pars,tree,topology=T){
   wt = tree$wt
   to = tree$to
   n = c(2,2+cumsum(to)+cumsum(to-1))
-  lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
+  lambda = lambda.dd(pars,n)
   mu = pars[2]
   sigma = (lambda + mu)*n
   if(topology){
-    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),1e-99)
   }else{
-    rho = n[-length(n)]*pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+    rho = pmax(n[-length(n)]*lambda[-length(lambda)]*to+mu*(1-to),1e-99)
   }
   nl = -(sum(-sigma*wt)+sum(log(rho)))
   if(min(pars)<0){nl = Inf}
   return(nl)
 }
 
+lambda.dd <- function(pars,n){
+  (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
+}
+
 # negative logLikelihood of a set of trees
-Q.approx = function(pars,st){
+Q.approx = function(pars,st,topology=TRUE){
   m = length(st$trees)
   l = vector(mode="numeric",length=m)
   for(i in 1:m){
-    l[i] = nllik.tree(pars,tree=st$trees[[i]])
+    l[i] = nllik.tree(pars,tree=st$trees[[i]],topology = topology)
   }
   w = st$w
-  Q = sum(l*w)/sum(w)
+  Q = sum(l*w)
   return(Q)
 }
 
 # MLE for a set of trees
-mle.st <-function(S,init_par =c(0.5,0.5,100)){
-  po = subplex(par = init_par, fn = Q.approx, st=S,hessian = TRUE)
+mle.st <-function(S,init_par = c(3,0.5,100),topology=TRUE){
+  po = subplex(par = init_par, fn = Q.approx, st = S,topology=topology,hessian = TRUE)
   return(po)
 }
 
-lg_prob <- function(tree,topology=TRUE){
+lg_prob <- function(tree,topology=T){
   list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
   mu = pars[2]
   if(mu!=0){
@@ -47,11 +51,11 @@ lg_prob <- function(tree,topology=TRUE){
     if(topology){
       term2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
     }else{
-      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(s))
+      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(s[is.finite(t_ext)]))
     }
     logg = sum(term1) + term2
   }else{
-    logg = 0
+    logg = 0 #is this Ok?
   }
   return(logg)
 }
@@ -62,23 +66,22 @@ df2tree <- function(df,pars){
   to = df$to[-dim]
   to[to==2] = 1
   n = c(2,2+cumsum(to)+cumsum(to-1))
-  s = n*(pars[1]-(pars[1]-pars[2])*(n/pars[3]))
-  r=df$bt[dim]-c(0,df$bt[-dim])
+  s = n*lambda.dd(pars,n)
+  r = df$bt[dim]-c(0,df$bt[-dim])
   t_ext = df$t.ext
   return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext))
 }
-
 # Monte-Carlo sampling function / simulation of a set of complete trees
-sim.sct <- function(brts,pars,m=10,print=TRUE){
+sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE){
   no_cores <- detectCores()
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
   trees <- foreach(i = 1:m, combine = list) %dopar% {
     df =  emphasis::sim.extinct2(brts = brts,pars = pars)
     tree = emphasis::df2tree(df,pars)
-    lsprob = emphasis::lg_prob(tree)
-    nl = emphasis::nllik.tree(pars,tree=tree)
-    lw = -nl-lsprob
+    lsprob = emphasis::lg_prob(tree,topology = topology)
+    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology)
+    lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
     fms = df$bt[is.finite(df$bte)][1] #first missing speciation
     fe = df$bt[df$to==0][1] # first extinction
     return(list(df=df,nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
@@ -102,9 +105,13 @@ sim.sct <- function(brts,pars,m=10,print=TRUE){
 }
 
 ###########################
-rnhe <- function(lambda,mu,Ti){  # random non-homogenous exponential
+rnhe <- function(lambda,mu,Ti,extinct=TRUE){  # random non-homogenous exponential
   ex = rexp(1)
-  rv = IntInv(r=Ti,mu=mu,s=lambda,u=ex)
+  if(extinct){
+    rv = IntInv(r=Ti,mu=mu,s=lambda,u=ex)
+  }else{
+    rv = IntInvExtant(r=Ti,mu=mu,s=lambda,u=ex)
+  }
   if(is.na(rv)){
     rv = Inf
   }
@@ -115,15 +122,18 @@ IntInv <- function(r,mu,s,u){
   t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
   return(t)
 }
+
+IntInvExtant <- function(r,mu,s,u){
+  t = log(u*(mu/s)*exp(mu*r)+1)/mu
+}
+
 ###  simulation of extinct species
 sim.extinct <- function(brts,pars,model='dd',seed=0){
   if(seed>0) set.seed(seed)
   wt = -diff(c(brts,0))
   ct = sum(wt)
-  lambda0 = pars[1]
-  mu0 = pars[2]
-  K = pars[3]
   dim = length(wt)
+  mu = pars[2]
   bt = NULL
   bte = NULL
   to = NULL
@@ -134,8 +144,7 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
     key = 0
     while(key == 0){
       if(model == "dd"){  # diversity-dependence model
-        lambda = max(1e-99, lambda0 - (lambda0-mu0)*N/K)
-        mu = mu0
+        lambda = max(1e-99, lambda.dd(pars,N))
         s = N*lambda
       }else{print('Model not implemented yet, try dd')}
       t.spe = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
@@ -145,7 +154,7 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
       if(mint < cwt){
         if(mint == t.spe){#speciation
           bt = c(bt,cbt+t.spe)
-          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu0)
+          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu)
           bte = c(bte,text)
           to = c(to,1)
           N = N + 1
@@ -175,33 +184,7 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
   return(df)
 }
 
-#weight
-logweight <- function(pars,df){ #sacar ct
-  dim = dim(df)[1]
-  wt = diff(c(0,df$bt))
-  to = df$to[-dim]
-  to[to==2] = 1
-  n = c(2,2+cumsum(to)+cumsum(to-1))
-  lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
-  lsprob = g_prob(wt=wt,t_ext=df$t.ext,s=lambda*n,mu=pars[2],r=df$bt[dim]-c(0,df$bt[-dim]),n=n)
-  lrprob = -nllik.tree(pars,n.tree = list(wt=wtT,E=to))
-  logweight = lrprob-lsprob
-  return(logweight)
-}
 
-g_prob <- function(wt,t_ext,s,mu,r,n,topology=FALSE){
-  t1 = -s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt)))
-  if(topology){
-    la = s/n
-  }else{
-    la = s
-  }
-  la = la[t_ext<999]
-  text = t_ext[t_ext<999]
-  t2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
-  logg = sum(t1) + t2
-  return(logg)
-}
 
 ####
 
@@ -315,3 +298,5 @@ mcem.tree <- function(brts,p){
   PARS = data.frame(it=1:(dim(Me)[1]+dim(PARS)[1]),lambda = c(Me[,1],PARS[,1]),mu=c(Me[,2],PARS[,2]),K=c(Me[,3],PARS[,3]))
   return(list(pars=pars,PARS=PARS,H=H,tE=tE,tM=tM,efficiency=efficiency))
 }
+
+pars2 = c(2.5e+02,1.0e+00, 0.0e+00, 1.0e+00, 0.0e+00, 2.0e+00, 1.0e-03, 1.0e-04, 1.0e-06, 1.0e+03)
