@@ -7,11 +7,11 @@ nllik.tree = function(pars,tree,topology=T){
   n = c(2,2+cumsum(to)+cumsum(to-1))
   lambda = lambda.dd(pars,n)
   mu = pars[2]
-  sigma = (lambda + mu)*n
+  sigma = ifelse(n != 2,(lambda + mu)*n,lambda*n)
   if(topology){
-    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),1e-99)
+    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   }else{
-    rho = pmax(n[-length(n)]*lambda[-length(lambda)]*to+mu*(1-to),1e-99)
+    rho = pmax(n[-length(n)]*lambda[-length(lambda)]*to+mu*(1-to),0)
   }
   nl = -(sum(-sigma*wt)+sum(log(rho)))
   if(min(pars)<0){nl = Inf}
@@ -23,11 +23,11 @@ lambda.dd <- function(pars,n){
 }
 
 # negative logLikelihood of a set of trees
-Q.approx = function(pars,st,topology=TRUE){
+Q.approx = function(pars,st,topology){
   m = length(st$trees)
   l = vector(mode="numeric",length=m)
   for(i in 1:m){
-    l[i] = nllik.tree(pars,tree=st$trees[[i]],topology = topology)
+    l[i] = nllik.tree(pars,tree=st$trees[[i]],topology=topology)
   }
   w = st$w
   Q = sum(l*w)
@@ -35,8 +35,8 @@ Q.approx = function(pars,st,topology=TRUE){
 }
 
 # MLE for a set of trees
-mle.st <-function(S,init_par = c(3,0.5,100),topology=TRUE){
-  po = subplex(par = init_par, fn = Q.approx, st = S,topology=topology,hessian = TRUE)
+mle.st <-function(S,init_par = c(0.5,0.5,100),topology=TRUE){
+  po = subplex(par = init_par, fn = Q.approx, topology=topology,st = S,hessian = TRUE)
   return(po)
 }
 
@@ -84,13 +84,12 @@ sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE){
     lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
     fms = df$bt[is.finite(df$bte)][1] #first missing speciation
     fe = df$bt[df$to==0][1] # first extinction
-    return(list(df=df,nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
+    return(list(nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
   }
   stopCluster(cl)
   lw = sapply(trees,function(list) list$lw)
   dim = sapply(trees,function(list) length(list$tree$wt))
   nl = sapply(trees,function(list) list$nl)
-  df = sapply(trees, function(list) list$df)
   lg = sapply(trees, function(list) list$lsprob)
   fms = sapply(trees, function(list) list$fms)
   fe = sapply(trees, function(list) list$fe)
@@ -101,7 +100,7 @@ sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE){
     g = qplot(dim,w)
     print(g)
   }
-  return(list(dfs = df, w=w, dim=dim, nl=nl, trees=trees,g=eg,fms=fms,fe=fe))
+  return(list(w=w, dim=dim, nl=nl, trees=trees,g=eg,fms=fms,fe=fe))
 }
 
 ###########################

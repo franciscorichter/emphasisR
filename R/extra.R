@@ -9,6 +9,20 @@ mc.llik <- function(pars,brts,m){
   return(aplli)
 }
 
+# subset of trees
+sub.st <- function(S,ntrees=10){
+  qu = quantile(S$w,1-ntrees/length(S$w))
+  whi = which(S$w>qu)
+  length(whi)
+  newtrees = vector(mode="list",length=length(whi))
+  i=1
+  for(j in whi){
+    newtrees[[i]] = S$trees[[j]]
+    i = i+1
+  }
+  newS = list(w=S$w[whi],dim=S$dim[whi],nl=S$nl[whi],trees=newtrees,g=S$g[whi],fsm=S$fsm[whi],fe=S$fe[whi])
+  return(newS)
+}
 
 
 #post processing

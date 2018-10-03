@@ -325,7 +325,11 @@ $$ \sigma_i = \sum_{j = 1}^{n_{t_i}} \lambda_{t_i,j}+\mu_{t_i,j}$$
 and the the sum of speciation rates at time $t_i$ as \footnote{Note that $s_i = \lambda_{t_i}$, they are just continuos/discrete caracterizations of the same process.}
 $$s_i = \sum_{j = 1}^{n_{t_i}} \lambda_{t_i,j} $$
 Moreover, we define the topology component of a tree at time $t_i$ as the vector $\tau_i \in \{0,1\}^{2*n_{t_i}}$. So, this vector contains a $1$ in the position $j$ if species $j$ has speciated at time $t_i$, or a $1$ in position $(n_{t_i}+j)$ if species $j$ becames extinct at time $t_i$, and $0$ elsewhere. We finally define 
-$$ \rho_i = \prod_{j=1}^{n_{t_i}} (\lambda_{(t_i,j)})^{\tau_i^{(j)}}\prod_{j=1}^{n_{t_i}} (\mu_{t_i,j})^{\tau_i^{(n_{t_i}+j)}}$$
+  \[\rho_i= \begin{cases} 
+       \lambda_{t_{i},j} & \text{if speciation of species j takes place at time } t_i \\
+      \mu_{t_{i},j} & \text{if extinction of species j takes place at time } t_i
+   \end{cases}
+\]
 where $\tau_i^{(j)}$ is the $j$-component of the vector $\tau_i$.
 Note that $\rho_i$ is just the speciation or extinction rate of species diversifying at branching time $t_i$. As we assume that only one speciation or extinction take place at a moment $t$ \footnote{this can be generalized to multiple speciations/extinctions. For potential further projects/extenctions/generalizations please see the appendix.}, the vector $\tau_i$ in principle contains only one 1 and 0??s elsewhere and we use the notation $\mathbbm{1}_j$ for a trans-dimensional vector with a 1 at position $j$ and zeros elsewhere. 
 
@@ -366,7 +370,9 @@ On the E-step we want to calculate
   
   \begin{equation} \label{lik} f_X(x;\phi) = \left(\prod_{i=1}^{d} e^{-\sigma_i \Delta t_i}\right)\left( \prod_{i=1}^{d-1} \rho_i \right) \end{equation}
   
+or
 
+ \begin{equation} \label{lik} \log f_X(x;\phi) =  \sum_{i=1}^{d-1} log(\rho_i)  - \sum_{i=1}^{d} \sigma_i \Delta t_i\end{equation}
 
 and $f_{X|Y} (x|y,\phi)$ is the probability density of the complete tree $x$ given that $x \in \mathcal{X}(y)$. Given the complexity of the space $\mathcal{X}(y)$, $Q(\phi|\phi^*)$ does not holds a close form, then a numerical approximation is needed. 
   
