@@ -7,7 +7,7 @@ nllik.tree = function(pars,tree,topology=T){
   n = c(2,2+cumsum(to)+cumsum(to-1))
   lambda = lambda.dd(pars,n)
   mu = pars[2]
-  sigma = ifelse(n != 2,(lambda + mu)*n,lambda*n)
+  sigma = (lambda + mu)*n
   if(topology){
     rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   }else{
@@ -18,8 +18,12 @@ nllik.tree = function(pars,tree,topology=T){
   return(nl)
 }
 
+#lambda.dd <- function(pars,n){
+#  pars[1]*(1-n/pars[3])
+#}
+
 lambda.dd <- function(pars,n){
-  (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
+  max(1e-99, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
 }
 
 # negative logLikelihood of a set of trees
