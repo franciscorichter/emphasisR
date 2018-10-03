@@ -23,7 +23,7 @@ nllik.tree = function(pars,tree,topology=T){
 #}
 
 lambda.dd <- function(pars,n){
-  max(1e-99, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
+  pmax(1e-99, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
 }
 
 # negative logLikelihood of a set of trees
