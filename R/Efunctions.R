@@ -1,11 +1,16 @@
 ### EMPHASIS functions
 
 # negative logLikelihood of a tree
-nllik.tree = function(pars,tree,topology=T){
+nllik.tree = function(pars,tree,topology=T,model="dd"){
   wt = tree$wt
   to = tree$to
   n = c(2,2+cumsum(to)+cumsum(to-1))
-  lambda = lambda.dd(pars,n)
+  if(model == "dd"){
+    lambda = lambda.dd(pars,n)
+  }
+  if(model == "dd.1.3"){
+    lambda = lamda.dd.1.3(pars,n)
+  }
   mu = pars[2]
   sigma = (lambda + mu)*n
   if(topology){
@@ -18,20 +23,20 @@ nllik.tree = function(pars,tree,topology=T){
   return(nl)
 }
 
-#lambda.dd <- function(pars,n){
-#  pars[1]*(1-n/pars[3])
-#}
+lambda.dd.1.3 <- function(pars,n){
+  pmax(1e-99, pars[1]*(1-n/pars[3]))
+}
 
 lambda.dd <- function(pars,n){
   pmax(1e-99, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
 }
 
 # negative logLikelihood of a set of trees
-Q.approx = function(pars,st,topology){
+Q.approx = function(pars,st,topology,model="dd"){
   m = length(st$trees)
   l = vector(mode="numeric",length=m)
   for(i in 1:m){
-    l[i] = nllik.tree(pars,tree=st$trees[[i]],topology=topology)
+    l[i] = nllik.tree(pars,tree=st$trees[[i]],topology=topology,model=model)
   }
   w = st$w
   Q = sum(l*w)
@@ -39,8 +44,8 @@ Q.approx = function(pars,st,topology){
 }
 
 # MLE for a set of trees
-mle.st <-function(S,init_par = c(0.5,0.5,100),topology=TRUE){
-  po = subplex(par = init_par, fn = Q.approx, topology=topology,st = S,hessian = TRUE)
+mle.st <-function(S,init_par = c(0.5,0.5,100),topology=TRUE,model="dd"){
+  po = subplex(par = init_par, fn = Q.approx, topology=topology,st = S,model=model,hessian = TRUE)
   return(po)
 }
 
@@ -48,7 +53,7 @@ lg_prob <- function(tree,topology=T){
   list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
   mu = pars[2]
   if(mu!=0){
-    term1 = -s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt)))
+    term1 = sum(-s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt))))
     la = s/n
     la = la[is.finite(t_ext)]
     text = t_ext[is.finite(t_ext)]
@@ -57,34 +62,39 @@ lg_prob <- function(tree,topology=T){
     }else{
       term2 = length(la)*log(mu)-sum(mu*text)+sum(log(s[is.finite(t_ext)]))
     }
-    logg = sum(term1) + term2
+    logg = term1 + term2
   }else{
-    logg = 0 #is this Ok?
+    logg = 0
   }
   return(logg)
 }
 
-df2tree <- function(df,pars){
+df2tree <- function(df,pars,model="dd"){
   dim = dim(df)[1]
   wt = diff(c(0,df$bt))
   to = df$to[-dim]
   to[to==2] = 1
   n = c(2,2+cumsum(to)+cumsum(to-1))
-  s = n*lambda.dd(pars,n)
+  if(model=="dd"){
+    s = n*lambda.dd(pars,n)
+  }
+  if(model == "dd.1.3"){
+    s = n*lamda.dd.1.3(pars,n)
+  }
   r = df$bt[dim]-c(0,df$bt[-dim])
   t_ext = df$t.ext
   return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext))
 }
 # Monte-Carlo sampling function / simulation of a set of complete trees
-sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE){
+sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd"){
   no_cores <- detectCores()
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
   trees <- foreach(i = 1:m, combine = list) %dopar% {
-    df =  emphasis::sim.extinct2(brts = brts,pars = pars)
-    tree = emphasis::df2tree(df,pars)
+    df =  emphasis::sim.extinct2(brts = brts,pars = pars,model=model)
+    tree = emphasis::df2tree(df,pars,model=model)
     lsprob = emphasis::lg_prob(tree,topology = topology)
-    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology)
+    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model)
     lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
     fms = df$bt[is.finite(df$bte)][1] #first missing speciation
     fe = df$bt[df$to==0][1] # first extinction
@@ -147,9 +157,12 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
     key = 0
     while(key == 0){
       if(model == "dd"){  # diversity-dependence model
-        lambda = max(1e-99, lambda.dd(pars,N))
-        s = N*lambda
-      }else{print('Model not implemented yet, try dd')}
+        lambda = lambda.dd(pars,N)
+      }
+      if(model == "dd1.3"){
+        lambda = lambda.dd.1.3(pars,N)
+      }
+      s = N*lambda
       t.spe = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
       sbte = bte[bte>cbt]
       t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
@@ -187,12 +200,10 @@ sim.extinct <- function(brts,pars,model='dd',seed=0){
   return(df)
 }
 
-
-
 ####
 
 # relative likelihood
-rel.llik <- function(S1,p0,p1){
+rel.llik <- function(S1,p0,p1,model="dd"){
   m = length(S1)
   f1 = vector(mode='numeric',length = m)
   f2 = vector(mode='numeric',length = m)
@@ -200,8 +211,8 @@ rel.llik <- function(S1,p0,p1){
   S1 = S1$rec[S1$w>0]
   for(i in 1:m){
     s = S1[[i]]
-    f1[i] = nllik.tree(pars=p1,tree=s)
-    f2[i] = nllik.tree(pars=p0,tree=s)
+    f1[i] = nllik.tree(pars=p1,tree=s,model=model)
+    f2[i] = nllik.tree(pars=p0,tree=s,model=model)
     d[i] = length(s$tree$wt)
     if(is.na(f1[i])) print(s)
   }
@@ -210,7 +221,7 @@ rel.llik <- function(S1,p0,p1){
 }
 
 # Pilot study
-pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3,60),l1=20){
+pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3,60),l1=20,model="dd"){
   # pilot study suggested by Chan et. al
   pars = init_par
   M = matrix(ncol = 3,nrow = l1)
@@ -218,10 +229,11 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
   DD = NULL
   LL = NULL
   for(i in 1:l1){
-    S = sim.sct(brts,pars,m=m1,print = F)
-    mle =  mle.st(S = S)
+    S = sim.sct(brts,pars,m=m1,print = F,model =  model)
+    mle =  mle.st(S = S, model=model)
 #    L = obs.lik.approx(pars = pars,st = S)
     lL = log(mean(S$w))
+    if(model=="dd.1.3"){pars2[2]=1.3}
     DDD <- DDD:::dd_loglik(pars1 = pars, pars2 = pars2,
                            brts = brts, missnumspec = 0)
     pars = mle$par
@@ -245,11 +257,11 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
     Me = matrix(ncol = 3,nrow = l)
     if(printprocess) print(paste('iteration',i))
     for(j in 1:l){
-      S = sim.sct(brts,pars=M[i,],m=m1,print = F)
-      mle = mle.st(S = S)
+      S = sim.sct(brts,pars=M[i,],m=m1,print = F,model=model)
+      mle = mle.st(S = S,model=model)
       pars = mle$par
       Me[j,] = pars
-      Delta[j] = rel.llik(S1 = S,p0 = M[i,], p1 = pars)
+      Delta[j] = rel.llik(S1 = S,p0 = M[i,], p1 = pars,model=model)
     }
     MLE[[i]] = Me
     mD = mean(Delta)
@@ -263,7 +275,7 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
 }
 
 #MCEM
-mcem.tree <- function(brts,p){
+mcem.tree <- function(brts,p,model="dd"){
   m = p$m
   s1 = p$s1
   sig = 100*s1/m
@@ -282,17 +294,17 @@ mcem.tree <- function(brts,p){
   while(abs(D)>tol){
     if(m*prop<p$m) m = m/prop
     time = proc.time()
-    S = sim.sct(brts = brts,pars=pars,m = m)
+    S = sim.sct(brts = brts,pars=pars,m = m,model=model)
     prop = sum(S$w>0)/length(S$w)
     efficiency = c(efficiency,prop)
     tE = c(tE,get.time(time))
     time = proc.time()
-    M = mle.st(S = S)
+    M = mle.st(S = S,model=model)
     tM = c(tM,get.time(time))
     mle = M$par
     h1 = try(diag(solve(M$hessian))/m)
     if(is.numeric(h1)) H =  rbind(H,h1)
-    D = rel.llik(S1 = S,p0 = pars,p1 = mle)
+    D = rel.llik(S1 = S,p0 = pars,p1 = mle,model=model)
     PARS = rbind(PARS,mle)
     pars = mle
     print(paste("iteration",k,"Q: ",M$value,'proportion of useful trees',prop,'sampling size',m*prop, " lambda: ", pars[1]," mu: ", pars[2], "K:", pars[3]))

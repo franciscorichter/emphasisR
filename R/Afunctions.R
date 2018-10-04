@@ -81,13 +81,6 @@ logweight <- function(pars,df,ct=NULL){
   s = lambda*n
   #sprob = da.prob(xi=xi,wt=n.tree$wt,t_ext=df$t.ext,s=s,mu=pars[2],r=ct-c(0,df$bt[-length(df$bt)]),n=n)
   lsprob = da.prob2(wt=wtT,t_ext=df$t.ext,s=s,mu=pars[2],r=ct-c(0,df$bt[-length(df$bt)]),n=n)
-  #lsprob = sum(log(sprob))
-  #lsprob2 = sum(log(sprob2))
-  #if(lsprob2==lsprob){
-  #  print("iguales")
-  #}else{
-  #  stop(paste(lsprob2,lsprob))
-  #}
   lrprob = -nllik.tree(pars,n.tree)
   logweight = lrprob-lsprob
   return(logweight)
@@ -133,7 +126,7 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
   wt = -diff(c(brts,0))
   ct = sum(wt)
   lambda0 = pars[1]
-  mu0 = pars[2]
+  mu0 = mu = pars[2] #mu can be removed
   K = pars[3]
   dim = length(wt)
   ms = NULL # missing speciations, for now we just add time. When we consider topology we do it with species as well
@@ -149,10 +142,12 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
     key = 0
     while(key == 0){
       if(model == "dd"){  # diversity-dependence model
-        lambda = max(1e-99, lambda0 - (lambda0-mu0)*N/K)
-        mu = mu0
-        s = N*lambda
-      }else{print('Model not implemented yet, try dd')}
+        lambda = lambda.dd(pars,N)
+      }
+      if(model == "dd1.3"){
+        lambda = lambda.dd.1.3(pars,N)
+      }
+      s = N*lambda
       t.spe = rexp(1,s)
       t.ext = extinction.processes(u=me,inits=ms,mu0=mu0)
       t_ext = ifelse(length(t.ext)>0,min(t.ext),Inf)-cbt  # if is not empty gives the waiting time for next extinction
@@ -160,7 +155,7 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
       if(mint < cwt){
         if(mint == t.spe){#speciation
           u = runif(1)
-          if(u < pexp(ct-(cbt+t.spe),mu)){
+          if(u < pexp(ct-(cbt+t.spe),mu0)){
             ms = c(ms,cbt+t.spe)
             me = c(me,u)
             bt = c(bt,cbt+t.spe)
