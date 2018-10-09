@@ -25,6 +25,36 @@ sub.st <- function(S,ntrees=10){
 }
 
 
+sim.sct.alt <- function(brts,pars){
+  no_cores <- detectCores()
+  cl <- makeCluster(no_cores)
+  registerDoParallel(cl)
+  trees <- foreach(i = 1:m, combine = list) %dopar% {
+    df =  emphasis::sim.extinct2(brts = brts,pars = pars,model=model)
+    tree = emphasis::df2tree(df,pars,model=model)
+    lsprob = emphasis::lg_prob(tree,topology = topology)
+    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model)
+    lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
+    fms = df$bt[is.finite(df$bte)][1] #first missing speciation
+    fe = df$bt[df$to==0][1] # first extinction
+    return(list(nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
+  }
+  stopCluster(cl)
+  lw = sapply(trees,function(list) list$lw)
+  dim = sapply(trees,function(list) length(list$tree$wt))
+  nl = sapply(trees,function(list) list$nl)
+  lg = sapply(trees, function(list) list$lsprob)
+  fms = sapply(trees, function(list) list$fms)
+  fe = sapply(trees, function(list) list$fe)
+  trees = lapply(trees, function(list) list$tree)
+  w = exp(lw)
+  eg = exp(lg)
+  if(print){
+    g = qplot(dim,w)
+    print(g)
+  }
+  return(list(w=w, dim=dim, nl=nl, trees=trees,g=eg,fms=fms,fe=fe))
+}
 #post processing
 post.pro <-function(file,extrafile=NULL){
   load(file)

@@ -1,7 +1,7 @@
 ### EMPHASIS functions
 
 # negative logLikelihood of a tree
-nllik.tree = function(pars,tree,topology=T,model="dd"){
+nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F){
   wt = tree$wt
   to = tree$to
   n = c(2,2+cumsum(to)+cumsum(to-1))
@@ -17,6 +17,10 @@ nllik.tree = function(pars,tree,topology=T,model="dd"){
     rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   }else{
     rho = pmax(n[-length(n)]*lambda[-length(lambda)]*to+mu*(1-to),0)
+  }
+  if(truncdim){
+    sigma = sigma[-length(sigma)]
+    wt = wt[-length(wt)]
   }
   nl = -(sum(-sigma*wt)+sum(log(rho)))
   if(min(pars)<0){nl = Inf}
