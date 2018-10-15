@@ -307,6 +307,20 @@ points(f.true2)</code></pre>
 </div>
 </div>
 </div>
+<div id="marginal-distribution-of-observed-trees" class="section level3">
+<h3>Marginal distribution of observed trees</h3>
+<p>For the case when only 1 speciation is allowed, we have that the marginal distribution of the observed tree <span class="math inline">\(y\)</span> is</p>
+<span class="math display">\[\begin{equation}
+
+f(y|\theta) = \begin{cases} 
+              \lambda e^{-2\lambda t_1} e^{-3\mu (T- t_1)} &amp; \text{if } brts(y) = (t_1, T) \\
+              
+             1 + \frac{e^{3\mu T}}{3\mu-2\lambda}(1-e^{(3\mu-2\lambda)T})\lambda  &amp; \text{if } brts(y) = T
+              \end{cases}
+              
+\end{equation}\]</span>
+<p>To extend this marginal function to the case of <span class="math inline">\(M\)</span> allowed speciations we, for now, focuss on <span class="math inline">\(brts(y) = T\)</span>,</p>
+</div>
 </div>
 
 
