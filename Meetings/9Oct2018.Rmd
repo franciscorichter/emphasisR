@@ -18,18 +18,18 @@ f.joint1 <- function(tm,lambda,mu,CT=2){
       ans[i] = exp(-2*lambda*CT)
     } else {
       if (tm[i,2] == CT){
-        ans[i] = dexp(tm[i,1],2*lambda)*(1/2)*exp(-(CT-tm[i,1])*3*mu)
+        ans[i] = dexp(tm[i,1],2*lambda)*(1/2)*pexp(CT-tm[i,1],3*mu,lower.tail=F)
       } else {
         ans[i] = dexp(tm[i,1],2*lambda)*(1/2)*(exp(-(tm[i,2]-tm[i,1])*3*mu))*mu
       }
     }
   }
-  return(ans)
+  return(log(ans))
 }
 
-f.joint <- function(x,lambda,mu,M){
+f.joint <- function(x,lambda,mu){
   tm = x$brts
-  M = (ncol(x$to)-1)/2
+  M = (ncol(tm)-1)/2
   ans<-NULL
   pars = c(lambda,mu,9e+99)
   if (is.vector(tm)){
@@ -41,16 +41,16 @@ f.joint <- function(x,lambda,mu,M){
     t.ext = no.na(x$t.ext[i,])
     e = (to==1 & t.ext < 9e+8)
     if(length(wt) == length(to)) to = to[-length(to)]
+    tot = to
+    to[to==2] = 1
     n = c(2,2+cumsum(to)+cumsum(to-1))
     mu = pars[2]
     lambda = lambda.dd(pars,n)
     rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
     sigma = (lambda + mu)*n
     sigma[n==2] = lambda[n==2]*2
-    tot = to
-    tot[tot==2] = 1
     if(sum(tot)>=M){
-      stopspec = min(which(cumsum(tot)==M))
+      stopspec = min(which(cumsum(to)==M))
       sigma[(stopspec+1):length(sigma)] = mu*n[(stopspec+1):length(sigma)]
       if(sum(1-to)==M){
         sigma = sigma[-length(sigma)]
@@ -62,8 +62,27 @@ f.joint <- function(x,lambda,mu,M){
   return(ans)
 }
 
+f.marg <- function(tm,lambda,mu){
+  ans<-NULL
+  if (is.vector(tm)){
+    tm<-matrix(tm,nrow=1)
+  }
+  CT = no.na(tm[1,])[length(no.na(tm[1,]))]
+  for (i in 1:nrow(tm)){
+    if (tm[i,1] == CT){
+      if (3*mu==2*lambda){
+        ans[i] = 1 - 2*CT*lambda*exp(-3*mu*CT)
+      } else {
+        ans[i] = 1 + ((2*lambda*exp(-3*mu*CT))/(3*mu-2*lambda))*(1-exp(CT*(3*mu-2*lambda)))
+      }
+    } else {
+      ans[i] = dexp(tm[i,1],2*lambda)*(1/2)*(exp(-(tm[i,2]-tm[i,1])*3*mu))
+    }
+  }
+  return(ans)
+}
 
-g1 <- function(ta,to){
+g1 <- function(ta,to,CT){
   ans<-NULL
   n<-nrow(ta)
   if (is.vector(to)){
@@ -76,42 +95,48 @@ g1 <- function(ta,to){
       if (ta[i,1]==CT){
         ans[i]=0.5
       } else {
-        ans[i] = 0.5*dunif(ta[i,1],min=0,max = CT)*dunif(ta[i,2],min=0,max = CT)
+        ans[i] = 0.5*dunif(ta[i,1],min=0,max = CT)*dunif(ta[i,2],min=ta[i,1],max = CT)/6
       }
     }
   }
   return(ans)
 }
 
-g <- function(x,Dim){
+g <- function(x,M){
   ans<-NULL
   n<-nrow(x$brts)
   for (i in 1:n){
     df = data.frame(bt=no.na(x$brts[i,]),bte=no.na(x$t.ext[i,]),to=no.na(x$to[i,]),t.ext=no.na(x$t.ext[i,])-no.na(x$brts[i,]))
-    ans[i] = g_samp(df,Dim)
+    ans[i] = g_samp(df,M)
   }
   return(ans)
 }
 
-g_samp <- function(df,Dim){
+g_samp <- function(df,M){
   last = dim(df)[1]
   ct = df[last,1]
-  M = Dim 
-  Ne = sum(df$to==0)
+  Ng = sum(df$to==2) - 1 # number of observed speciations (or given data)
+  R = M - Ng
   subdf = df[df$to==1,]
+  ms = dim(subdf)[1]
   Ts = ct-subdf$bt
   tempto = df$to
   to = df$to[-last]
   to[to==2] = 1
   n = c(2,2+cumsum(to)+cumsum(to-1))
-  n = n[tempto==1]
-  log_dens = -log(M+1)-Ne*log(ct)-sum(log(Ts)) -sum(log(n))
+  n = n[tempto==1 | tempto==0]
+  if(R==0){
+    log_dens = 0
+  }else{
+    log_dens = - log(R+1) - ms*log(ct) - sum(log(Ts)) - sum(log(n))
+  }
   return(log_dens)
 }
 
-
-sim.extinct.truncdim <- function(brts,Dim){
-  Ne = sample((0:Dim),1)
+sim.extinct.truncdim <- function(brts,M){
+  brts = no.na(brts)
+  R = M - (length(brts)-1) # maximum possible number of extinctions
+  Ne = sample((0:R),1)
   ms = runif(Ne,min=0,max=brts[1])
   me = runif(Ne,min=ms,max=brts[1])
   to = c(rep(1,Ne),rep(0,Ne))
@@ -127,18 +152,43 @@ no.na <- function(vector){
 }
 
 
-g.sim <- function(x.obs,n=NULL,Dim){
+g.sim1<-function(to,n=NULL,CT=2){
+  if (is.vector(to)){
+    to<-matrix(rep(to,each=n),ncol=2)
+  } else {
+    n<-nrow(to)
+  }
+  ta<-matrix(NA,nrow=n,ncol=3)
+  for (i in 1:n){
+    if (is.na(to[i,2])){
+      if (rbinom(1,1,.5)==1){
+        u<-runif(2,min=0,max=CT)
+        ta[i,1] = min(u)
+        ta[i,2] = max(u)
+        ta[i,3] = CT
+      } else {
+        ta[i,1] = CT
+      }
+    } else {
+      ta[i,1:2] = to[i,]
+    }
+  }
+  return(ta)
+}
+
+
+g.sim <- function(x.obs,n=NULL,M){
   if (is.vector(x.obs)){
     x.obs <- matrix(rep(x.obs,each=n),ncol=length(x.obs))
   }
   n <- nrow(x.obs)
-  brts <- matrix(nrow=n,ncol=2*Dim+1)
-  to <- matrix(nrow=n,ncol=2*Dim+1)
-  t.ext <- matrix(nrow=n,ncol=2*Dim+1)
+  brts <- matrix(nrow=n,ncol=2*M+1)
+  to <- matrix(nrow=n,ncol=2*M+1)
+  t.ext <- matrix(nrow=n,ncol=2*M+1)
   for (i in 1:n){
     wt = no.na(diff(c(0,x.obs[i,])))
     cs = length(wt)-1 # current speciations
-    pm = Dim - cs  # possible speciations
+    pm = M - cs  # possible speciations
     if(pm > 0 ){
       df = sim.extinct.truncdim(cumsum(wt),pm)
       brts[i,1:length(df$bt)] = df$bt
@@ -146,7 +196,7 @@ g.sim <- function(x.obs,n=NULL,Dim){
       t.ext[i,1:length(df$to)] = df$t.ext
     }else{
       brts[i,1:length(wt)] = cumsum(wt)
-      to[i,1:(length(wt))] = c(rep(1,(length(wt)-1)),2)
+      to[i,1:(length(wt))] = c(rep(2,(length(wt)-1)),2)
       t.ext[i,1:(length(wt))] = c(rep(Inf,(length(wt)-1)),Inf)
     }
   }
@@ -248,6 +298,7 @@ rm_ext <- function(x){
   return(x)
 }
 
+
 ```
 
 
@@ -269,20 +320,18 @@ x
 tm = x$brts[x$to[,1]==1,]
 tm
 
-# they should be the same
-exp(f.joint(x,lambda = lambda, mu=mu,M=M))
+# should match
+f.joint(x,lambda = lambda, mu=mu)
 f.joint1(tm,lambda,mu)
 
 x.obs<-observe(x)
 x.obs
 
-x.ext<-g.sim(x.obs,Dim=M)
+x.ext<-g.sim(x.obs,M=M)
 x.ext
 
-g.sim(x.obs[1,],n=6,Dim = M)
+g.sim(x.obs[1,],n=6,M = M)
 
-exp(g(x.ext,Dim = M))
-g1(x.ext$brts,x.obs)
-
-#g(x.ext,x.obs[1,])
+exp(g(x.ext,M))
+g1(x.ext$brts,x.obs,CT=CT)
 ```
