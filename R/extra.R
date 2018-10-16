@@ -157,3 +157,29 @@ W <- function (z, branch = 0)
     return(W.z)
   }
 }
+
+
+get.topologies <- function(M){
+  TO = matrix(nrow=2*M,ncol=1)
+  TO[1,1] = 1
+  for(i in 2:(2*M)){
+    comb = ncol(TO)
+    for(j in 1:comb){
+      ns = sum(no.na(TO[,j]))
+      ne = sum(1-no.na(TO[,j]))
+      if(ns < M & ns > ne){ #extinction or speciation
+        TO[i,j] = 1
+        TO = cbind(TO,matrix(TO[,j],ncol=1))
+        TO[i,ncol(TO)] = 0
+      }
+      if(ns == M & ns > ne){ #extinction
+        TO[i,j] = 0
+      }
+      if(ns < M & ns == ne){ #speciation
+        TO[i,j] = 1
+      }
+    }
+  }
+  return(TO)
+}
+
