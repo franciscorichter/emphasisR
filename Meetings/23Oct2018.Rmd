@@ -9,10 +9,21 @@ library(emphasis)
 ```
 
 
+$$ f(y | x=T, \theta) =  
+
+\begin{cases}
+    e^{-2\lambda T} & \text{if } brts(y) = T \\
+    f_1(y|x=CT,\theta) & \text{if } brts(y) = (t_1,t_2,T) \\
+    f_2(y|x=CT,\theta) & \text{if } brts(y) = (t_1,t_2,t_3,t_4,T)
+\end{cases}
+
+$$
+where 
+
 
 \begin{equation}
 \begin{split}
-f(y|x=CT,\theta) =& -\frac{e^{s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
+f_2(y|x=CT,\theta) = & -\frac{e^{s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
  &+\frac{e^{-s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
   &+\frac{e^{-s_3}}{s_4(s_4-s_3)(s_4-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
    &-\frac{e^{-s_2}}{s_4(s_4-s_3)(s_4-s_2)(s_4-s_1)}(e^{T(s_4-s_1)}-1)\\
@@ -209,3 +220,5 @@ points(mu,f_hat2,col="red")
 points(mu,f_hat3,col="blue")
 ```
 
+
+## constant rates likelihood

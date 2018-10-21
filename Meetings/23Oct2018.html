@@ -125,9 +125,16 @@ $(document).ready(function () {
 </div>
 
 
+<p>$$ f(y | x=T, ) =</p>
+<span class="math display">\[\begin{cases}
+    e^{-2\lambda T} &amp; \text{if } brts(y) = T \\
+    f_1(y|x=CT,\theta) &amp; \text{if } brts(y) = (t_1,t_2,T) \\
+    f_2(y|x=CT,\theta) &amp; \text{if } brts(y) = (t_1,t_2,t_3,t_4,T)
+\end{cases}\]</span>
+<p>$$ where</p>
 <span class="math display">\[\begin{equation}
 \begin{split}
-f(y|x=CT,\theta) =&amp; -\frac{e^{s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
+f_2(y|x=CT,\theta) = &amp; -\frac{e^{s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
  &amp;+\frac{e^{-s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
   &amp;+\frac{e^{-s_3}}{s_4(s_4-s_3)(s_4-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
    &amp;-\frac{e^{-s_2}}{s_4(s_4-s_3)(s_4-s_2)(s_4-s_1)}(e^{T(s_4-s_1)}-1)\\
@@ -304,6 +311,9 @@ plot(mu,f.true,type=&quot;l&quot;,ylim=c(min(f_hat,f_hat3),max(f.true,f_hat,f_ha
 points(mu,f_hat)
 points(mu,f_hat2,col=&quot;red&quot;)
 points(mu,f_hat3,col=&quot;blue&quot;)</code></pre>
+</div>
+<div id="constant-rates-likelihood" class="section level2">
+<h2>constant rates likelihood</h2>
 </div>
 
 
