@@ -125,6 +125,10 @@ $(document).ready(function () {
 </div>
 
 
+<p>The sampling probability would be then</p>
+<p><span class="math display">\[g(x|y) = \frac{(N_e+1)!}{R+1}\left(\frac{1}{T} \right)^{N_e} \prod_{i=1}^{N_e} \frac{1}{T-T_i} \prod_{j=1}^{N_e} \frac{1}{n_j} \]</span></p>
+<p>or</p>
+<p><span class="math display">\[ log(g(x|y)) = log((N_e+1)!)-log(R+1)-N_elog(T)-\sum_{i=1}^{N_e}log(T-T_i)-\sum_{j=1}^{N_e}log(n_{j}) \]</span></p>
 <pre class="r"><code>### Method 1: uniform
 
 sim.extinct.alt &lt;- function(brts,cte=10){
@@ -152,9 +156,7 @@ g_samp &lt;- function(df,cte){
   to[to==2] = 1
   n = c(2,2+cumsum(to)+cumsum(to-1))
   n = n[df$to==1]
-  #  density = (1/(M+1))*((1/ct)^Ne)*prod(1/Ts)*prod(1/n)
   log_dens = -log(M+1)-Ne*log(ct)-sum(log(Ts))-sum(log(n))+lgamma(Ne+1)
-  #log_dens = -log(M+1)-2*Ne*log(ct)-sum(log(n))
   return(log_dens)
 }
 
