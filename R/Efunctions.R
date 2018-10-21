@@ -13,6 +13,7 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F){
   }
   mu = pars[2]
   sigma = (lambda + mu)*n
+  sigma[n==2] = lambda[n==2]*2
   if(topology){
     rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   }else{
