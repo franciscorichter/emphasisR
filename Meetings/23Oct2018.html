@@ -188,8 +188,8 @@ h_2(y|x=CT,s(\tau,\theta)) = (\mu\lambda)^2(&amp; -\frac{e^{-s_2T}}{s_4(s_4-s_3)
   out = (exp(-s[3]*CT)/(s[3]-s[2])) * ( (exp(CT*(s[3]-s[2]))/(s[2]-s[1]))*(exp(CT*(s[2]-s[1]))-1) +
                               - (1/(s[3]-s[1]))*(exp(CT*(s[3]-s[1]))-1) )
   if(s[1]==s[3]){
-    out = (exp(-s[3]*CT)/(s[3]-s[2])) * ( (exp(CT*(s[3]-s[2]))/(s[2]-s[1]))*(exp(CT*(s[2]-s[1]))-1) +
-                                            - (CT-1) )
+    out = (exp(-s[3]*CT)/(s[3]-s[2])) * ( (exp(CT*(s[3]-s[2]))/(s[2]-s[1]))*(exp(CT*(s[2]-s[1]))-1)  - CT )
+                                           
   }
   return(out)
 }
@@ -323,7 +323,7 @@ x.obs[,1] = CT
 
 f.hat&lt;-NULL
 n.sim &lt;- nrow(x.obs)
-n.gsim = 100000
+n.gsim = 10000
 for (i in 1:n.sim){
   x.ext&lt;-g.sim(x.obs[i,],n=n.gsim,M=M)
   f.hat[i] &lt;- mean(exp(f.joint(x.ext,lambda=lambda,mu=mu)-g(x.ext,M)))
@@ -331,8 +331,8 @@ for (i in 1:n.sim){
 f.true&lt;-f.marg2S(CT,lambda,mu)
 cbind(f.true,f.hat)</code></pre>
 <pre><code>##         f.true    f.hat
-## [1,] 0.5299195 1.408896
-## [2,] 0.5299195 1.407410</code></pre>
+## [1,] 0.5472712 1.369830
+## [2,] 0.5472712 1.437007</code></pre>
 </div>
 <div id="comparing-likelihoods-with-and-without-topology" class="section level2">
 <h2>Comparing likelihoods with and without topology</h2>
