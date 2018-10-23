@@ -125,31 +125,48 @@ $(document).ready(function () {
 </div>
 
 
-<p>$$ f(y | x=T, ) =</p>
-<span class="math display">\[\begin{cases}
-    e^{-2\lambda T} &amp; \text{if } brts(y) = T \\
-    f_1(y|x=CT,\theta) &amp; \text{if } brts(y) = (t_1,t_2,T) \\
-    f_2(y|x=CT,\theta) &amp; \text{if } brts(y) = (t_1,t_2,t_3,t_4,T)
-\end{cases}\]</span>
-<p>$$ where</p>
+<p>Finally the marginal equation corresponds to</p>
+<span class="math display">\[\begin{equation}
+
+F(x|y,\theta) = e^{-2\lambda T} + 6h_1(y|x=CT,s(\tau_3,\theta)) + 72h_2(y|x=CT,s(\tau_1,\theta)) + 36h_2(y|x=CT,s(\tau_2,\theta))
+
+\end{equation}\]</span>
+<p>where <span class="math inline">\(\tau_1 = (1,1,0,0), \tau_2 = (1,0,1,0)\)</span> and <span class="math inline">\(\tau_3 = (1,0)\)</span> and</p>
+<span class="math display">\[\begin{equation}
+
+h_1(y|x=CT,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \mu \lambda e^{-s_1t_1-s_2t_2-s_3(T-t_1-t_2)} dt_2 dt_1 
+
+\end{equation}\]</span>
+<p>and</p>
+<span class="math display">\[\begin{equation}
+
+h_2(y|x=CT,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \displaystyle\int_0^{T-t_1-t_2}\displaystyle\int_0^{T-t_1-t_2-t_3} (\mu \lambda)^2 e^{-s_1t_1-s_2t_2-s_3t_3-s_4t_4} dt_4dt_3dt_2 dt_1 
+
+\end{equation}\]</span>
+<p>That is</p>
+<span class="math display">\[\begin{equation}
+
+h_1(y|x=CT,s(\tau,\theta)) = (\mu\lambda)\frac{e^{-s_2T}}{(s_3-s_1)(s_2-s_1)}\left( e^{(s_3-s_2)T}-1 \right) - \frac{e^{-s_3T}}{(s_3-s_2)(s_3-s_1)}\left( e^{(s_3-s_1)T}-1 \right) 
+
+\end{equation}\]</span>
+and
 <span class="math display">\[\begin{equation}
 \begin{split}
-f_2(y|x=CT,\theta) = &amp; -\frac{e^{s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
- &amp;+\frac{e^{-s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
-  &amp;+\frac{e^{-s_3}}{s_4(s_4-s_3)(s_4-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
-   &amp;-\frac{e^{-s_2}}{s_4(s_4-s_3)(s_4-s_2)(s_4-s_1)}(e^{T(s_4-s_1)}-1)\\
-    &amp;-\frac{e^{-s_4}}{s_4s_3(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
-     &amp;+\frac{e^{-s_2}}{s_4s_3(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
-      &amp;-\frac{e^{-s_3}}{s_4s_3(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
-       &amp;-\frac{e^{-s_2}}{s_4s_3s_2s_1}(e^{-s_1T}-1)\\
- &amp;-\frac{1}{s_4(s_4-s_3)s_2(s_2-s_1)}(e^{-s_1T}-1) \}
+h_2(y|x=CT,s(\tau,\theta)) = (\mu\lambda)^2(&amp; -\frac{e^{-s_2T}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
+ &amp;+\frac{e^{-s_3T}}{s_4(s_4-s_3)(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
+  &amp;+\frac{e^{-s_2T}}{s_4(s_4-s_3)(s_4-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
+   &amp;-\frac{e^{-s_4T}}{s_4(s_4-s_3)(s_4-s_2)(s_4-s_1)}(e^{T(s_4-s_1)}-1)\\
+    &amp;-\frac{e^{-s_2T}}{s_4s_3(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
+     &amp;+\frac{e^{-s_3T}}{s_4s_3(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
+      &amp;-\frac{e^{-s_2T}}{s_4s_3(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
+       &amp;-\frac{1}{s_4s_3s_2s_1}(e^{-s_1T}-1) \}
 \end{split}
 \end{equation}\]</span>
 <pre class="r"><code>spec2 &lt;- function(s,CT){
   out = -(exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1)+
       (exp(-s[3]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])*(s[3]-s[1])))*(exp(CT*(s[3]-s[1]))-1) +
     (exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
-    -(exp(s[4]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[4]-s[1])))*(exp(CT*(s[4]-s[1]))-1) +
+    -(exp(-s[4]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[4]-s[1])))*(exp(CT*(s[4]-s[1]))-1) +
     -(exp(-s[2]*CT)/(s[4]*s[3]*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
     (exp(-s[3]*CT)/(s[4]*s[3]*(s[3]-s[2])*(s[3]-s[1])))*(exp(CT*(s[3]-s[1]))-1) +
     -(exp(-s[2]*CT)/(s[4]*s[3]*s[2]*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
@@ -158,7 +175,7 @@ f_2(y|x=CT,\theta) = &amp; -\frac{e^{s_2}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(
     out = -(exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1)+
       (exp(-s[3]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])))*(CT) +
       (exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
-      -(exp(s[4]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[4]-s[1])))*(exp(CT*(s[4]-s[1]))-1) +
+      -(exp(-s[4]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[4]-s[1])))*(exp(CT*(s[4]-s[1]))-1) +
       -(exp(-s[2]*CT)/(s[4]*s[3]*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
       (exp(-s[3]*CT)/(s[4]*s[3]*(s[3]-s[2])))*(CT) +
       -(exp(-s[2]*CT)/(s[4]*s[3]*s[2]*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
@@ -180,16 +197,40 @@ f.marg2S &lt;- function(CT,lambda,mu){
   s1 = c(2,3,4,3)*c(lambda,lambda+mu,mu,mu)
   s2 = c(2,3,2,3)*c(lambda,lambda+mu,lambda,mu)
   s3 = c(2,3,2)*c(lambda,lambda+mu,lambda)
-  out = spec2(s1,CT)*(lambda/(lambda+mu))+spec2(s2,CT)*(mu/(lambda+mu))+spec1(s3,CT)+exp(-ct*2*lambda)
+  out = spec2(s1,CT)*72*(lambda*mu)^2+spec2(s2,CT)*72*(lambda*mu)^2+spec1(s3,CT)*6*lambda*mu+exp(-CT*2*lambda)
   return(out)
 }</code></pre>
-<div id="dendroica-case" class="section level2">
-<h2>Dendroica case</h2>
-<pre class="r"><code>### Method 1: uniform
+<p>other functions we need</p>
+<pre class="r"><code>g.sim &lt;- function(x.obs,n=NULL,M){
+  if (is.vector(x.obs)){
+    x.obs &lt;- matrix(rep(x.obs,each=n),ncol=length(x.obs))
+  }
+  n &lt;- nrow(x.obs)
+  brts &lt;- matrix(nrow=n,ncol=2*M+1)
+  to &lt;- matrix(nrow=n,ncol=2*M+1)
+  t.ext &lt;- matrix(nrow=n,ncol=2*M+1)
+  for (i in 1:n){
+    wt = no.na(diff(c(0,x.obs[i,])))
+    cs = length(wt)-1 # current speciations
+    pm = M - cs  # possible speciations
+    if(pm &gt; 0 ){
+      df = sim.extinct.truncdim(cumsum(wt),pm)
+      brts[i,1:length(df$bt)] = df$bt
+      to[i,1:length(df$to)] = df$to
+      t.ext[i,1:length(df$to)] = df$t.ext
+    }else{
+      brts[i,1:length(wt)] = cumsum(wt)
+      to[i,1:(length(wt))] = c(rep(2,(length(wt)-1)),2)
+      t.ext[i,1:(length(wt))] = c(rep(Inf,(length(wt)-1)),Inf)
+    }
+  }
+  return(list(brts=brts,to=to,t.ext=t.ext))
+}
 
-sim.extinct.alt &lt;- function(brts,cte=10){
-  N = length(brts)+1
-  Ne = sample(0:(cte*N),1)
+sim.extinct.truncdim &lt;- function(brts,M){
+  brts = no.na(brts)
+  R = M - (length(brts)-1) # maximum possible number of extinctions
+  Ne = sample((0:R),1)
   ms = runif(Ne,min=0,max=brts[1])
   me = runif(Ne,min=ms,max=brts[1])
   to = c(rep(1,Ne),rep(0,Ne))
@@ -200,120 +241,143 @@ sim.extinct.alt &lt;- function(brts,cte=10){
   return(df)
 }
 
-g_samp &lt;- function(df,cte){
+g &lt;- function(x,M){
+  ans&lt;-NULL
+  n&lt;-nrow(x$brts)
+  for (i in 1:n){
+    df = data.frame(bt=no.na(x$brts[i,]),bte=no.na(x$t.ext[i,]),to=no.na(x$to[i,]),t.ext=no.na(x$t.ext[i,])-no.na(x$brts[i,]))
+    ans[i] = g_samp(df,M)
+  }
+  return(ans)
+}
+
+g_samp &lt;- function(df,M){
   last = dim(df)[1]
   ct = df[last,1]
-  N = sum(df$to==2)+1
-  M = N*cte
-  Ne = sum(df$to==0)
+  Ng = sum(df$to==2) - 1 # number of observed speciations (or given data)
+  R = M - Ng
   subdf = df[df$to==1,]
+  ms = dim(subdf)[1]
   Ts = ct-subdf$bt
+  tempto = df$to
   to = df$to[-last]
   to[to==2] = 1
   n = c(2,2+cumsum(to)+cumsum(to-1))
-  n = n[df$to==1]
-  #  density = (1/(M+1))*((1/ct)^Ne)*prod(1/Ts)*prod(1/n)
-  log_dens = -log(M+1)-Ne*log(ct)-sum(log(Ts))-sum(log(n))+lgamma(Ne+1)
-  #log_dens = -log(M+1)-2*Ne*log(ct)-sum(log(n))
+  n = n[tempto==1 | tempto==0]
+  if(R==0){
+    log_dens = 0
+  }else{
+    log_dens = - log(R+1) - ms*log(ct) - sum(log(Ts)) - sum(log(n))
+  }
   return(log_dens)
 }
-
-
-f.hat &lt;- function(brts,pars,cte=10,m=100){
-  f.joint = vector(mode=&quot;numeric&quot;,length=m)
-  g.samp = vector(mode=&quot;numeric&quot;,length=m)
-  for(i in 1:m){
-    df = sim.extinct.alt(brts,cte=cte)
-    f.joint[i] = -emphasis::nllik.tree(pars,tree=emphasis::df2tree(df,pars))
-    g.samp[i] = g_samp(df,cte=cte)
+f.joint &lt;- function(x,lambda,mu){
+  tm = x$brts
+  M = (ncol(tm)-1)/2
+  ans&lt;-NULL
+  pars = c(lambda,mu,9e+99)
+  if (is.vector(tm)){
+    tm&lt;-matrix(tm,nrow=1)
   }
-  f_hat = log(mean(exp(f.joint-g.samp)))
-  return(f_hat)
-}
-
-##### Method 2: Poisson
-
-sim.extinct.alt2 &lt;- function(brts,pars){
-  Ne = rpois(1,pars[1]-pars[2])
-  ms = runif(Ne,min=0,max=brts[1])
-  me = runif(Ne,min=ms,max=brts[1])
-  to = c(rep(1,Ne),rep(0,Ne))
-  df = data.frame(bt = c(ms,me),bte=c(me,rep(Inf,Ne)),to=to)
-  df = rbind(df,data.frame(bt=brts,to=rep(2,length(brts)),bte=rep(Inf,length(brts))))
-  df = df[order(df$bt),]
-  df$t.ext = df$bte-df$bt
-  return(df)
-}
-
-g_samp2 &lt;- function(df,pars){
-  last = dim(df)[1]
-  ct = df[last,1]
-  Ne = sum(df$to==0)
-  subdf = df[df$to==1,]
-  Ts = ct-subdf$bt
-  to = df$to[-last]
-  to[to==2] = 1
-  n = c(2,2+cumsum(to)+cumsum(to-1))
-  n = n[df$to==1]
-  #  density = (1/(M+1))*((1/ct)^Ne)*prod(1/Ts)*prod(1/n)
-  log_dens = dpois(Ne,lambda = pars[1]-pars[2],log=TRUE)-Ne*log(ct)-sum(log(Ts))-sum(log(n))+lgamma(Ne+1)
-  #log_dens = -log(M+1)-2*Ne*log(ct)-sum(log(n))
-  return(log_dens)
-}
-
-
-f.hat2 &lt;- function(brts,pars,m=100){
-  f.joint = vector(mode=&quot;numeric&quot;,length=m)
-  g.samp = vector(mode=&quot;numeric&quot;,length=m)
-  for(i in 1:m){
-    df = sim.extinct.alt2(brts,pars=pars)
-    f.joint[i] = -emphasis::nllik.tree(pars,tree=emphasis::df2tree(df,pars))
-    g.samp[i] = g_samp2(df,pars=pars)
+  for (i in 1:nrow(tm)){
+    wt = no.na(diff(c(0,x$brts[i,])))
+    to = no.na(x$to[i,])
+    t.ext = no.na(x$t.ext[i,])
+    e = (to==1 &amp; t.ext &lt; 9e+8) # speciation of missing species
+    if(length(wt) == length(to)) to = to[-length(to)]
+    tot = to
+    to[to==2] = 1
+    n = c(2,2+cumsum(to)+cumsum(to-1))
+    mu = pars[2]
+    lambda = lambda.dd(pars,n)
+    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+    sigma = (lambda + mu)*n
+    sigma[n==2] = lambda[n==2]*2
+    if(sum(to)&gt;=M){
+      stopspec = min(which(cumsum(to)==M))
+      sigma[(stopspec+1):length(sigma)] = mu*n[(stopspec+1):length(sigma)]
+      if(sum(1-to)==M){
+        sigma = sigma[-length(sigma)]
+        wt = wt[-length(wt)]
+      }
+    }
+    ans[i] = sum(-sigma*wt)+sum(log(rho))
   }
-  f_hat = log(mean(exp(f.joint-g.samp)))
-  return(f_hat)
+  return(ans)
 }
-############################
-# Consider a single case
+no.na &lt;- function(vector){
+  vector[!is.na(vector)]
+}</code></pre>
+<div id="experiment" class="section level3">
+<h3>Experiment</h3>
+<pre class="r"><code>n.sim = 4
+lambda = 1
+mu = 0.3
+CT = 2
+M = 2
 
-pars = c(3,1,9e+9999999)
-brts = 2
-f.hat(brts,pars,m = 1000)
-f.hat2(brts,pars,m = 1000)
+#x.obs&lt;-observe(x)
+x.obs &lt;- matrix(nrow=2,ncol=(2*M+1))
+x.obs[,1] = CT
 
+f.hat&lt;-NULL
+n.sim &lt;- nrow(x.obs)
+n.gsim = 100000
+for (i in 1:n.sim){
+  x.ext&lt;-g.sim(x.obs[i,],n=n.gsim,M=M)
+  f.hat[i] &lt;- mean(exp(f.joint(x.ext,lambda=lambda,mu=mu)-g(x.ext,M)))
+}
+f.true&lt;-f.marg2S(CT,lambda,mu)
+cbind(f.true,f.hat)</code></pre>
+<pre><code>##         f.true    f.hat
+## [1,] 0.5299195 1.408896
+## [2,] 0.5299195 1.407410</code></pre>
+</div>
+<div id="constant-rates-likelihood" class="section level2">
+<h2>constant rates likelihood</h2>
+<pre class="r"><code>ut  &lt;- function (lambda, mu, t) {
+  time &lt;- t
+  Lambda &lt;- exp((mu - lambda) * time)
+  out    &lt;- (lambda == mu) * (lambda * time/(1 + lambda * time)) +
+    (lambda != mu) * ((lambda - lambda * Lambda + (lambda == mu)) / (lambda - mu * Lambda * (lambda != mu) + (lambda == mu)))
+  return(unname(out))
+}
 
-###########################################################
-# Consider varying mu
+pn &lt;- function(lambda, mu, t, n) {
+  out &lt;- (n &gt; 0) * pt(t = t, lambda = lambda, mu = mu) *
+    (1 - ut(t = t, lambda = lambda, mu = mu)) *
+    ut(t = t, lambda = lambda, mu = mu)^(n - 1 + 2*(n == 0)) +
+    (n == 0) * (1 - pt(t = t, lambda = lambda, mu = mu))
+  return(out)
+}
 
-n.sim&lt;-25
+Nee_likelihood &lt;- function(lambda, mu, brts, cond) {
+  BRTS &lt;- c(brts[1], brts)
+  NN &lt;- length(BRTS)
+  out &lt;- prod(   pt(lambda = lambda, mu = mu, t = BRTS) * (1 - ut(lambda = lambda, mu = mu, t = BRTS))  ) * lambda^(NN - 2) * factorial(NN - 1)
+  out &lt;- out/((pt(lambda = lambda, mu = mu, t = BRTS[1]))^(2 * cond))
+}</code></pre>
+<pre class="r"><code>n.sim&lt;-25
 cte = 10
-mu &lt;- seq(0.001,2.99,length=n.sim)
-#brts = 2
-#dendroica
-btdd = c(4.9999999998,4.806886544,4.70731246478,4.50735197578,4.37856240588,4.29594855558,4.19207515688,4.18261061218,4.11238451758,4.09640902445,3.81723693538,3.71143733895,3.48845298905,3.25729503338,3.11613886835,2.64829864145,2.63531839038,2.37990087748,1.82721570435,0.83704715535,0.64242044758,0.56121103655,0.356333544350001,0.346462849050001)
-brts = btdd
-n.gsim &lt;- 1000
+mu &lt;- seq(0.001,0.99,length=n.sim)
+brts = c(2,1.5,1,0.5)
+#brts = btdd
+n.gsim &lt;- 10000
 f_hat&lt;-NULL
 f.true&lt;-NULL
 f_hat2 &lt;- NULL
 f_hat3 &lt;- NULL
-#pars = c(3,1,9e+9999999)
-pars = c(3,1,24.5)
+nee &lt;- NULL
+pars = c(1,0.1,9e+9999999)
+lambda = pars[1]
+#pars = c(3,1,24.5)
 for (i in 1:n.sim){
   pars[2] = mu[i]
-  f_hat[i] &lt;- f.hat(brts,pars,m = n.gsim,cte = cte)
-  f_hat3[i] &lt;- f.hat2(brts,pars,m = n.gsim)
+  nee[i] = log(Nee_likelihood(lambda,mu[i],brts,cond = 0))
   f.true[i]&lt;- DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
-  S = emphasis:::sim.sct(brts,pars,1000,print = FALSE)
-  f_hat2[i] &lt;- log(mean(S$w))
 }
-plot(mu,f.true,type=&quot;l&quot;,ylim=c(min(f_hat,f_hat3),max(f.true,f_hat,f_hat2,f_hat3)))
-points(mu,f_hat)
-points(mu,f_hat2,col=&quot;red&quot;)
-points(mu,f_hat3,col=&quot;blue&quot;)</code></pre>
-</div>
-<div id="constant-rates-likelihood" class="section level2">
-<h2>constant rates likelihood</h2>
+plot(mu,f.true,type=&quot;l&quot;,ylim=c(min(f_hat,f_hat3,nee),max(nee2,f.true,f_hat,f_hat2,f_hat3,nee)))
+points(mu,nee)</code></pre>
 </div>
 
 
