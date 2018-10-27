@@ -9,7 +9,167 @@ library(emphasis)
 ```
 
 
+The marginal probability for two speciation allowed corresponds to 
+
+
+\begin{equation}
+
+P(y=T |\theta) = e^{-2\lambda T} + 6h_1(y=T,s(\tau_3,\theta)) + 72h_2(y=T,s(\tau_1,\theta)) + 36h_2(y=T,s(\tau_2,\theta))
+
+\end{equation}
+
+where  $\tau_1 = (1,1,0,0), \tau_2 = (1,0,1,0)$ and $\tau_3 = (1,0)$ and 
+
+\begin{equation}
+
+h_1(x=T,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \mu \lambda e^{-s_1t_1-s_2t_2-s_3(T-t_1-t_2)} dt_2 dt_1 
+
+\end{equation}
+
+and 
+
+\begin{equation}
+
+h_2(y=CT,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \displaystyle\int_0^{T-t_1-t_2}\displaystyle\int_0^{T-t_1-t_2-t_3} (\mu \lambda)^2 e^{-s_1t_1-s_2t_2-s_3t_3-s_4t_4} dt_4dt_3dt_2 dt_1 
+
+\end{equation}
+
+That is 
+
+\begin{equation}
+
+h_1(y=CT,s(\tau,\theta)) = (\mu\lambda)\left(\frac{e^{-s_2T}}{(s_3-s_2)(s_2-s_1)}\left( e^{(s_2-s_1)T}-1 \right) - \frac{e^{-s_3T}}{(s_3-s_2)(s_3-s_1)}\left( e^{(s_3-s_1)T}-1 \right)) 
+
+\end{equation}
+
+
+and
+\begin{equation}
+\begin{split}
+h_2(y=CT,s(\tau,\theta)) = (\mu\lambda)^2(& -\frac{e^{-s_2T}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
+ &+\frac{e^{-s_3T}}{s_4(s_4-s_3)(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
+  &+\frac{e^{-s_2T}}{s_4(s_4-s_3)(s_4-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
+   &-\frac{e^{-s_4T}}{s_4(s_4-s_3)(s_4-s_2)(s_4-s_1)}(e^{T(s_4-s_1)}-1)\\
+    &-\frac{e^{-s_2T}}{s_4s_3(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
+     &+\frac{e^{-s_3T}}{s_4s_3(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
+      &-\frac{e^{-s_2T}}{s_4s_3(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
+       &-\frac{1}{s_4s_3s_2s_1}(e^{-s_1T}-1) \}
+\end{split}
+\end{equation}
+
+note also that if $\tau_1 = (1,1,0,0), \tau_2 = (1,0,1,0)$ and $\tau_3 = (1,0)$ then $s(\tau_1,\theta) = c(2\lambda,3(\lambda+\mu),4\mu,3\mu), s(\tau_2,\theta) = c(2\lambda,3(\lambda+\mu),2\lambda,3\mu), s(\tau_1,\theta) = c(2\lambda,3(\lambda+\mu),2\lambda)$ 
+
 ```{r}
+h2 <- function(s,CT){
+  v1 = c(-1,1,1,-1,-1,1,-1,-1)
+  v21 = c(s[2],s[3],s[2],s[4],s[2],s[3],s[2],0)
+  v2 = exp(-v21*CT)
+  v3 = s[4]*c(rep(s[4]-s[3],4),rep(s[3],4))*c(s[3]-s[2],s[3]-s[2],s[4]-s[2],s[4]-s[2],s[3]-s[2],s[3]-s[2],s[2],s[2])
+  v4 = ifelse((v21-s[1])!=0, exp(CT*(v21-s[1]))/(v21-s[1]),CT)
+  out = (v1*v2*v4)/v3
+  return(out)
+}
+```
+
+
+```{r}
+h1 <- function(s,CT){
+  out = (exp(-s[3]*CT)/(s[3]-s[2])) * ( (exp(CT*(s[3]-s[2]))/(s[2]-s[1]))*(exp(CT*(s[2]-s[1]))-1) +
+                              - (1/(s[3]-s[1]))*(exp(CT*(s[3]-s[1]))-1) )
+  if(s[1]==s[3]){
+    out = (exp(-s[3]*CT)/(s[3]-s[2])) * ( (exp(CT*(s[3]-s[2]))/(s[2]-s[1]))*(exp(CT*(s[2]-s[1]))-1)  - CT )
+                                           
+  }
+  return(out)
+}
+
+f.marg2S <- function(CT,lambda,mu){
+  s1 = c(2,3,4,3)*c(lambda,lambda+mu,mu,mu)
+  s2 = c(2,3,2,3)*c(lambda,lambda+mu,lambda,mu)
+  s3 = c(2,3,2)*c(lambda,lambda+mu,lambda)
+  out = h2(s1,CT)*72*(lambda*mu)^2+h2(s2,CT)*36*(lambda*mu)^2+h1(s3,CT)*6*lambda*mu+exp(-CT*2*lambda)
+  return(out)
+}
+
+```
+
+other functions we need 
+
+```{r}
+# DAA
+g.sim <- function(x.obs,n=NULL,M){
+  if (is.vector(x.obs)){
+    x.obs <- matrix(rep(x.obs,each=n),ncol=length(x.obs))
+  }
+  n <- nrow(x.obs)
+  brts <- matrix(nrow=n,ncol=2*M+1)
+  to <- matrix(nrow=n,ncol=2*M+1)
+  t.ext <- matrix(nrow=n,ncol=2*M+1)
+  for (i in 1:n){
+    wt = no.na(diff(c(0,x.obs[i,])))
+    cs = length(wt)-1 # current speciations
+    pm = M - cs  # possible speciations
+    if(pm > 0 ){
+      df = sim.extinct.truncdim(cumsum(wt),pm)
+      brts[i,1:length(df$bt)] = df$bt
+      to[i,1:length(df$to)] = df$to
+      t.ext[i,1:length(df$to)] = df$t.ext
+    }else{
+      brts[i,1:length(wt)] = cumsum(wt)
+      to[i,1:(length(wt))] = c(rep(2,(length(wt)-1)),2)
+      t.ext[i,1:(length(wt))] = c(rep(Inf,(length(wt)-1)),Inf)
+    }
+  }
+  return(list(brts=brts,to=to,t.ext=t.ext))
+}
+
+sim.extinct.truncdim <- function(brts,M){
+  brts = no.na(brts)
+  R = M - (length(brts)-1) # maximum possible number of extinctions
+  Ne = sample((0:R),1)
+  ms = runif(Ne,min=0,max=brts[1])
+  me = runif(Ne,min=ms,max=brts[1])
+  to = c(rep(1,Ne),rep(0,Ne))
+  df = data.frame(bt = c(ms,me),bte=c(me,rep(Inf,Ne)),to=to)
+  df = rbind(df,data.frame(bt=brts,to=rep(2,length(brts)),bte=rep(Inf,length(brts))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  return(df)
+}
+
+# sampling probability 
+g <- function(x,M){
+  ans<-NULL
+  n<-nrow(x$brts)
+  for (i in 1:n){
+    df = data.frame(bt=no.na(x$brts[i,]),bte=no.na(x$t.ext[i,]),to=no.na(x$to[i,]),t.ext=no.na(x$t.ext[i,])-no.na(x$brts[i,]))
+    ans[i] = g_samp(df,M)
+  }
+  return(ans)
+}
+
+g_samp <- function(df,M){
+  last = dim(df)[1]
+  ct = df[last,1]
+  Ng = sum(df$to==2) - 1 # number of observed speciations (or given data)
+  R = M - Ng
+  subdf = df[df$to==1,]
+  ms = dim(subdf)[1]
+  Ts = ct-subdf$bt
+  tempto = df$to
+  to = df$to[-last]
+  to[to==2] = 1
+  n = c(2,2+cumsum(to)+cumsum(to-1))
+  n = n[tempto==1 | tempto==0]
+  if(R==0){
+    log_dens = 0
+  }else{
+    log_dens = - log(R+1) - ms*log(ct) - sum(log(Ts)) - sum(log(n))
+  }
+  return(log_dens)
+}
+
+# join likelihood
 f.joint <- function(x,lambda,mu){
   tm = x$brts
   M = (ncol(tm)-1)/2
@@ -44,204 +204,15 @@ f.joint <- function(x,lambda,mu){
   }
   return(ans)
 }
-
-spec2 <- function(s,CT){
-  out = -(exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1)+
-      (exp(-s[3]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])*(s[3]-s[1])))*(exp(CT*(s[3]-s[1]))-1) +
-    (exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
-    -(exp(s[4]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[4]-s[1])))*(exp(CT*(s[4]-s[1]))-1) +
-    -(exp(-s[2]*CT)/(s[4]*s[3]*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
-    (exp(-s[3]*CT)/(s[4]*s[3]*(s[3]-s[2])*(s[3]-s[1])))*(exp(CT*(s[3]-s[1]))-1) +
-    -(exp(-s[2]*CT)/(s[4]*s[3]*s[2]*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
-    -(1/(s[4]*s[3]*s[2]*s[1]))*(exp(-CT*s[1])-1)
-  if(s[3]==s[1]){
-    out = -(exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1)+
-      (exp(-s[3]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])))*(CT) +
-      (exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
-      -(exp(s[4]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[4]-s[1])))*(exp(CT*(s[4]-s[1]))-1) +
-      -(exp(-s[2]*CT)/(s[4]*s[3]*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
-      (exp(-s[3]*CT)/(s[4]*s[3]*(s[3]-s[2])))*(CT) +
-      -(exp(-s[2]*CT)/(s[4]*s[3]*s[2]*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
-      -(1/(s[4]*s[3]*s[2]*s[1]))*(exp(-CT*s[1])-1)
-  }
-  return(out)
-}
-
-spec1 <- function(s,CT){
-  out = (exp(-s[3]*CT)/(s[3]-s[2])) * ( (exp(CT*(s[3]-s[2]))/(s[2]-s[1]))*(exp(CT*(s[2]-s[1]))-1) +
-                              - (1/(s[3]-s[1]))*(exp(CT*(s[3]-s[1]))-1) )
-  if(s[1]==s[3]){
-    out = (exp(-s[3]*CT)/(s[3]-s[2])) * ( (exp(CT*(s[3]-s[2]))/(s[2]-s[1]))*(exp(CT*(s[2]-s[1]))-1) +
-                                            - (CT-1) )
-  }
-  return(out)
-}
-
-f.marg2S <- function(CT,lambda,mu){
-  s1 = c(2,3,4,3)*c(lambda,lambda+mu,mu,mu)
-  s2 = c(2,3,2,3)*c(lambda,lambda+mu,lambda,mu)
-  s3 = c(2,3,2)*c(lambda,lambda+mu,lambda)
-  out = spec2(s1,CT)*(lambda/(lambda+mu))+spec2(s2,CT)*(mu/(lambda+mu))+spec1(s3,CT)+exp(-CT*2*lambda)
-  return(out)
-}
-
-g <- function(x,M){
-  ans<-NULL
-  n<-nrow(x$brts)
-  for (i in 1:n){
-    df = data.frame(bt=no.na(x$brts[i,]),bte=no.na(x$t.ext[i,]),to=no.na(x$to[i,]),t.ext=no.na(x$t.ext[i,])-no.na(x$brts[i,]))
-    ans[i] = g_samp(df,M)
-  }
-  return(ans)
-}
-
-g_samp <- function(df,M){
-  last = dim(df)[1]
-  ct = df[last,1]
-  Ng = sum(df$to==2) - 1 # number of observed speciations (or given data)
-  R = M - Ng
-  subdf = df[df$to==1,]
-  ms = dim(subdf)[1]
-  Ts = ct-subdf$bt
-  tempto = df$to
-  to = df$to[-last]
-  to[to==2] = 1
-  n = c(2,2+cumsum(to)+cumsum(to-1))
-  n = n[tempto==1 | tempto==0]
-  if(R==0){
-    log_dens = 0
-  }else{
-    log_dens = - log(R+1) - ms*log(ct) - sum(log(Ts)) - sum(log(n))
-  }
-  return(log_dens)
-}
-
-sim.extinct.truncdim <- function(brts,M){
-  brts = no.na(brts)
-  R = M - (length(brts)-1) # maximum possible number of extinctions
-  Ne = sample((0:R),1)
-  ms = runif(Ne,min=0,max=brts[1])
-  me = runif(Ne,min=ms,max=brts[1])
-  to = c(rep(1,Ne),rep(0,Ne))
-  df = data.frame(bt = c(ms,me),bte=c(me,rep(Inf,Ne)),to=to)
-  df = rbind(df,data.frame(bt=brts,to=rep(2,length(brts)),bte=rep(Inf,length(brts))))
-  df = df[order(df$bt),]
-  df$t.ext = df$bte-df$bt
-  return(df)
-}
-
 no.na <- function(vector){
   vector[!is.na(vector)]
 }
 
-
-g.sim <- function(x.obs,n=NULL,M){
-  if (is.vector(x.obs)){
-    x.obs <- matrix(rep(x.obs,each=n),ncol=length(x.obs))
-  }
-  n <- nrow(x.obs)
-  brts <- matrix(nrow=n,ncol=2*M+1)
-  to <- matrix(nrow=n,ncol=2*M+1)
-  t.ext <- matrix(nrow=n,ncol=2*M+1)
-  for (i in 1:n){
-    wt = no.na(diff(c(0,x.obs[i,])))
-    cs = length(wt)-1 # current speciations
-    pm = M - cs  # possible speciations
-    if(pm > 0 ){
-      df = sim.extinct.truncdim(cumsum(wt),pm)
-      brts[i,1:length(df$bt)] = df$bt
-      to[i,1:length(df$to)] = df$to
-      t.ext[i,1:length(df$to)] = df$t.ext
-    }else{
-      brts[i,1:length(wt)] = cumsum(wt)
-      to[i,1:(length(wt))] = c(rep(2,(length(wt)-1)),2)
-      t.ext[i,1:(length(wt))] = c(rep(Inf,(length(wt)-1)),Inf)
-    }
-  }
-  return(list(brts=brts,to=to,t.ext=t.ext))
-}
-
-f.sim <- function(n,lambda,mu,CT=2,M){
-  TO <- matrix(NA,ncol=2*M+1,nrow=n)
-  BRTS <- matrix(NA,ncol=2*M+1,nrow=n)
-  T.EXT <- matrix(NA,ncol=2*M+1,nrow=n)
-  for (i in 1:n){
-    bt = 0
-    N = 2
-    to = NULL
-    brts = NULL
-    ns = ne = 0
-    t.ext = NULL
-    while(bt < CT & ns < M & N > 1){
-      time <- rexp(1,N*(lambda+mu))
-      bt = bt + time
-      to1 = rbinom(1,1,lambda/(lambda+mu))
-      if (to1 == 1) {
-        N = N + 1
-        ns = ns + 1
-      } else {
-        N = N-1
-        ne = ne +1
-        if(N>1) t.ext[sample((1:length(t.ext))[t.ext==Inf & to==1],1)] = bt
-      }
-      t.ext = c(t.ext,Inf)
-      brts = c(brts,bt)
-      to = c(to,to1)
-    }
-    while(bt < CT & ne < M & N > 1){
-      time <- rexp(1,N*mu)
-      bt = bt + time
-      if(bt < CT){
-        to = c(to,0)
-        t.ext = c(t.ext,Inf)
-        brts = c(brts,bt)
-      }
-      N = N-1
-      ne = ne+1
-      if(bt<CT & N>1) t.ext[sample((1:length(t.ext))[t.ext==Inf & to==1],1)] = bt
-    }
-    brts=c(brts,CT)
-    t.ext = c(t.ext,Inf)
-    to = c(to,2)
-    BRTS[i,1:length(brts)] = brts
-    TO[i,1:length(to)] = to
-    T.EXT[i,1:length(to)] = t.ext
-  }
-  return(list(brts=BRTS,to=TO,t.ext=T.EXT))
-}
-
-
-observe <- function(x){
-  tm = x$brts
-  ta<-matrix(nrow=nrow(tm),ncol=ncol(tm)-1)
-  for(i in 1:nrow(tm)){
-    to = x$to[i,]
-    to = to[!is.na(to)]
-    t.ext = x$t.ext[i,]
-    t.ext = t.ext[!is.na(t.ext)]
-    brts = x$brts[i,]
-    brts = brts[!is.na(brts)]
-    obs = c(brts[c((to==1 & t.ext == Inf),F)],brts[length(brts)])
-    ta[i,1:length(obs)] = obs
-  }
-  return(ta)
-}
-
-rm_ext <- function(x){
-  rm = (x$to[,1] == 0)
-  x$brts = x$brts[!rm,]
-  x$to = x$to[!rm,]
-  x$t.ext = x$t.ext[!rm,]
-  return(x)
-}
-
-
 ```
 
+### Experiment 
 
-```{r cars}
-#2 speciations case
-
+```{r, exp1}
 n.sim = 4
 lambda = 1
 mu = 0.3
@@ -249,17 +220,45 @@ CT = 2
 M = 2
 
 #x.obs<-observe(x)
-x.obs <- matrix(nrow=2,ncol=2*M)
+x.obs <- matrix(nrow=2,ncol=(2*M+1))
 x.obs[,1] = CT
 
 f.hat<-NULL
 n.sim <- nrow(x.obs)
-n.gsim = 100
+n.gsim = 10000
 for (i in 1:n.sim){
   x.ext<-g.sim(x.obs[i,],n=n.gsim,M=M)
   f.hat[i] <- mean(exp(f.joint(x.ext,lambda=lambda,mu=mu)-g(x.ext,M)))
 }
 f.true<-f.marg2S(CT,lambda,mu)
 cbind(f.true,f.hat)
+
 ```
 
+```{r, vmu}
+#consider varying mu 
+n.sim = 25
+lambda = 1
+mu = 0.3
+CT = 2
+M = 2
+
+#x.obs<-observe(x)
+x.obs <- matrix(nrow=2,ncol=(2*M+1))
+x.obs[,1] = CT
+mu <- seq(0.01,0.99,length=n.sim)
+
+f.hat<-NULL
+f.true = NULL
+n.gsim = 10000
+for (i in 1:n.sim){
+  x.ext<-g.sim(x.obs[1,],n=n.gsim,M=M)
+  f.hat[i] <- mean(exp(f.joint(x.ext,lambda=lambda,mu=mu[i])-g(x.ext,M)))
+  f.true[i] <- f.marg2S(CT,lambda,mu[i])
+}
+```
+
+```{r}
+plot(mu,f.true,ylim=c(min(f.true,f.hat),max(f.true,f.hat)),type="l")
+points(mu,f.hat,col="blue")
+```
