@@ -125,27 +125,32 @@ $(document).ready(function () {
 </div>
 
 
+<p>For the likelihood to be normalized we need to calculate the normalization constant</p>
+<p><span class="math display">\[ C = \int_{x = \mathcal{X}} f(x|\theta) dx = \int_{x = \mathcal{X}} f(x|\theta) \frac{g(x|\theta)}{g(x|\theta)} = E_{x \sim g} \left[ \frac{f(x|\theta)}{g(x|\theta)} \right] \approx \frac{1}{m} \sum_{i=1}^m \frac{f(x_i|\theta)}{g(x_i|\theta)}\]</span></p>
 <pre class="r"><code>norma.const &lt;- function(lambda,mu,CT,n){
   lg = NULL
   lf = NULL
   for(i in 1:n){
-    df = sim.tree.g(lambda,mu,CT)
-    lg[i] = g_samp_missobs(df,c(lambda,mu))
+    df = sim.tree.g(lambda,mu,CT) # simulation of tree
+    lg[i] = g_samp_missobs(df,c(lambda,mu)) # calculate sampling probability 
+    # and calculate joint probability 
     to = df$to[-nrow(df)]
     to[to==2] = 1
     lf[i] = -emphasis:::nllik.tree(pars=c(lambda,mu,Inf),tree=list(wt=diff(c(0,df$bt)),to=to))
   }
+  # finally, get the approximation
   const.approx = sum(exp(lf-lg))/n
   return(const.approx)
 }
 
 
 sim.tree.g &lt;- function(lambda,mu,CT){
-  Ne = rpois(1,(lambda+mu)*CT)
-  Np = rpois(1,(lambda-mu)*CT)
-  brts = runif(Np,min=0,max=CT)
-  ms = runif(Ne,min=0,max=CT)
-  me = runif(Ne,min=ms,max=CT)
+  Ne = rpois(1,(lambda+mu)*CT) # number of extinct species
+  Np = rpois(1,(lambda-mu)*CT) # number of present species
+  brts = runif(Np,min=0,max=CT) # branching times of speciation of present species
+  ms = runif(Ne,min=0,max=CT) # branching times of speciation of extinct species
+  me = runif(Ne,min=ms,max=CT) # branching times of extinctions
+  # return matrix with branching times and topology
   to = c(rep(1,Ne),rep(0,Ne))
   df = data.frame(bt = c(ms,me),to=to)
   df = rbind(df,data.frame(bt=c(brts,CT),to=c(rep(2,length(brts)),2)))
@@ -154,6 +159,7 @@ sim.tree.g &lt;- function(lambda,mu,CT){
 }
 
 g_samp_missobs &lt;- function(df,pars){
+  # sampling probability 
   last = nrow(df)
   ct = df[last,1]
   Ne = sum(df$to==0)
@@ -172,6 +178,7 @@ g_samp_missobs &lt;- function(df,pars){
   log_dens = log_dens_miss+log_dens_obs
   return(log_dens)
 }</code></pre>
+<p>Exercise 1. Chech if the normalization constant is a smooth function of <span class="math inline">\(\mu\)</span></p>
 <pre class="r"><code>time=proc.time()
 nsim = 15
 n=10000
