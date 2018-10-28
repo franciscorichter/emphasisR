@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
 library(emphasis)
 ```
 
@@ -28,11 +28,7 @@ h_1(x=T,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \mu \lambda
 
 and 
 
-\begin{equation}
-
-h_2(y=CT,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \displaystyle\int_0^{T-t_1-t_2}\displaystyle\int_0^{T-t_1-t_2-t_3} (\mu \lambda)^2 e^{-s_1t_1-s_2t_2-s_3t_3-s_4t_4} dt_4dt_3dt_2 dt_1 
-
-\end{equation}
+\begin{equation}h_2(y=CT,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \displaystyle\int_0^{T-t_1-t_2}\displaystyle\int_0^{T-t_1-t_2-t_3} (\mu \lambda)^2 e^{-s_1t_1-s_2t_2-s_3t_3-s_4t_4} dt_4dt_3dt_2 dt_1 \end{equation}
 
 That is 
 
@@ -66,7 +62,7 @@ h2 <- function(s,CT){
   v2 = exp(-v21*CT)
   v3 = s[4]*c(rep(s[4]-s[3],4),rep(s[3],4))*c(s[3]-s[2],s[3]-s[2],s[4]-s[2],s[4]-s[2],s[3]-s[2],s[3]-s[2],s[2],s[2])
   v4 = ifelse((v21-s[1])!=0, exp(CT*(v21-s[1]))/(v21-s[1]),CT)
-  out = (v1*v2*v4)/v3
+  out = sum((v1*v2*v4)/v3)
   return(out)
 }
 ```
@@ -225,7 +221,7 @@ x.obs[,1] = CT
 
 f.hat<-NULL
 n.sim <- nrow(x.obs)
-n.gsim = 10000
+n.gsim = 1000
 for (i in 1:n.sim){
   x.ext<-g.sim(x.obs[i,],n=n.gsim,M=M)
   f.hat[i] <- mean(exp(f.joint(x.ext,lambda=lambda,mu=mu)-g(x.ext,M)))
@@ -237,7 +233,7 @@ cbind(f.true,f.hat)
 
 ```{r, vmu}
 #consider varying mu 
-n.sim = 25
+n.sim = 20
 lambda = 1
 mu = 0.3
 CT = 2
@@ -250,7 +246,7 @@ mu <- seq(0.01,0.99,length=n.sim)
 
 f.hat<-NULL
 f.true = NULL
-n.gsim = 10000
+n.gsim = 1000
 for (i in 1:n.sim){
   x.ext<-g.sim(x.obs[1,],n=n.gsim,M=M)
   f.hat[i] <- mean(exp(f.joint(x.ext,lambda=lambda,mu=mu[i])-g(x.ext,M)))
@@ -261,4 +257,31 @@ for (i in 1:n.sim){
 ```{r}
 plot(mu,f.true,ylim=c(min(f.true,f.hat),max(f.true,f.hat)),type="l")
 points(mu,f.hat,col="blue")
+mu[14]
+f.true[14]
+s1 = c(2,3,4,3)*c(lambda,lambda+mu[14],mu[14],mu[14])
+s2 = c(2,3,2,3)*c(lambda,lambda+mu[14],lambda,mu[14])
+s3 = c(2,3,2)*c(lambda,lambda+mu[14],lambda)
+s1
+s2
+s3
+h2(s1,CT)
+h2(s2,CT)
+h1(s3,CT)
+s=s1
+v1 = c(-1,1,1,-1,-1,1,-1,-1)
+v21 = c(s[2],s[3],s[2],s[4],s[2],s[3],s[2],0)
+v2 = exp(-v21*CT)
+v3 = s[4]*c(rep(s[4]-s[3],4),rep(s[3],4))*c(s[3]-s[2],s[3]-s[2],s[4]-s[2],s[4]-s[2],s[3]-s[2],s[3]-s[2],s[2],s[2])
+v4 = ifelse((v21-s[1])!=0, exp(CT*(v21-s[1]))/(v21-s[1]),CT)
+v1
+v2
+v3
+v4
+out = sum((v1*v2*v4)/v3)
+out
+(v1*v2*v4)/v3
+ exp(CT*(v21-s[1]))/(v21-s[1])
+ v21
+ s[1]
 ```
