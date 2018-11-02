@@ -23,7 +23,7 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F){
     sigma = sigma[-length(sigma)]
     wt = wt[-length(wt)]
   }
-  nl = -(sum(-sigma*wt)+sum(log(rho)))
+  nl = -(sum(-sigma*wt)+sum(log(rho)))#+mu*sum(wt))
   if(min(pars)<0){nl = Inf}
   return(nl)
 }

@@ -539,6 +539,12 @@ So,
 defines completely the E-step. 
 
 
+Note that 
+
+
+\begin{equation} L(y | \theta) = \frac{1}{m}\sum_{i=1}^m \frac{f(x_i,y|\theta)}{g(x_i|y,\theta)} \end{equation}
+
+
 
 # 3. M-step
 

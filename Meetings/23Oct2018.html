@@ -125,34 +125,34 @@ $(document).ready(function () {
 </div>
 
 
-<p>The marginal equation for two speciation allowed corresponds to</p>
+<p>The marginal probability for two speciation allowed corresponds to</p>
 <span class="math display">\[\begin{equation}
 
-F(x|y,\theta) = e^{-2\lambda T} + 6h_1(y|x=T,s(\tau_3,\theta)) + 72h_2(y|x=T,s(\tau_1,\theta)) + 36h_2(y|x=T,s(\tau_2,\theta))
+P(y=T |\theta) = e^{-2\lambda T} + 6h_1(y=T,s(\tau_3,\theta)) + 72h_2(y=T,s(\tau_1,\theta)) + 36h_2(y=T,s(\tau_2,\theta))
 
 \end{equation}\]</span>
 <p>where <span class="math inline">\(\tau_1 = (1,1,0,0), \tau_2 = (1,0,1,0)\)</span> and <span class="math inline">\(\tau_3 = (1,0)\)</span> and</p>
 <span class="math display">\[\begin{equation}
 
-h_1(y|x=T,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \mu \lambda e^{-s_1t_1-s_2t_2-s_3(T-t_1-t_2)} dt_2 dt_1 
+h_1(x=T,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \mu \lambda e^{-s_1t_1-s_2t_2-s_3(T-t_1-t_2)} dt_2 dt_1 
 
 \end{equation}\]</span>
 <p>and</p>
 <span class="math display">\[\begin{equation}
 
-h_2(y|x=CT,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \displaystyle\int_0^{T-t_1-t_2}\displaystyle\int_0^{T-t_1-t_2-t_3} (\mu \lambda)^2 e^{-s_1t_1-s_2t_2-s_3t_3-s_4t_4} dt_4dt_3dt_2 dt_1 
+h_2(y=CT,\theta) = \displaystyle\int_0^{T}\displaystyle\int_0^{T-t_1} \displaystyle\int_0^{T-t_1-t_2}\displaystyle\int_0^{T-t_1-t_2-t_3} (\mu \lambda)^2 e^{-s_1t_1-s_2t_2-s_3t_3-s_4t_4} dt_4dt_3dt_2 dt_1 
 
 \end{equation}\]</span>
 <p>That is</p>
 <span class="math display">\[\begin{equation}
 
-h_1(y|x=CT,s(\tau,\theta)) = (\mu\lambda)(\frac{e^{-s_2T}}{(s_3-s_1)(s_2-s_1)}\left( e^{(s_3-s_2)T}-1 \right) - \frac{e^{-s_3T}}{(s_3-s_2)(s_3-s_1)}\left( e^{(s_3-s_1)T}-1 \right)) 
+h_1(y=CT,s(\tau,\theta)) = (\mu\lambda)(\frac{e^{-s_2T}}{(s_3-s_1)(s_2-s_1)}\left( e^{(s_3-s_2)T}-1 \right) - \frac{e^{-s_3T}}{(s_3-s_2)(s_3-s_1)}\left( e^{(s_3-s_1)T}-1 \right)) 
 
 \end{equation}\]</span>
 and
 <span class="math display">\[\begin{equation}
 \begin{split}
-h_2(y|x=CT,s(\tau,\theta)) = (\mu\lambda)^2(&amp; -\frac{e^{-s_2T}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
+h_2(y=CT,s(\tau,\theta)) = (\mu\lambda)^2(&amp; -\frac{e^{-s_2T}}{s_4(s_4-s_3)(s_3-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1) \\
  &amp;+\frac{e^{-s_3T}}{s_4(s_4-s_3)(s_3-s_2)(s_3-s_1)}(e^{T(s_3-s_1)}-1)\\
   &amp;+\frac{e^{-s_2T}}{s_4(s_4-s_3)(s_4-s_2)(s_2-s_1)}(e^{T(s_2-s_1)}-1)\\
    &amp;-\frac{e^{-s_4T}}{s_4(s_4-s_3)(s_4-s_2)(s_4-s_1)}(e^{T(s_4-s_1)}-1)\\
@@ -163,7 +163,7 @@ h_2(y|x=CT,s(\tau,\theta)) = (\mu\lambda)^2(&amp; -\frac{e^{-s_2T}}{s_4(s_4-s_3)
 \end{split}
 \end{equation}\]</span>
 <p>note also that if <span class="math inline">\(\tau_1 = (1,1,0,0), \tau_2 = (1,0,1,0)\)</span> and <span class="math inline">\(\tau_3 = (1,0)\)</span> then <span class="math inline">\(s(\tau_1,\theta) = c(2\lambda,3(\lambda+\mu),4\mu,3\mu), s(\tau_2,\theta) = c(2\lambda,3(\lambda+\mu),2\lambda,3\mu), s(\tau_1,\theta) = c(2\lambda,3(\lambda+\mu),2\lambda)\)</span></p>
-<pre class="r"><code>spec2 &lt;- function(s,CT){
+<pre class="r"><code>h2 &lt;- function(s,CT){
   out = -(exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1)+
       (exp(-s[3]*CT)/(s[4]*(s[4]-s[3])*(s[3]-s[2])*(s[3]-s[1])))*(exp(CT*(s[3]-s[1]))-1) +
     (exp(-s[2]*CT)/(s[4]*(s[4]-s[3])*(s[4]-s[2])*(s[2]-s[1])))*(exp(CT*(s[2]-s[1]))-1) +
@@ -184,7 +184,7 @@ h_2(y|x=CT,s(\tau,\theta)) = (\mu\lambda)^2(&amp; -\frac{e^{-s_2T}}{s_4(s_4-s_3)
   }
   return(out)
 }</code></pre>
-<pre class="r"><code>spec1 &lt;- function(s,CT){
+<pre class="r"><code>h1 &lt;- function(s,CT){
   out = (exp(-s[3]*CT)/(s[3]-s[2])) * ( (exp(CT*(s[3]-s[2]))/(s[2]-s[1]))*(exp(CT*(s[2]-s[1]))-1) +
                               - (1/(s[3]-s[1]))*(exp(CT*(s[3]-s[1]))-1) )
   if(s[1]==s[3]){
@@ -198,11 +198,12 @@ f.marg2S &lt;- function(CT,lambda,mu){
   s1 = c(2,3,4,3)*c(lambda,lambda+mu,mu,mu)
   s2 = c(2,3,2,3)*c(lambda,lambda+mu,lambda,mu)
   s3 = c(2,3,2)*c(lambda,lambda+mu,lambda)
-  out = spec2(s1,CT)*72*(lambda*mu)^2+spec2(s2,CT)*72*(lambda*mu)^2+spec1(s3,CT)*6*lambda*mu+exp(-CT*2*lambda)
+  out = h2(s1,CT)*72*(lambda*mu)^2+h2(s2,CT)*36*(lambda*mu)^2+h1(s3,CT)*6*lambda*mu+exp(-CT*2*lambda)
   return(out)
 }</code></pre>
 <p>other functions we need</p>
-<pre class="r"><code>g.sim &lt;- function(x.obs,n=NULL,M){
+<pre class="r"><code># DAA
+g.sim &lt;- function(x.obs,n=NULL,M){
   if (is.vector(x.obs)){
     x.obs &lt;- matrix(rep(x.obs,each=n),ncol=length(x.obs))
   }
@@ -242,6 +243,7 @@ sim.extinct.truncdim &lt;- function(brts,M){
   return(df)
 }
 
+# sampling probability 
 g &lt;- function(x,M){
   ans&lt;-NULL
   n&lt;-nrow(x$brts)
@@ -272,6 +274,8 @@ g_samp &lt;- function(df,M){
   }
   return(log_dens)
 }
+
+# join likelihood
 f.joint &lt;- function(x,lambda,mu){
   tm = x$brts
   M = (ncol(tm)-1)/2
@@ -331,8 +335,8 @@ for (i in 1:n.sim){
 f.true&lt;-f.marg2S(CT,lambda,mu)
 cbind(f.true,f.hat)</code></pre>
 <pre><code>##         f.true    f.hat
-## [1,] 0.5472712 1.369830
-## [2,] 0.5472712 1.437007</code></pre>
+## [1,] 0.4394771 1.327520
+## [2,] 0.4394771 1.389929</code></pre>
 <pre class="r"><code>#consider varying mu 
 n.sim = 25
 lambda = 1
@@ -347,7 +351,7 @@ mu &lt;- seq(0.01,0.99,length=n.sim)
 
 f.hat&lt;-NULL
 f.true = NULL
-n.gsim = 1000
+n.gsim = 10000
 for (i in 1:n.sim){
   x.ext&lt;-g.sim(x.obs[1,],n=n.gsim,M=M)
   f.hat[i] &lt;- mean(exp(f.joint(x.ext,lambda=lambda,mu=mu[i])-g(x.ext,M)))

@@ -185,4 +185,50 @@ get.topologies <- function(M){
 
 
 
+norma.const <- function(lambda,mu,CT,n){
+  lg = NULL
+  lf = NULL
+  for(i in 1:n){
+    df = sim.tree.g(lambda,mu,CT)
+    lg[i] = g_samp_missobs(df,c(lambda,mu))
+    to = df$to[-nrow(df)]
+    to[to==2] = 1
+    lf[i] = -nllik.tree(pars=c(lambda,mu,Inf),tree=list(wt=diff(c(0,df$bt)),to=to))
+  }
+  const.approx = sum(exp(lf-lg))/n
+  return(const.approx)
+}
 
+
+sim.tree.g <- function(lambda,mu,CT){
+  Ne = rpois(1,(lambda+mu)*CT)
+  Np = rpois(1,(lambda-mu)*CT)
+  brts = runif(Np,min=0,max=CT)
+  ms = runif(Ne,min=0,max=CT)
+  me = runif(Ne,min=ms,max=CT)
+  to = c(rep(1,Ne),rep(0,Ne))
+  df = data.frame(bt = c(ms,me),to=to)
+  df = rbind(df,data.frame(bt=c(brts,CT),to=c(rep(2,length(brts)),2)))
+  df = df[order(df$bt),]
+  return(df)
+}
+
+g_samp_missobs <- function(df,pars){
+  last = nrow(df)
+  ct = df[last,1]
+  Ne = sum(df$to==0)
+  Np = sum(df$to==2) - 1
+  subdf_e = df[df$to==1,]
+  subdf_p = df[df$to==2,]
+  Ts = ct-subdf_e$bt
+  to = df$to[-last]
+  rto = to
+  to[to==2] = 1
+  n = c(2,2+cumsum(to)+cumsum(to-1))
+  nm = n[c(rto,2)==1]
+  log_dens_miss = dpois(Ne,lambda =(pars[1]+pars[2])*ct,log=TRUE)-Ne*log(ct)-sum(log(Ts))-sum(log(nm))+lgamma(Ne+1)
+  ne = n[c(rto,0)==2]
+  log_dens_obs = dpois(Np,lambda = (pars[1]-pars[2])*ct,log=TRUE)-Np*log(ct)-sum(log(ne))+lgamma(Np+1)
+  log_dens = log_dens_miss+log_dens_obs
+  return(log_dens)
+}
