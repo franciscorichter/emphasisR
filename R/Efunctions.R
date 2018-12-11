@@ -328,3 +328,14 @@ mcem.tree <- function(brts,p,model="dd"){
   return(list(pars=pars,PARS=PARS,H=H,tE=tE,tM=tM,efficiency=efficiency))
 }
 
+
+phylo2tree <- function(tree){
+  # to map newick trees into ther xxxx format
+  ltt = ltt.plot.coords(tree)
+  t = diff(ltt[,1])
+  ltt = ltt[-1,]
+  n = ltt[,2]
+  E = diff(n)
+  E[E==-1] = 0
+  return(list(wt=t,to=E))
+}
