@@ -1,10 +1,13 @@
 ### EMPHASIS functions
 
 # negative logLikelihood of a tree
-nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F){
+nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
   wt = tree$wt
   to = tree$to
-  n = c(2,2+cumsum(to)+cumsum(to-1))
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  if(model == "cr"){
+    lambda = lambda.cr(pars,n)
+  }
   if(model == "dd"){
     lambda = lambda.dd(pars,n)
   }
@@ -13,7 +16,7 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F){
   }
   mu = pars[2]
   sigma = (lambda + mu)*n
-  sigma[n==2] = lambda[n==2]*2
+#  sigma[n==2] = lambda[n==2]*2
   if(topology){
     rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   }else{
@@ -23,7 +26,7 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F){
     sigma = sigma[-length(sigma)]
     wt = wt[-length(wt)]
   }
-  nl = -(sum(-sigma*wt)+sum(log(rho)))#+mu*sum(wt))
+  nl = -(sum(-sigma*wt)+sum(log(rho)))
   if(min(pars)<0){nl = Inf}
   return(nl)
 }
@@ -34,6 +37,10 @@ lambda.dd.1.3 <- function(pars,n){
 
 lambda.dd <- function(pars,n){
   pmax(1e-99, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
+}
+
+lambda.cr <- function(pars,n){
+  rep(pmax(1e-99, pars[1]), length(n))
 }
 
 # negative logLikelihood of a set of trees
@@ -91,7 +98,7 @@ df2tree <- function(df,pars,model="dd"){
   return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext))
 }
 # Monte-Carlo sampling function / simulation of a set of complete trees
-sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd"){
+sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd",truncdim=FALSE){
   no_cores <- detectCores()
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
@@ -99,14 +106,16 @@ sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd"){
     df =  emphasis::sim.extinct2(brts = brts,pars = pars,model=model)
     tree = emphasis::df2tree(df,pars,model=model)
     lsprob = emphasis::lg_prob(tree,topology = topology)
-    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model)
+    lw2 = we_cal(tree)
+    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model,truncdim = truncdim)
     lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
     fms = df$bt[is.finite(df$bte)][1] #first missing speciation
     fe = df$bt[df$to==0][1] # first extinction
-    return(list(nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
+    return(list(nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe,lw2=lw2))
   }
   stopCluster(cl)
   lw = sapply(trees,function(list) list$lw)
+  lw2 = sapply(trees,function(list) list$lw2)
   dim = sapply(trees,function(list) length(list$tree$wt))
   nl = sapply(trees,function(list) list$nl)
   lg = sapply(trees, function(list) list$lsprob)
@@ -119,7 +128,7 @@ sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd"){
     g = qplot(dim,w)
     print(g)
   }
-  return(list(w=w, dim=dim, nl=nl, trees=trees,g=eg,fms=fms,fe=fe))
+  return(list(w=w, dim=dim, nl=nl, trees=trees,g=eg,fms=fms,fe=fe,lw2=lw2))
 }
 
 ###########################
@@ -319,4 +328,3 @@ mcem.tree <- function(brts,p,model="dd"){
   return(list(pars=pars,PARS=PARS,H=H,tE=tE,tM=tM,efficiency=efficiency))
 }
 
-pars2 = c(2.5e+02,1.0e+00, 0.0e+00, 1.0e+00, 0.0e+00, 2.0e+00, 1.0e-03, 1.0e-04, 1.0e-06, 1.0e+03)
