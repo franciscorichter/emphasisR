@@ -4,6 +4,7 @@
 nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
   wt = tree$wt
   to = tree$to
+  to[to==2] = 1
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   if(model == "cr"){
     lambda = lambda.cr(pars,n)
@@ -20,7 +21,7 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
   if(topology){
     rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   }else{
-    rho = pmax(n[-length(n)]*lambda[-length(lambda)]*to+mu*(1-to),0)
+    rho = pmax(n[-length(n)]*(lambda[-length(lambda)]*to+mu*(1-to)),0)
   }
   if(truncdim){
     sigma = sigma[-length(sigma)]
@@ -29,6 +30,10 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
   nl = -(sum(-sigma*wt)+sum(log(rho)))
   if(min(pars)<0){nl = Inf}
   return(nl)
+}
+
+lik.tree <- function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
+  exp(-nllik.tree(pars,tree,topology=topology,model=model,truncdim=truncdim,initspec=initspec))
 }
 
 lambda.dd.1.3 <- function(pars,n){
@@ -65,7 +70,8 @@ lg_prob <- function(tree,topology=T){
   list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
   mu = pars[2]
   if(mu!=0){
-    term1 = sum(-s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt))))
+    #term1 = sum(-s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt))))
+    term1 = sum(-2*s*((exp(-r*mu)/mu)*(exp(mu*wt)-1)-(exp(-2*r*mu)/(2*mu))*(exp(2*mu*wt)-1)))-mu*sum(r-wt)
     la = s/n
     la = la[is.finite(t_ext)]
     text = t_ext[is.finite(t_ext)]
@@ -81,33 +87,46 @@ lg_prob <- function(tree,topology=T){
   return(logg)
 }
 
-df2tree <- function(df,pars,model="dd"){
+df2tree <- function(df,pars,model="dd",initspec=2){
   dim = dim(df)[1]
   wt = diff(c(0,df$bt))
   to = df$to[-dim]
   to[to==2] = 1
-  n = c(2,2+cumsum(to)+cumsum(to-1))
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   if(model=="dd"){
     s = n*lambda.dd(pars,n)
   }
   if(model == "dd.1.3"){
     s = n*lamda.dd.1.3(pars,n)
   }
+  if(model=="cr"){
+    s = n*lambda.cr(pars,n)
+  }
   r = df$bt[dim]-c(0,df$bt[-dim])
   t_ext = df$t.ext
   return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext))
 }
+
+df2tree2 <- function(df){
+  dim = nrow(df)
+  wt = diff(c(0,df$bt))
+  to = df$to[-dim]
+  to[to==2] = 1
+  return(list(wt=wt,to=to))
+}
+
+
 # Monte-Carlo sampling function / simulation of a set of complete trees
-sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd",truncdim=FALSE){
+sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd",truncdim=FALSE,initspec = 2){
   no_cores <- detectCores()
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
   trees <- foreach(i = 1:m, combine = list) %dopar% {
     df =  emphasis::sim.extinct2(brts = brts,pars = pars,model=model)
-    tree = emphasis::df2tree(df,pars,model=model)
+    tree = emphasis::df2tree(df,pars,model=model,initspec=initspec)
     lsprob = emphasis::lg_prob(tree,topology = topology)
     lw2 = we_cal(tree)
-    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model,truncdim = truncdim)
+    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model,truncdim = truncdim,initspec = initspec)
     lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
     fms = df$bt[is.finite(df$bte)][1] #first missing speciation
     fe = df$bt[df$to==0][1] # first extinction
@@ -157,7 +176,7 @@ IntInvExtant <- function(r,mu,s,u){
 ###  simulation of extinct species
 sim.extinct <- function(brts,pars,model='dd',seed=0){
   if(seed>0) set.seed(seed)
-  wt = -diff(c(brts,0))
+  wt = diff(c(0,brts))
   ct = sum(wt)
   dim = length(wt)
   mu = pars[2]
