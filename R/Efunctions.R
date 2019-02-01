@@ -125,12 +125,12 @@ sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd",truncdim=
     df =  emphasis::sim.extinct2(brts = brts,pars = pars,model=model)
     tree = emphasis::df2tree(df,pars,model=model,initspec=initspec)
     lsprob = emphasis::lg_prob(tree,topology = topology)
-    lw2 = we_cal(tree)
+    #lw2 = we_cal(tree)
     nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model,truncdim = truncdim,initspec = initspec)
     lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
     fms = df$bt[is.finite(df$bte)][1] #first missing speciation
     fe = df$bt[df$to==0][1] # first extinction
-    return(list(nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe,lw2=lw2))
+    return(list(nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
   }
   stopCluster(cl)
   lw = sapply(trees,function(list) list$lw)

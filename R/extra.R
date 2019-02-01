@@ -160,6 +160,10 @@ W <- function (z, branch = 0)
 
 
 get.topologies <- function(M){
+  if(M == 0)
+  {
+    return(NULL)
+  }
   TO = matrix(nrow=2*M,ncol=1)
   TO[1,1] = 1
   for(i in 2:(2*M)){
@@ -232,3 +236,85 @@ g_samp_missobs <- function(df,pars){
   log_dens = log_dens_miss+log_dens_obs
   return(log_dens)
 }
+
+
+we_cal <- function(tree){ # weights calculation
+  list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
+  mu = pars[2]
+  if(mu!=0){
+    if(length(t_ext) != length(to)) to = c(to,2)
+    ev = (to==1 & is.infinite(t_ext))
+    nobs = c(2,2+cumsum(ev))
+    nobs = nobs[-length(nobs)]
+    index = (!is.finite(t_ext) & to == 1)
+    logg = sum(-s*(exp(-r*mu)/mu)*(exp(wt*mu)-1))+sum(log(s[index]/n[index]))-sum(mu*nobs*wt)
+  }else{
+    logg = 0
+  }
+  return(logg)
+}
+
+sim.tree <- function(pars,CT,seed=1,model="dd"){
+  set.seed(seed)
+  mu = pars[2]
+  N = 2
+  brts = 0
+  to = c(1,1)
+  while(max(brts)<CT & N>0){
+    if(model=="dd") lambda = lambda.dd(pars,N)
+    if(model=="cr") lambda = lambda.cr(pars,N)
+    sigma = N*(mu+lambda)
+    wt = rexp(1,rate=sigma)
+    tev = rbinom(n=1,size=1,prob= (lambda/(lambda+mu)) )
+    brts = c(brts,max(brts)+wt)
+    to = c(to,tev)
+    if(tev==1) N = N+1
+    if(tev==0 & max(brts)<CT){
+      N = N-1
+      ext = sample((1:length(to))[to==1],1)
+      to[ext] = -1
+    }
+  }
+  to = to[-length(to)]
+  if(max(brts)>CT) brts[length(brts)]=CT
+  tree = list(wt=diff(brts),to=to)
+  return(tree)
+}
+
+
+
+mle.tree <- function(tree,init_par= c(1,0.5,100),topology=TRUE,model="dd",truncdim=FALSE){
+  if(model=="cr") init_par = c(init_par[1],init_par[2])
+  po = subplex(par = init_par, fn = nllik.tree, topology=topology, truncdim=truncdim, tree = tree,model=model,hessian = TRUE)
+  return(po)
+}
+
+
+prune.tree <- function(tree){
+  brts = sum(tree$wt)-c(0,cumsum(tree$wt))
+  brts = c(brts[1],brts[-length(brts)])
+  nbrts = brts[tree$to==1]
+  return(nbrts)
+}
+
+sim.tree.g <- function(lambda,mu,CT,seed){
+  set.seed(seed)
+  Ne = rpois(1,mu*CT) # number of extinct species
+  Np = rpois(1,(mu+lambda)*CT) # number of present species
+  brts = runif(Np,min=0,max=CT) # branching times of speciation of present species
+  ms = runif(Ne,min=0,max=CT) # branching times of speciation of extinct species
+  me = runif(Ne,min=ms,max=CT) # branching times of extinctions
+  # return matrix with branching times and topology
+  to = c(rep(1,Ne),rep(0,Ne))
+  df = data.frame(bt = c(ms,me),to=to)
+  df = rbind(df,data.frame(bt=c(brts,CT),to=c(rep(2,length(brts)),2)))
+  df = df[order(df$bt),]
+  return(df)
+}
+
+no.na <- function(vector){
+  vector[!is.na(vector)]
+}
+
+pars2 = c(2.5e+02,1.0e+00, 0.0e+00, 1.0e+00, 0.0e+00, 2.0e+00)
+
