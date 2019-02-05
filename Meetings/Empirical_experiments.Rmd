@@ -1,0 +1,968 @@
+---
+title: "Empirical experiments"
+output:
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(emphasis)
+library(Rmisc)
+library(numbers)
+```
+
+### 1. The space of time trees and its distributions
+
+
+#### 1.1 Diversity-dependance 
+
+
+We first set parameters $\lambda=0.1, \mu=0.1, K = 40$ and $T=15$
+
+```{r, exp1, cache=TRUE}
+nsim = 10000
+M1=matrix(ncol=3,nrow=nsim)
+#M2=matrix(ncol=3,nrow=nsim)
+pars = c(0.8,0.1,40)
+CT = 15
+time = proc.time()
+for(i in 1:nsim){
+  dd = sim.tree(pars,CT = CT,seed=i)
+  if(sum(dd$wt)==CT){
+    dd$to = dd$to[3:length(dd$to)]
+    dd$to[dd$to==-1] = 1
+    M1[i,] = mle.tree(dd)$par
+   # M2[i,] = mle.tree(dd,truncdim = TRUE)$par
+  }
+}
+
+df = data.frame(lambda=M1[,1],mu=M1[,2],K=M1[,3])
+
+summary(df)
+df = df[!is.na(df$lambda),]
+#summary(M2)
+gl = ggplot(data=df,aes(x=lambda))+geom_histogram(position="identity",alpha=0.6,binwidth = 0.05)+geom_vline(aes(xintercept=pars[1]))
+
+gm = ggplot(data=df,aes(x=mu))+geom_histogram(position="identity",alpha=0.6,binwidth = 0.01)+geom_vline(aes(xintercept=pars[2]))
+
+#gk = ggplot(data=df,aes(x=K))+geom_histogram(position="identity",alpha=0.6)+geom_vline(aes(xintercept=pars[3]))
+
+multiplot(gl,gm)
+```
+
+```{r, exp2, cache=TRUE}
+nsim = 10000
+M1=matrix(ncol=3,nrow=nsim)
+#M2=matrix(ncol=3,nrow=nsim)
+pars = c(0.8,0.1,40)
+CT = 10
+time = proc.time()
+for(i in 1:nsim){
+  dd = sim.tree(pars,CT = CT,seed=i)
+  if(sum(dd$wt)==CT){
+    dd$to = dd$to[3:length(dd$to)]
+    dd$to[dd$to==-1] = 1
+    M1[i,] = mle.tree(dd)$par
+   # M2[i,] = mle.tree(dd,truncdim = TRUE)$par
+  }
+}
+
+df = data.frame(lambda=M1[,1],mu=M1[,2],K=M1[,3])
+
+summary(df)
+df = df[!is.na(df$lambda),]
+#summary(M2)
+gl = ggplot(data=df,aes(x=lambda))+geom_histogram(position="identity",alpha=0.6,binwidth = 0.05)+geom_vline(aes(xintercept=pars[1]))
+
+gm = ggplot(data=df,aes(x=mu))+geom_histogram(position="identity",alpha=0.6,binwidth = 0.01)+geom_vline(aes(xintercept=pars[2]))
+
+#gk = ggplot(data=df,aes(x=K))+geom_histogram(position="identity",alpha=0.6,binwidth = 1)+geom_vline(aes(xintercept=pars[3]))
+
+multiplot(gl,gm)
+```
+
+```{r, exp3, cache=TRUE}
+nsim = 10000
+M1=matrix(ncol=3,nrow=nsim)
+#M2=matrix(ncol=3,nrow=nsim)
+pars = c(0.8,0.1,40)
+CT = 5
+time = proc.time()
+for(i in 1:nsim){
+  dd = sim.tree(pars,CT = CT,seed=i)
+  if(sum(dd$wt)==CT){
+    dd$to = dd$to[3:length(dd$to)]
+    dd$to[dd$to==-1] = 1
+    M1[i,] = mle.tree(dd)$par
+   # M2[i,] = mle.tree(dd,truncdim = TRUE)$par
+  }
+}
+
+df = data.frame(lambda=M1[,1],mu=M1[,2],K=M1[,3])
+
+summary(df)
+df = df[!is.na(df$lambda),]
+#summary(M2)
+gl = ggplot(data=df,aes(x=lambda))+geom_histogram(position="identity",alpha=0.6,binwidth = 0.05)+geom_vline(aes(xintercept=pars[1]))
+
+gm = ggplot(data=df,aes(x=mu))+geom_histogram(position="identity",alpha=0.6,binwidth = 0.01)+geom_vline(aes(xintercept=pars[2]))
+
+#gk = ggplot(data=df,aes(x=K))+geom_histogram(position="identity",alpha=0.6,binwidth = 1)+geom_vline(aes(xintercept=pars[3]))
+
+multiplot(gl,gm)
+```
+
+
+#### Constant rates 
+
+
+
+```{r, exp1cr, cache=TRUE}
+nsim = 10000
+M1=matrix(ncol=2,nrow=nsim)
+#M2=matrix(ncol=3,nrow=nsim)
+pars = c(0.8,0.1,Inf)
+CT = 5
+time = proc.time()
+for(i in 1:nsim){
+  dd = sim.tree(pars,CT = CT,seed=i,model="cr")
+  if(sum(dd$wt)==CT){
+    dd$to = dd$to[3:length(dd$to)]
+    dd$to[dd$to==-1] = 1
+    M1[i,] = mle.tree(dd,model = "cr")$par
+  }
+}
+
+df = data.frame(lambda=M1[,1],mu=M1[,2])
+
+summary(df)
+df = df[!is.na(df$lambda),]
+gl = ggplot(data=df,aes(x=lambda))+geom_histogram(position="identity",alpha=0.6,binwidth = 0.05)+geom_vline(aes(xintercept=pars[1]))
+
+gm = ggplot(data=df,aes(x=mu))+geom_histogram(position="identity",alpha=0.6,binwidth = 0.01)+geom_vline(aes(xintercept=pars[2]))
+
+
+multiplot(gl,gm)
+```
+
+
+## 2. Monte Carlo approximation of the likelihood 
+
+#### 2.1 The three sampling squemes together. 
+
+```{r}
+## Method 1: uniform
+
+sim.extinct.alt <- function(brts,cte=10){
+  N = length(brts)+1
+  Ne = sample(0:(cte*N),1)
+  ms = runif(Ne,min=0,max=brts[1])
+  me = runif(Ne,min=ms,max=brts[1])
+  to = c(rep(1,Ne),rep(0,Ne))
+  df = data.frame(bt = c(ms,me),bte=c(me,rep(Inf,Ne)),to=to)
+  df = rbind(df,data.frame(bt=brts,to=rep(2,length(brts)),bte=rep(Inf,length(brts))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  return(df)
+}
+
+g_samp <- function(df,cte){
+  last = dim(df)[1]
+  ct = df[last,1]
+  N = sum(df$to==2)+1
+  M = N*cte
+  Ne = sum(df$to==0)
+  subdf = df[df$to==1,]
+  Ts = ct-subdf$bt
+  to = df$to[-last]
+  to[to==2] = 1
+  n = c(2,2+cumsum(to)+cumsum(to-1))
+  n = n[df$to==1]
+  log_dens = -log(M+1)-Ne*log(ct)-sum(log(Ts))-sum(log(n))+lgamma(Ne+1)
+  return(log_dens)
+}
+
+
+f.hat1 <- function(brts,pars,cte=10,m=100,model="dd"){
+  f.joint = vector(mode="numeric",length=m)
+  g.samp = vector(mode="numeric",length=m)
+  for(i in 1:m){
+    df = sim.extinct.alt(brts,cte=cte)
+    f.joint[i] = -emphasis::nllik.tree(pars,tree=emphasis::df2tree(df,pars),model=model)
+    g.samp[i] = g_samp(df,cte=cte)
+  }
+  f_hat = mean(exp(f.joint-g.samp))
+  return(f_hat)
+}
+
+##### Method 2: Poisson
+
+sim.extinct.alt2 <- function(brts,pars){
+  Ne = rpois(1,pars[1]+pars[2])
+  ms = runif(Ne,min=0,max=brts[1])
+  me = runif(Ne,min=ms,max=brts[1])
+  to = c(rep(1,Ne),rep(0,Ne))
+  df = data.frame(bt = c(ms,me),bte=c(me,rep(Inf,Ne)),to=to)
+  df = rbind(df,data.frame(bt=brts,to=rep(2,length(brts)),bte=rep(Inf,length(brts))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  return(df)
+}
+
+g_samp2 <- function(df,pars){
+  last = dim(df)[1]
+  ct = df[last,1]
+  Ne = sum(df$to==0)
+  subdf = df[df$to==1,]
+  Ts = ct-subdf$bt
+  to = df$to[-last]
+  to[to==2] = 1
+  n = c(2,2+cumsum(to)+cumsum(to-1))
+  n = n[df$to==1]
+  #  density = (1/(M+1))*((1/ct)^Ne)*prod(1/Ts)*prod(1/n)
+  log_dens = dpois(Ne,lambda = pars[1]-pars[2],log=TRUE)-Ne*log(ct)-sum(log(Ts))-sum(log(n))+lgamma(Ne+1)
+  #log_dens = -log(M+1)-2*Ne*log(ct)-sum(log(n))
+  return(log_dens)
+}
+
+
+f.hat2 <- function(brts,pars,m=100,model="dd"){
+  f.joint = vector(mode="numeric",length=m)
+  g.samp = vector(mode="numeric",length=m)
+  for(i in 1:m){
+    df = sim.extinct.alt2(brts,pars=pars)
+    f.joint[i] = -emphasis::nllik.tree(pars,tree=emphasis::df2tree(df,pars),model=model)
+    g.samp[i] = g_samp2(df,pars=pars)
+  }
+  f_hat = mean(exp(f.joint-g.samp))
+  return(f_hat)
+}
+
+
+## Method 3:  uniform
+
+sim.extinct.alt <- function(brts,cte=10){
+  N = length(brts)+1
+  Ne = sample(0:(cte*N),1)
+  ms = runif(Ne,min=0,max=brts[1])
+  me = runif(Ne,min=ms,max=brts[1])
+  to = c(rep(1,Ne),rep(0,Ne))
+  df = data.frame(bt = c(ms,me),bte=c(me,rep(Inf,Ne)),to=to)
+  df = rbind(df,data.frame(bt=brts,to=rep(2,length(brts)),bte=rep(Inf,length(brts))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  return(df)
+}
+
+g_samp <- function(df,cte){
+  last = dim(df)[1]
+  ct = df[last,1]
+  N = sum(df$to==2)+1
+  M = N*cte
+  Ne = sum(df$to==0)
+  subdf = df[df$to==1,]
+  Ts = ct-subdf$bt
+  to = df$to[-last]
+  to[to==2] = 1
+  n = c(2,2+cumsum(to)+cumsum(to-1))
+  n = n[df$to==1]
+  log_dens = -log(M+1)-Ne*log(ct)-sum(log(Ts))-sum(log(n))+lgamma(Ne+1)
+  return(log_dens)
+}
+
+
+f.hat1 <- function(brts,pars,cte=10,m=100,model="dd"){
+  f.joint = vector(mode="numeric",length=m)
+  g.samp = vector(mode="numeric",length=m)
+  for(i in 1:m){
+    df = sim.extinct.alt(brts,cte=cte)
+    f.joint[i] = -emphasis::nllik.tree(pars,tree=emphasis::df2tree(df,pars),model=model)
+    g.samp[i] = g_samp(df,cte=cte)
+  }
+  f_hat = mean(exp(f.joint-g.samp))
+  return(f_hat)
+}
+
+## Method 4: deterministic topology, uniform random values
+Xd.mc <- function(d,obt,nsim=10,pars,model="dd"){
+  #print(paste("Getting topologies for", d," missing species"))
+  top = get.topologies(d)
+  sumofllik = vector(mode="numeric",length=ncol(top))
+  #print(paste("Drawing uniform trees for ",ncol(top),"topologies"))
+  for(j in 1:ncol(top)){
+    topi = top[,j]
+    topi = replicate(nsim,topi,simplify = F)
+    ntree = lapply(topi,sim.unif.tree.df,obt=obt)  # simulate unif random tree given topology
+    nlliks = lapply(ntree,weight.unif,pars=pars,d=d,ct=max(obt),model=model)
+    sumofllik[j] = Reduce("+", nlliks)
+  }
+  sumofllik = sum(sumofllik)
+  return(sumofllik/(ncol(top)*nsim))
+}
+
+#logfactor <- log_catalan(S) + 2 * S * log(age) - lgamma(2 * S + 1) # Works for S = 1
+#loglik <- logfactor + loglik_full_tree_vec_max + log(mean(exp(loglik_full_tree_vec - loglik_full_tree_vec_max)))
+
+weight.unif <- function(tree,pars,d,ct,model){
+  lik.tree(pars,tree,initspec = 1,topology = F,model = model)*((catalan(d)*(ct^(2*d)))/(factorial(2*d)))
+}
+
+
+sim.unif.mtree <- function(top,obt){
+  nmbt = length(top) #length of missing bt
+  mbt = sort(runif(nmbt,min=0,max=max(obt)))
+  df = data.frame(bt=c(mbt,obt),to=c(top,rep(2,length(obt))))
+  df = df[order(df$bt),]
+  return(df)
+}
+
+sim.unif.tree.df <- function(top,obt){
+  df = df2tree2(sim.unif.mtree(top,obt))
+  return(df)
+}
+
+
+f.hat4 <- function(brts,pars,cte=10,m=100,model="dd"){
+  int.d = NULL
+  for(i in 1:cte){
+    int.d[i] = Xd.mc(nsim=m,obt=brts,d = i,pars=pars)
+  }
+  sum(int.d)
+}
+
+## new mathod 1
+
+sim.miss1 <- function(maxnumspec=250,ct){
+  S = sample(0:maxnumspec,1)
+  brts = sort(runif(2*S,min=0,max=ct))
+  to = sampletopology(S)
+  tree = list(brts=brts,to=to)
+  return(tree)
+}
+
+sampletopology <- function(S,p=0.5){
+  to = NULL
+  if(S>0){
+    for(i in 1:(2*S)){
+      if(sum(to==1)==sum(to==0)){
+        prob = 1
+      }
+      if(sum(to==1)==S){
+        prob = 0
+      }
+      to = c(to,rbinom(n=1,size=1,prob=prob))
+      prob = p
+    }
+  }else{
+    to = NULL
+  }
+  return(to)
+}
+
+loggprob1 <- function(to,maxnumspec,ct,conf){
+  loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+log(probto(to))-log(conf$N-conf$P)
+#  gprob = (1/(maxnumspec+1))*factorial(length(to))*((1/ct)^(length(to)))*probto(to)
+}
+
+probto <- function(to,p=0.5){
+  posspec = c(0,cumsum(to==1))<(length(to)/2)
+  posext = !(c(0,cumsum(to==1))==c(0,cumsum(to==0)))
+  expo = sum(posspec & posext)
+  prob = p^expo
+  return(prob)
+}
+
+fhat1 <- function(obs,pars,nsim=1000,maxnumspec=250,model="cr"){
+  ct = max(obs)
+  logf.joint = vector(mode="numeric",length=nsim)
+  logg.samp = vector(mode="numeric",length=nsim)
+  for(i in 1:nsim){
+    miss = sim.miss1(maxnumspec = maxnumspec,ct = ct)
+    logg.samp[i] = loggprob1(to = miss$to,maxnumspec = maxnumspec,ct=ct)
+    df = data.frame(bt=c(miss$brts,obs),to=c(miss$to,rep(1,length(obs))))
+    df = df[order(df$bt),]
+    tree = df2tree2(df)
+    logf.joint[i] = -nllik.tree(pars=pars,tree=tree,topology = F,model=model,initspec = 1)
+  }
+  difflog = logf.joint - logg.samp
+  maxdifflog = max(difflog)
+  log_fhat = maxdifflog + log(mean(exp(difflog-maxdifflog)))
+  fhat = exp(log_fhat)
+  return(fhat)
+}
+
+
+possible.configurations  <- function(miss,obs){
+  if (is.vector(obs)){
+    tms <- obs
+    to <- rep(1,length(obs))
+    obs <- list(brts=tms,to=to)
+  }
+  mi = 1 #index for missing
+  ob = 1 #index for observed
+  
+  # (number of) protected species
+  protected = 1
+  P<-NULL
+  
+  # (number of) current species
+  currentspecies = 1
+  N<-NULL
+  
+  # missing branching times
+  brts.m = c(miss$brts,Inf)
+  
+  # set of sets of guardians
+  guardians = list()
+  
+  # missing new species (starting to count at 1 above number of present species)
+  n.obs = length(obs$brts)
+  newspecies.m = n.obs+1
+  
+  # observed new species (starting to count at 1, so next one is 2)
+  newspecies.o = 2
+  
+  # sampled tree
+  tree<-list(brts=NULL,species=NULL,event=NULL)
+  
+  while (mi < length(brts.m) | ob < length(obs$brts)) {
+    if(obs$brts[ob]<brts.m[mi]){ # observed speciation
+      spec = obs$to[ob]
+      #update tree
+      tree$brts = c(tree$brts,obs$brts[ob])
+      tree$species =c(tree$species,spec)
+      tree$event = c(tree$event,newspecies.o)
+      if(spec%in%protected){ # if protected, then both species become protected
+        protected = c(protected,newspecies.o)
+        currentspecies = c(currentspecies,newspecies.o)
+      }else{ # if unprotected, then then (1) its guardian set disappears and (2) both become protected
+        index = unlist(lapply(guardians,function(y,x){x%in%y},x=spec))
+        if (sum(index)>0){
+          index = which(index)
+          n.guardians = length(guardians[[index]])
+          guardians[[index]] = NULL
+        }
+        protected = c(protected,spec,newspecies.o)
+        P = c(P,0) # it is weird, but we want to try 
+        currentspecies = c(currentspecies,newspecies.o)
+        N = c(N,n.guardians) # it is weird, but we want to try 
+      }
+      ob = ob + 1
+      newspecies.o = newspecies.o + 1
+    }else{ # missing event
+      if(miss$to[mi]==1){ # missing speciation
+        mspec = sample(c(currentspecies,currentspecies),1)
+        index = which(mspec==protected)
+        N = c(N,length(currentspecies))
+        P=c(P,0)
+        currentspecies = c(currentspecies,newspecies.m)
+        #update tree
+        tree$brts = c(tree$brts,miss$brts[mi])
+        tree$species =c(tree$species,mspec)
+        tree$event = c(tree$event,newspecies.m)
+        if(sum(index)>0){ # if a protected species speciates, then it becomes unprotected and both guardians
+          protected = protected[-index]
+          guardians[[length(guardians)+1]] = c(mspec,newspecies.m)
+        }else{ # if a unprotected species speciates, then ...
+          index = unlist(lapply(guardians,function(y,x){x%in%y},x=mspec))          
+          if (sum(index)>0){ #... if it is a guardian then new species becomes guardian
+            index=which(index)
+            guardians[[index]] = c(guardians[[index]],newspecies.m)
+          } # ... if it is not a guardian then no changes to guardianship
+        }
+        newspecies.m = newspecies.m + 1
+      } else { #missing extinction
+        N = c(N,length(currentspecies))
+        P = c(P,length(protected))
+        available = setdiff(currentspecies,protected)
+        missextinct = sample(c(available,available),1)
+        if (missextinct<=n.obs){# if we selected the label of an extant species, we arbitrarily pick the label of a missing guardian
+          index = which(unlist(lapply(guardians,function(y,x){x%in%y},x=missextinct)))         
+          missextinct = setdiff(guardians[[index]],missextinct)[1]
+        }
+        #update tree
+        tree$brts = c(tree$brts,miss$brts[mi])
+        tree$species =c(tree$species,missextinct)
+        tree$event = c(tree$event,0)
+        index = unlist(lapply(guardians,function(y,x){x%in%y},x=missextinct))          
+        if (sum(index)>0){ # if it is a guardian then ...
+          index=which(index)
+          if (length(guardians[[index]])>2){ # ... if the set is larger than 2, then take it out of guardian set
+            guardians[[index]] = setdiff(guardians[[index]],missextinct)
+          } else { # ... if guardian set is of size 2, remove guardian set and protect the remaining species
+            protected = c(protected, setdiff(guardians[[index]],missextinct))
+            guardians[[index]] = NULL
+          }
+        }
+        currentspecies = setdiff(currentspecies,missextinct)
+      }
+      mi = mi + 1
+    }
+  }
+  return(list(N=N,P=P,tree=tree))
+}
+
+
+```
+
+```{r}
+#nee et. al likelihood
+#' @title Pt
+#' @author Giovanni Laudanno
+#' @description Nee's function: pt
+#' @inheritParams default_params_doc
+#' @return pt
+#' @export
+pt  <- function (lambda, mu, t) {
+  time <- t
+  Lambda <- exp((mu - lambda) * time)
+  out    <- (lambda == mu) * (1/(1 + lambda * time)) +
+    (lambda != mu) * ((lambda - mu + (lambda == mu))/(lambda - mu *
+                                                        Lambda * (lambda != mu) + (lambda == mu)))
+  return(unname(out))
+}
+
+#' @title ut
+#' @author Giovanni Laudanno
+#' @description Nee's function: ut
+#' @inheritParams default_params_doc
+#' @return ut
+#' @export
+ut  <- function (lambda, mu, t) {
+  time <- t
+  Lambda <- exp((mu - lambda) * time)
+  out    <- (lambda == mu) * (lambda * time/(1 + lambda * time)) +
+    (lambda != mu) * ((lambda - lambda * Lambda + (lambda == mu)) /
+                        (lambda - mu * Lambda * (lambda != mu) + (lambda == mu)))
+  return(unname(out))
+}
+
+#' @title Pn
+#' @author Giovanni Laudanno
+#' @description Nee's function: pn
+#' @inheritParams default_params_doc
+#' @return pn
+#' @export
+pn <- function(lambda, mu, t, n) {
+  out <- (n > 0) * sls::pt(t = t, lambda = lambda, mu = mu) *
+    (1 - sls::ut(t = t, lambda = lambda, mu = mu)) *
+    sls::ut(t = t, lambda = lambda, mu = mu)^(n - 1 + 2*(n == 0)) +
+    (n == 0) * (1 - sls::pt(t = t, lambda = lambda, mu = mu))
+  return(out)
+}
+
+Nee_likelihood <- function(lambda, mu, brts, cond)
+{
+  BRTS <- brts
+  NN <- length(BRTS)
+  out <- prod(
+    pt(lambda = lambda, mu = mu, t = BRTS) * (1 - ut(lambda = lambda, mu
+                                                     = mu, t = BRTS))
+  ) * lambda^(NN - 1) #* factorial(NN - 1)
+  out <- out/((pt(lambda = lambda, mu = mu, t = BRTS[1]))^(2 * cond))
+}
+
+```
+
+
+
+
+
+##considering topology version
+
+```{r}
+loggprob1 <- function(to,maxnumspec,ct,initspec=1,conf){
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  n = n[-length(n)]
+  loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+log(probto(to))-sum(log(conf$N-conf$P))
+#  gprob = (1/(maxnumspec+1))*factorial(length(to))*((1/ct)^(length(to)))*probto(to)
+}
+
+
+fhat1 <- function(obs,pars,nsim=1000,maxnumspec=250,model="cr"){
+  ct = max(obs)
+  logf.joint = vector(mode="numeric",length=nsim)
+  logg.samp = vector(mode="numeric",length=nsim)
+  dim = vector(mode="numeric",length=nsim)
+  for(i in 1:nsim){
+    miss = sim.miss1(maxnumspec = maxnumspec,ct = ct)
+    dim[i] = length(miss$to)/2
+    conf = possible.configurations(miss = miss,obs = obs)
+    logg.samp[i] = loggprob1(to = miss$to,maxnumspec = maxnumspec,ct=ct,conf=conf)
+    df = data.frame(bt=c(miss$brts,obs),to=c(miss$to,rep(1,length(obs))))
+    df = df[order(df$bt),]
+    tree = df2tree2(df)
+    logf.joint[i] = -nllik.tree(pars=pars,tree=tree,topology = TRUE,model=model,initspec = 1)
+  }
+  difflog = logf.joint - logg.samp
+  maxdifflog = max(difflog)
+  log_fhat = maxdifflog + log(mean(exp(difflog-maxdifflog)))
+  fhat = exp(log_fhat)
+  return(list(fhat=fhat,dim=dim,logf=logf.joint,logg=logg.samp))
+}
+```
+
+```{r, checkNewm1conTop,cache=TRUE}
+time=proc.time()
+n.sim <- 10
+mu <- seq(0.001,0.99,length=n.sim)
+brts = obt = 1
+n.gsim <- 100000
+pars = c(2,NaN,Inf)
+lambda = pars[1]
+
+fhatn1=f.true1=NULL
+for (i in 1:n.sim){
+  pars[2] = mu[i]
+  fhatn1[i] <- fhat1(obs = obt,nsim = n.gsim,maxnumspec = 8,pars = pars)$fhat
+  f.true1[i]<- pt(lambda = pars[1], mu = pars[2],t = obt) *(1-ut(lambda = pars[1], mu = pars[2],t = obt))
+}
+get.time(time)
+
+plot(mu,f.true1,type="l")
+points(mu,fhatn1,col="blue")
+```
+
+#### again, but in parallel 
+
+```{r}
+lfhat_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="cr"){
+  ct = max(obs)
+  #logf.joint = vector(mode="numeric",length=nsim)
+  #logg.samp = vector(mode="numeric",length=nsim)
+  no_cores <- detectCores()
+  cl <- makeCluster(no_cores)
+  registerDoParallel(cl)
+  logprobs <- foreach(i = 1:nsim, .combine = rbind) %dopar% {
+    miss = emphasis:::sim.miss1(maxnumspec = maxnumspec,ct = ct)
+    conf = emphasis:::possible.configurations(miss = miss,obs = obs)
+    logg.samp = emphasis:::loggprob1(to = miss$to,maxnumspec = maxnumspec,ct=ct,conf=conf)
+    df = data.frame(bt=c(miss$brts,obs),to=c(miss$to,rep(1,length(obs))))
+    df = df[order(df$bt),]
+    tree = emphasis:::df2tree2(df)
+    logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,topology = TRUE,model=model,initspec = 1)
+    return(c(logf.joint,logg.samp))
+  }
+  stopCluster(cl)
+  difflog = logprobs[,1] - logprobs[,2]
+  maxdifflog = max(difflog)
+  log_fhat = maxdifflog + log(mean(exp(difflog-maxdifflog)))
+  fhat = log_fhat
+  return(fhat)
+}
+```
+
+```{r, checkNewm1conTop2,cache=TRUE}
+time=proc.time()
+n.sim <- 10
+mu <- seq(0.001,0.99,length=n.sim)
+brts = obt = 1
+n.gsim <- 100000
+pars = c(2,NaN,Inf)
+lambda = pars[1]
+
+fhatn1=f.true1=NULL
+for (i in 1:n.sim){
+  pars[2] = mu[i]
+  fhatn1[i] <- lfhat_p(obs = obt,nsim = n.gsim,maxnumspec = 8,pars = pars)
+  f.true1[i]<- pt(lambda = pars[1], mu = pars[2],t = obt) *(1-ut(lambda = pars[1], mu = pars[2],t = obt))
+}
+get.time(time)
+```
+
+```{r}
+plot(mu,f.true1,type="l")
+points(mu,exp(fhatn1),col="blue")
+
+```
+
+
+## more branching times
+
+```{r, checkNewm1conTopBT2,cache=TRUE}
+time=proc.time()
+n.sim <- 10
+mu <- seq(0.001,0.99,length=n.sim)
+brts = obt = c(0.5,1)
+n.gsim <- 10000
+pars = c(2,NaN,Inf)
+lambda = pars[1]
+
+fhatn1=f.true1=NULL
+for (i in 1:n.sim){
+  pars[2] = mu[i]
+  fhatn1[i] <- fhat1(obs = obt,nsim = n.gsim,maxnumspec = 8,pars = pars)
+  f.true1[i]<- Nee_likelihood(lambda=pars[1],mu=pars[2],brts=brts,cond=0)
+}
+get.time(time)
+
+plot(mu,f.true1,type="l")
+points(mu,fhatn1,col="blue")
+```
+
+
+```{r, checkNewm4,cache=TRUE}
+time=proc.time()
+n.sim <- 10
+mu <- seq(0.001,0.99,length=n.sim)
+obt = c(0.01,1)
+brts = c(1,0.99)
+n.gsim <- 10000
+pars = c(2,NaN,Inf)
+lambda = pars[1]
+
+fhatn1=f.true1=f_hat4=NULL
+for (i in 1:n.sim){
+  pars[2] = mu[i]
+  fhatn1[i] <- fhat1(obs = obt,nsim = n.gsim,maxnumspec = 7,pars = pars)
+  f.true1[i]<- Nee_likelihood(lambda=pars[1],mu=pars[2],brts=brts,cond=0)
+}
+get.time(time)
+```
+
+```{r}
+f.true1
+fhatn1
+#plot(mu,f.true1,type="l",ylim=c(min(c(f.true1,fhatn1)),max(c(f.true1,fhatn1))))
+#points(mu,f_hat4,col="green")
+#points(mu,fhatn1,col="blue")
+```
+
+```{r, checkNewm5,cache=TRUE}
+time=proc.time()
+n.sim <- 10
+mu <- seq(0.001,0.99,length=n.sim)
+obt = c(0.99,1)
+brts = c(1,0.01)
+n.gsim <- 10000
+pars = c(2,NaN,Inf)
+lambda = pars[1]
+
+fhatn1=f.true1=f_hat4=NULL
+for (i in 1:n.sim){
+  pars[2] = mu[i]
+  fhatn1[i] <- fhat1(obs = obt,nsim = n.gsim,maxnumspec = 8,pars = pars)$fhat
+  f.true1[i]<- Nee_likelihood(lambda=pars[1],mu=pars[2],brts=brts,cond=0)
+ # ctezero = exp(-nllik.tree(pars,tree=list(wt=diff(c(0,obt)),to=rep(1,length(obt)-1)),initspec = 1,topology = F))
+  #f_hat4[i] <- f.hat4(brts = obt,pars = pars,cte = 8,m = 10, model = "cr") + ctezero
+}
+get.time(time)
+
+plot(mu,f.true1,type="l",ylim=c(min(f.true1,fhatn1),max(f.true1,fhatn1)))
+#points(mu,f_hat4,col="green")
+points(mu,fhatn1,col="blue")
+```
+
+
+## Four branching times example
+
+```{r, checkNewm1conTopBTden,cache=TRUE}
+pars=c(1.5,0.1,5)
+time=proc.time()
+n.sim <- 10
+mu <- seq(0.001,0.9,length=n.sim)
+#brts = obt = btdd = c(4.9999999998,4.806886544,4.70731246478,4.50735197578,4.37856240588,4.29594855558,4.19207515688,4.18261061218,4.11238451758,4.09640902445,3.81723693538,3.71143733895,3.48845298905,3.25729503338,3.11613886835,2.64829864145,2.63531839038,2.37990087748,1.82721570435,0.83704715535,0.64242044758,0.56121103655,0.356333544350001,0.346462849050001)
+brts = obt = 1:4
+
+n.gsim <- 10000
+pars = c(2,NaN,Inf)
+lambda = pars[1]
+
+fhatn1=f.true1=NULL
+maxnumspec=25
+pars2=c(maxnumspec,1,0,1,0,1)
+for (i in 1:n.sim){
+  pars[2] = mu[i]
+  fhatn1[i] <- fhat1(obs = obt, nsim = n.gsim, maxnumspec = maxnumspec, pars = pars, model = "dd")$fhat
+  f.true1[i]<- exp(DDD:::dd_loglik(pars1 = pars, pars2 = pars2, brts = brts, missnumspec = 0))
+}
+get.time(time)
+
+plot(mu,f.true1,type="l",ylim=c(min(c(fhatn1,f.true1)),max(c(fhatn1,f.true1))))
+points(mu,fhatn1,col="blue")
+```
+
+```{r}
+plot(mu,log(f.true1),type="l")
+points(mu,log(fhatn1),col="blue")
+```
+
+```{r,eval=F}
+lfhat2 <- function(obs,pars,nsim=1000,maxnumspec=250,model="cr"){
+  ct = max(obs)
+  logf.joint = vector(mode="numeric",length=nsim)
+  logg.samp = vector(mode="numeric",length=nsim)
+  for(i in 1:nsim){
+    df = sim.extinct(brts=obs,pars=pars,)
+    miss = list(brts=df$bt[df$to!=2],to=df$to[df$to!=2])
+    conf = possible.configurations(miss = miss,obs = obs)
+    tree = df2tree()
+    logg.samp[i] = loggprob1(to = miss$to,maxnumspec = maxnumspec,ct=ct,conf=conf)
+    df = data.frame(bt=c(miss$brts,obs),to=c(miss$to,rep(1,length(obs))))
+    df = df[order(df$bt),]
+    tree = df2tree2(df)
+    logf.joint[i] = -nllik.tree(pars=pars,tree=tree,topology = TRUE,model=model,initspec = 1)
+  }
+  difflog = logf.joint - logg.samp
+  maxdifflog = max(difflog)
+  log_fhat = maxdifflog + log(mean(exp(difflog-maxdifflog)))
+  fhat = log_fhat
+  return(fhat)
+}
+```
+
+```{r, checkNewm1conTopBTdenM2,cache=TRUE,eval=F}
+pars=c(1.5,0.1,5)
+time=proc.time()
+n.sim <- 10
+mu <- seq(0.001,0.9,length=n.sim)
+#brts = obt = btdd = c(4.9999999998,4.806886544,4.70731246478,4.50735197578,4.37856240588,4.29594855558,4.19207515688,4.18261061218,4.11238451758,4.09640902445,3.81723693538,3.71143733895,3.48845298905,3.25729503338,3.11613886835,2.64829864145,2.63531839038,2.37990087748,1.82721570435,0.83704715535,0.64242044758,0.56121103655,0.356333544350001,0.346462849050001)
+brts = obt = 1:4
+
+n.gsim <- 10000
+pars = c(2,NaN,Inf)
+lambda = pars[1]
+
+fhatn1=f.true1=NULL
+maxnumspec=20
+pars2=c(maxnumspec,1,0,1,0,1)
+for (i in 1:n.sim){
+  pars[2] = mu[i]
+  fhatn1[i] <- exp(lfhat2(obs = obt, nsim = n.gsim, maxnumspec = maxnumspec, pars = pars, model = "dd"))
+  f.true1[i]<- exp(DDD:::dd_loglik(pars1 = pars, pars2 = pars2, brts = brts, missnumspec = 0))
+}
+get.time(time)
+
+plot(mu,f.true1,type="l",ylim=c(min(c(fhatn1,f.true1)),max(c(fhatn1,f.true1))))
+points(mu,fhatn1,col="blue")
+```
+
+```{r,cache=T}
+plot(mu,log(f.true1),type="l")
+points(mu,log(fhatn1),col="blue")
+
+fhat1(obs = obt, nsim = n.gsim, maxnumspec = maxnumspec, pars = pars, model = "dd")
+exp(DDD:::dd_loglik(pars1 = pars, pars2 = pars2, brts = brts, missnumspec = 0))
+
+```
+
+
+```{r, fifty, cache=TRUE}
+maxnumspec
+n.gsim = 10000
+maxnumspec=45
+pars2=c(maxnumspec,1,0,1,0,1)
+fh = fhat1(obs = obt, nsim = n.gsim, maxnumspec = maxnumspec, pars = pars, model = "dd")
+exp(DDD:::dd_loglik(pars1 = pars, pars2 = pars2, brts = brts, missnumspec = 0))
+```
+
+#hasta aca renove todo
+
+```{r, cache=TRUE}
+fh$fhat
+hist(fh$dim)
+fhats=NULL
+for(i in 0:50){
+  logf.joint = fh$logf[fh$dim<=i]
+  logg.samp = fh$logg[fh$dim<=i]
+  difflog = logf.joint - logg.samp
+  maxdifflog = max(difflog)
+  log_fhat = maxdifflog + log(mean(exp(difflog-maxdifflog)))
+  fhats[i+1] = exp(log_fhat)
+}
+qplot(0:50,fhats)
+boxplot(0:50,fhats)
+qplot(0:19,fhats[1:20])
+
+logdiff = fh$logf-fh$logg
+avlodiff = exp(mean(logdiff))
+avlodiff
+summary(fh$dim)
+summary(logdiff)
+boxplot(exp(logdiff)~fh$dim)
+```
+
+```{r, twenty, cache=TRUE}
+maxnumspec
+n.gsim = 1000000
+maxnumspec=20
+pars2=c(maxnumspec,1,0,1,0,1)
+fh = fhat1(obs = obt, nsim = n.gsim, maxnumspec = maxnumspec, pars = pars, model = "dd")
+exp(DDD:::dd_loglik(pars1 = pars, pars2 = pars2, brts = brts, missnumspec = 0))
+```
+
+```{r, cache=TRUE}
+fh$fhat
+hist(fh$dim)
+fhats=NULL
+for(i in 0:20){
+  logf.joint = fh$logf[fh$dim<=i]
+  logg.samp = fh$logg[fh$dim<=i]
+  difflog = logf.joint - logg.samp
+  maxdifflog = max(difflog)
+  log_fhat = maxdifflog + log(mean(exp(difflog-maxdifflog)))
+  fhats[i+1] = exp(log_fhat)
+}
+qplot(0:20,fhats)
+logdiff = fh$logf-fh$logg
+boxplot(exp(logdiff)~fh$dim)
+```
+
+```{r, therty, cache=TRUE}
+maxnumspec
+n.gsim = 1000000
+maxnumspec=30
+pars2=c(maxnumspec,1,0,1,0,1)
+fh = fhat1(obs = obt, nsim = n.gsim, maxnumspec = maxnumspec, pars = pars, model = "dd")
+exp(DDD:::dd_loglik(pars1 = pars, pars2 = pars2, brts = brts, missnumspec = 0))
+```
+
+```{r, cache=TRUE}
+fh$fhat
+hist(fh$dim)
+fhats=NULL
+for(i in 0:30){
+  logf.joint = fh$logf[fh$dim<=i]
+  logg.samp = fh$logg[fh$dim<=i]
+  difflog = logf.joint - logg.samp
+  maxdifflog = max(difflog)
+  log_fhat = maxdifflog + log(mean(exp(difflog-maxdifflog)))
+  fhats[i+1] = exp(log_fhat)
+}
+```
+
+```{r}
+qplot(0:30,fhats)
+logdiff = fh$logf-fh$logg
+boxplot(exp(logdiff)~fh$dim)
+```
+
+```{r, furty, cache=TRUE}
+maxnumspec
+n.gsim = 1000000
+maxnumspec=40
+pars2=c(maxnumspec,1,0,1,0,1)
+fh = fhat1(obs = obt, nsim = n.gsim, maxnumspec = maxnumspec, pars = pars, model = "dd")
+exp(DDD:::dd_loglik(pars1 = pars, pars2 = pars2, brts = brts, missnumspec = 0))
+```
+
+```{r, fou, cache=TRUE}
+fh$fhat
+hist(fh$dim)
+fhats=NULL
+for(i in 0:40){
+  logf.joint = fh$logf[fh$dim<=i]
+  logg.samp = fh$logg[fh$dim<=i]
+  difflog = logf.joint - logg.samp
+  maxdifflog = max(difflog)
+  log_fhat = maxdifflog + log(mean(exp(difflog-maxdifflog)))
+  fhats[i+1] = exp(log_fhat)
+}
+```
+
+```{r}
+qplot(0:40,fhats)
+logdiff = fh$logf-fh$logg
+boxplot(exp(logdiff)~fh$dim)
+```

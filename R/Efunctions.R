@@ -15,7 +15,7 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
   if(model == "dd.1.3"){
     lambda = lamda.dd.1.3(pars,n)
   }
-  mu = pars[2]
+  mu = max(0,pars[2])
   sigma = (lambda + mu)*n
 #  sigma[n==2] = lambda[n==2]*2
   if(topology){
@@ -28,6 +28,7 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
     wt = wt[-length(wt)]
   }
   nl = -(sum(-sigma*wt)+sum(log(rho)))
+  #if(initspec==1) nl = nl - log(pars[1])
   if(min(pars)<0){nl = Inf}
   return(nl)
 }

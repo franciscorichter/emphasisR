@@ -1,6 +1,6 @@
 ### temporary functions 
 
-loggprob1 <- function(to,maxnumspec,ct,initspec=1,conf){
+log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf){
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   n = n[-length(n)]
   loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+log(probto(to))-sum(log(conf$N-conf$P))
@@ -124,7 +124,7 @@ probto <- function(to,p=0.5){
   return(prob)
 }
 
-sim.miss1 <- function(maxnumspec=250,ct){
+sim.branchingtimes.and.events <- function(maxnumspec=250,ct){
   S = sample(0:maxnumspec,1)
   brts = sort(runif(2*S,min=0,max=ct))
   to = sampletopology(S)
