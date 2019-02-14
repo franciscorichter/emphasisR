@@ -155,7 +155,7 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
       if(mint < cwt){
         if(mint == t.spe){#speciation
           u = runif(1)
-          if(u < pexp(ct-(cbt+t.spe),mu0)){
+          if(u < 2*pexp(ct-(cbt+t.spe),mu0)*(1-pexp(ct-(cbt+t.spe),mu0))){
             ms = c(ms,cbt+t.spe)
             me = c(me,u)
             bt = c(bt,cbt+t.spe)
@@ -324,16 +324,26 @@ sim.extinct_old <- function(brts,pars,model='dd',seed=0){
 }
 
 
-#weight
-#logweight <- function(pars,df){ #sacar ct
-#  dim = dim(df)[1]
-#  wt = diff(c(0,df$bt))
-#  to = df$to[-dim]
-#  to[to==2] = 1
-#  n = c(2,2+cumsum(to)+cumsum(to-1))
-#  lambda = (pars[1]-(pars[1]-pars[2])*(n/pars[3]))
-#  lsprob = g_prob(wt=wt,t_ext=df$t.ext,s=lambda*n,mu=pars[2],r=df$bt[dim]-c(0,df$bt[-dim]),n=n)
-#  lrprob = -nllik.tree(pars,n.tree = list(wt=wtT,E=to))
-#  logweight = lrprob-lsprob
-#  return(logweight)
-#}
+##############
+
+
+sim.missing <- function(pars,obs,initspec = 1){
+  ct = max(obs)
+  N = initspec
+  wt = diff(c(0,obs))
+  i=1
+  bt = 0
+  btm = NULL
+  while(i < length(wt)){
+    la = lambda.cr(pars,N)
+    tspe = rexp(1,la)
+    if(tspe < wt[i]){
+      btm = c(bt,bt + tspe)
+      text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b = ct,rate=mu)
+      tom = c(tom,1)
+    }else{
+      i = i + 1
+    }
+    
+  }
+}

@@ -124,12 +124,20 @@ probto <- function(to,p=0.5){
   return(prob)
 }
 
-sim.branchingtimes.and.events <- function(maxnumspec=250,ct){
-  S = sample(0:maxnumspec,1)
+sim.branchingtimes.and.events <- function(S=S,ct){
   brts = sort(runif(2*S,min=0,max=ct))
   to = sampletopology(S)
   tree = list(brts=brts,to=to)
   return(tree)
+}
+
+sim.dim <- function(maxnumspec,deterministic=FALSE,i=NULL,nsim=NULL){
+  if(deterministic){
+    S = floor((maxnumspec+1)*i/nsim)
+  }else{
+    S = sample(0:maxnumspec,1)
+  }
+  return(S)
 }
 
 sampletopology <- function(S,p=0.5){
