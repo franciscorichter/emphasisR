@@ -2,7 +2,7 @@
 runExample <- function() {
   appDir <- system.file("shiny-examples", "mcem_ex1.R", package = "emphasis")
   if (appDir == "") {
-    stop("Could not find example directory. Try re-installing `mypackage`.", call. = FALSE)
+    stop("Could not find example directory. Try re-installing `emphasis`.", call. = FALSE)
   }
   
   shiny::runApp(appDir, display.mode = "normal")
