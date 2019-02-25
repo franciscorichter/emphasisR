@@ -404,9 +404,11 @@ mcem <- function(brts,init_par,n_it=10,MC_ss=100,limit_miss_spec,model="dd"){
 
 mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL){
   st = sim_setoftrees_p(obs = brts,pars = theta_0,nsim = MC_ss,maxnumspec = maxnumspec,model=model)
+  fhat =mean(st$weights)
+  se = sd(st$weights)/sqrt(MC_ss)
   sub_st = lapply(st, "[", st$weights!=0)
-  pars = M_step(S = sub_st)
-  return(pars)
+  pars = M_step(S = sub_st,init_par = theta_0)
+  return(list(pars=pars,fhat=fhat,se=se))
 }
 
 phylo2tree <- function(tree){
