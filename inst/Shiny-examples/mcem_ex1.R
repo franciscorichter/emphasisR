@@ -12,14 +12,16 @@ ui <- fluidPage(
   sidebarLayout(position = "left",
                 sidebarPanel("Controls",
                              textInput('vec1', 'Enter a vector (comma delimited) with branching times', "0.1,0.2,3,4"),
+                             numericInput("ss", "Monte-Carlo sample size:", 10),
                              #textInput('vec2', 'Enter a vector (comma delimited) with parameters', "5,0.2,10"),
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),
                              actionButton("resetbutt","Reset"),
-                             numericInput("ss", "Monte-Carlo sample size:", 10)),
+                             textOutput("txtOutput")
+                             ),
                              #numericInput("brts", "brts:", c(0.1,0.2,3,4)),
                              #numericInput("la", "Initial lambda:", 10)),
-  
+          
                 mainPanel("Plot",
                           plotOutput("lambda"),
                           plotOutput("mu"),
@@ -29,7 +31,7 @@ ui <- fluidPage(
   ))
 server <- function(input,output,session) {
   init_pars = c(4,0.3,40)
-  rv <- reactiveValues(x=init_pars,run=F,fhat=NULL,se=NULL,ftrue=NULL,lambda=NULL)
+  rv <- reactiveValues(x=init_pars,run=F,fhat=NULL,se=NULL,ftrue=NULL,lambda=NULL,LastTime=NULL)
   autoInvalidate <- reactiveTimer(intervalMs=500,session)
   pars = init_pars
   save(pars,file="first.R")
@@ -39,7 +41,9 @@ server <- function(input,output,session) {
       brts <- as.numeric(unlist(strsplit(input$vec1,",")))
       load("first.R")
       rv$lambda <- c(rv$lambda,pars[1])
-      mcem = mcem_step(brts,pars,maxnumspec = 15,MC_ss = input$ss)
+      time = proc.time()
+      mcem = mcem_step(brts,pars,maxnumspec = 35,MC_ss = input$ss)
+      rv$LastTime <- get.time(time)
       ftrue = exp(DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = brts_d,missnumspec = 0))
       pars = mcem$pars
       save(pars,file="first.R")
@@ -57,8 +61,11 @@ server <- function(input,output,session) {
   
   observeEvent(input$gogobutt, { isolate({ rv$run=T      }) })
   observeEvent(input$stopbutt, { isolate({ rv$run=F      }) })
-  observeEvent(input$resetbutt,{ isolate({ rv$x=mcem_step(brts,c(50,10,100),maxnumspec = 15,MC_ss = input$ss) }) })
-  
+  observeEvent(input$resetbutt,{ isolate({ rv$x=mcem_step(brts,c(50,10,100),maxnumspec = 35,MC_ss = input$ss) }) })
+  output$txtOutput = renderText({
+    paste0("Last iteration took: ", rv$LastTime, "\n Last parameter: ", rv$lambda[length(rv$lambda)] )
+    #paste0("Last parameters:", rv$lambda[length(rv$lambda)])
+  })
   output$lambda <- renderPlot({
     htit <- sprintf("Hist of %d rnorms",length(rv$x))
     plot(1:nrow(rv$x),rv$x[,1],type="l")
@@ -76,7 +83,7 @@ server <- function(input,output,session) {
   })
   output$fhat <- renderPlot({
     htit <- sprintf("fhat",length(rv$fhat))
-    plot(1:length(rv$ftrue),rv$ftrue,ylim=c(0,max(rv$fhat,rv$ftrue,rv$fhat+1.96*rv$se)))
+    plot(1:length(rv$ftrue),rv$ftrue,ylim=c(0,max(rv$fhat,rv$ftrue)))
     lines(1:length(rv$fhat),rv$fhat,col="blue")
     lines(1:length(rv$fhat),rv$fhat+1.96*rv$se,col="red")
     lines(1:length(rv$fhat),rv$fhat-1.96*rv$se,col="red")
