@@ -1,10 +1,18 @@
+brts_d = brts_d=c(4.9999999998,4.806886544,4.70731246478,4.50735197578,4.37856240588,4.29594855558,4.19207515688,4.18261061218,4.11238451758,4.09640902445,3.81723693538,3.71143733895,3.48845298905,3.25729503338,3.11613886835,2.64829864145,2.63531839038,2.37990087748,1.82721570435,0.83704715535,0.64242044758,0.56121103655,0.356333544350001,0.346462849050001)
+
+#pars = DDD:::dd_ML(brts = brts,soc=1)
+#pars = c(3.021189,0.164449,24.579503 )
+#wt = -diff(c(brts_d,0))
+#brts = cumsum(wt)
+
 #brts = c(0.1,0.2,3,4)
-brts_d = c(4,3.9,3.8,1)
+#brts_d = c(4,3.9,3.8,1)
 
 ui <- fluidPage(
   sidebarLayout(position = "left",
                 sidebarPanel("Controls",
                              textInput('vec1', 'Enter a vector (comma delimited) with branching times', "0.1,0.2,3,4"),
+                             #textInput('vec2', 'Enter a vector (comma delimited) with parameters', "5,0.2,10"),
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),
                              actionButton("resetbutt","Reset"),
@@ -20,7 +28,7 @@ ui <- fluidPage(
                           )
   ))
 server <- function(input,output,session) {
-  init_pars = c(5,0.2,10)
+  init_pars = c(4,0.3,40)
   rv <- reactiveValues(x=init_pars,run=F,fhat=NULL,se=NULL,ftrue=NULL,lambda=NULL)
   autoInvalidate <- reactiveTimer(intervalMs=500,session)
   pars = init_pars
