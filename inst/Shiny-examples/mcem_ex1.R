@@ -12,7 +12,8 @@ ui <- fluidPage(
   sidebarLayout(position = "left",
                 sidebarPanel("Controls",
                              textInput('vec1', 'Enter a vector (comma delimited) with branching times', "0.1,0.2,3,4"),
-                             numericInput("ss", "Monte-Carlo sample size:", 10),
+                             numericInput("ss", "Monte-Carlo sample size:", 100),
+                             numericInput("Bt", "Number of best trees to take:", 10),
                              #textInput('vec2', 'Enter a vector (comma delimited) with parameters', "5,0.2,10"),
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),
@@ -22,16 +23,20 @@ ui <- fluidPage(
                              #numericInput("brts", "brts:", c(0.1,0.2,3,4)),
                              #numericInput("la", "Initial lambda:", 10)),
           
-                mainPanel("Plot",
+                mainPanel("Parameters",
                           plotOutput("lambda"),
                           plotOutput("mu"),
                           plotOutput("K"),
-                          plotOutput("fhat")
-                          )
+                          "Diagnostics",
+                          plotOutput("fhat"),
+                          plotOutput("rellik")
+                          ),
+                
+                
   ))
 server <- function(input,output,session) {
   init_pars = c(4,0.3,40)
-  rv <- reactiveValues(x=init_pars,run=F,fhat=NULL,se=NULL,ftrue=NULL,lambda=NULL,LastTime=NULL)
+  rv <- reactiveValues(x=init_pars,run=F,fhat=NULL,se=NULL,ftrue=NULL,lambda=NULL,LastTime=NULL,rellik=NULL,ll.prop=NULL)
   autoInvalidate <- reactiveTimer(intervalMs=500,session)
   pars = init_pars
   save(pars,file="first.R")
@@ -42,7 +47,10 @@ server <- function(input,output,session) {
       load("first.R")
       rv$lambda <- c(rv$lambda,pars[1])
       time = proc.time()
-      mcem = mcem_step(brts,pars,maxnumspec = 35,MC_ss = input$ss)
+      mcem = mcem_step(brts,pars,maxnumspec = 35,MC_ss = input$ss,selectBestTrees = TRUE,bestTrees = input$Bt)
+      #h1 = try(diag(solve(mcem$hessian))/m)
+      rv$ll.prop = mcem$loglik.proportion
+      rv$rellik = c(rv$rellik,rel.llik(S1=mcem$st$trees,p0=pars,p1=mcem$pars))
       rv$LastTime <- get.time(time)
       ftrue = exp(DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = brts_d,missnumspec = 0))
       pars = mcem$pars
@@ -61,15 +69,15 @@ server <- function(input,output,session) {
   
   observeEvent(input$gogobutt, { isolate({ rv$run=T      }) })
   observeEvent(input$stopbutt, { isolate({ rv$run=F      }) })
-  observeEvent(input$resetbutt,{ isolate({ rv$x=mcem_step(brts,c(50,10,100),maxnumspec = 35,MC_ss = input$ss) }) })
+  observeEvent(input$resetbutt,{ isolate({ rv$x=mcem_step(as.numeric(unlist(strsplit(input$vec1,","))),c(50,10,100),maxnumspec = 35,MC_ss = input$ss) }) })
   output$txtOutput = renderText({
-    paste0("Last iteration took: ", rv$LastTime, "\n Last parameter: ", rv$lambda[length(rv$lambda)] )
+    paste0("Last iteration took: ", rv$LastTime, "\n La: ", rv$x[nrow(rv$x),1], " mu: ", rv$x[nrow(rv$x),2], " K: ", rv$x[nrow(rv$x),3], "\n Proportion of likelihood: ", rv$ll.prop )
     #paste0("Last parameters:", rv$lambda[length(rv$lambda)])
   })
   output$lambda <- renderPlot({
     htit <- sprintf("Hist of %d rnorms",length(rv$x))
     plot(1:nrow(rv$x),rv$x[,1],type="l")
-    points(1:length(rv$lambda),rv$lambda)
+    #points(1:length(rv$lambda),rv$lambda)
     ##hist(rv$x,col = "steelblue",main=htit,breaks=12)
   })
   output$mu <- renderPlot({
@@ -87,6 +95,11 @@ server <- function(input,output,session) {
     lines(1:length(rv$fhat),rv$fhat,col="blue")
     lines(1:length(rv$fhat),rv$fhat+1.96*rv$se,col="red")
     lines(1:length(rv$fhat),rv$fhat-1.96*rv$se,col="red")
+    
+  })
+  output$rellik <- renderPlot({
+    htit <- sprintf("rellik",length(rv$fhat))
+    plot(1:length(rv$rellik),rv$rellik,type="l")
     
   })
 }

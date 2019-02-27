@@ -74,7 +74,7 @@ Q_approx = function(pars,st,model="dd"){
 #  return(po)
 #}
 M_step <-function(S,init_par = c(0.5,0.5,100),model="dd"){
-  po = subplex(par = init_par, fn = Q_approx,st = S,model=model,hessian = FALSE)$par
+  po = subplex(par = init_par, fn = Q_approx,st = S,model=model,hessian = FALSE)
   return(po)
 }
 
@@ -163,9 +163,9 @@ df2tree2 <- function(df){
 # }
 sim_setoftrees_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="dd"){
   ct <- max(obs)
-  if(brts[1]==max(brts)){
-    wt = -diff(c(brts,0))
-    brts = cumsum(wt)
+  if(obs[1]==max(obs)){
+    wt = -diff(c(obs,0))
+    obs = cumsum(wt)
   }
   no_cores <- detectCores()
   cl <- makeCluster(no_cores)
@@ -279,12 +279,12 @@ rel.llik <- function(S1,p0,p1,model="dd"){
   f1 = vector(mode='numeric',length = m)
   f2 = vector(mode='numeric',length = m)
   d = vector(mode='numeric',length = m)
-  S1 = S1$rec[S1$w>0]
+  #S1 = S1$[S1$w>0]
   for(i in 1:m){
     s = S1[[i]]
     f1[i] = nllik.tree(pars=p1,tree=s,model=model)
     f2[i] = nllik.tree(pars=p0,tree=s,model=model)
-    d[i] = length(s$tree$wt)
+    #d[i] = length(s$tree$wt)
     if(is.na(f1[i])) print(s)
   }
   Delta = -log(sum(f1/f2)/m)
@@ -402,13 +402,23 @@ mcem <- function(brts,init_par,n_it=10,MC_ss=100,limit_miss_spec,model="dd"){
   
 }
 
-mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL){
+mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL,selectBestTrees=FALSE,bestTrees=NULL){
   st = sim_setoftrees_p(obs = brts,pars = theta_0,nsim = MC_ss,maxnumspec = maxnumspec,model=model)
   fhat =mean(st$weights)
   se = sd(st$weights)/sqrt(MC_ss)
-  sub_st = lapply(st, "[", st$weights!=0)
-  pars = M_step(S = sub_st,init_par = theta_0)
-  return(list(pars=pars,fhat=fhat,se=se))
+  if(selectBestTrees){
+    weights = st$weights/sum(st$weights)
+    max.weight = sort(weights,decreasing = TRUE)[bestTrees]
+    sub_st = lapply(st, "[", weights>=max.weight)
+    loglik.proportion = sum(weights[weights>=max.weight])
+  }else{
+    sub_st = lapply(st, "[", st$weights!=0)
+    loglik.proportion = 1
+  }
+  M = M_step(S = sub_st,init_par = theta_0)
+  pars = M$par
+  H = M$hessian
+  return(list(pars=pars,fhat=fhat,se=se,st=st,H=H,loglik.proportion=loglik.proportion))
 }
 
 phylo2tree <- function(tree){
