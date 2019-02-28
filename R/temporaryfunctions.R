@@ -3,7 +3,7 @@
 log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf){
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   n = n[-length(n)]
-  loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+log(probto(to))-sum(log(conf$N-conf$P))
+  loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+lprobto(to)-sum(log(conf$N-conf$P))
 }
 
 possible.configurations  <- function(miss,obs){
@@ -116,12 +116,12 @@ possible.configurations  <- function(miss,obs){
   return(list(N=N,P=P,tree=tree))
 }
 
-probto <- function(to,p=0.5){
+lprobto <- function(to,p=0.5){
   posspec = c(0,cumsum(to==1))<(length(to)/2)
   posext = !(c(0,cumsum(to==1))==c(0,cumsum(to==0)))
   expo = sum(posspec & posext)
-  prob = p^expo
-  return(prob)
+  logprob = expo*log(p)
+  return(logprob)
 }
 
 sim.branchingtimes.and.events <- function(S=S,ct){
