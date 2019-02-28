@@ -5,14 +5,20 @@
 ui <- fluidPage(
   sidebarLayout(position = "left",
                 sidebarPanel("Controls",
-                             textInput('vec1', 'Enter a vector (comma delimited) with branching times', "0.1,0.2,3,4"),
+                             #textInput('vec1', 'Enter a vector (comma delimited) with branching times', "0.1,0.2,3,4"),
+                             selectInput("brts", "Choose Phylo/Branching times:",
+                                         list("Dendroica" = "0.1931135, 0.2926875, 0.4926480, 0.6214376, 0.7040514, 0.8079248, 0.8173894, 0.8876155, 0.9035910, 1.1827631, 1.2885627, 1.5115470, 1.7427050, 1.8838611, 2.3517014, 2.3646816, 2.6200991, 3.1727843, 4.1629528, 4.3575796, 4.4387890, 4.6436665, 4.6535372, 5",
+                                              "Simple" = "0.1,0.2,3,4")
+                             ),
                              numericInput("ss", "Monte-Carlo sample size:", 100),
                              numericInput("Bt", "Number of best trees to take:", 10),
                              #textInput('vec2', 'Enter a vector (comma delimited) with parameters', "5,0.2,10"),
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),
                              actionButton("resetbutt","Reset"),
-                             textOutput("txtOutput")
+                             textOutput("txtOutput1"),
+                             textOutput("txtOutput2"),
+                             textOutput("txtOutput3")
                              ),
                              #numericInput("brts", "brts:", c(0.1,0.2,3,4)),
                              #numericInput("la", "Initial lambda:", 10)),
@@ -37,7 +43,7 @@ server <- function(input,output,session) {
   observe({
     autoInvalidate()
     isolate({ if (rv$run) { 
-      brts <- as.numeric(unlist(strsplit(input$vec1,",")))
+      brts <- as.numeric(unlist(strsplit(input$brts,",")))
       load("first.R")
       rv$lambda <- c(rv$lambda,pars[1])
       time = proc.time()
@@ -64,9 +70,14 @@ server <- function(input,output,session) {
   observeEvent(input$gogobutt, { isolate({ rv$run=T      }) })
   observeEvent(input$stopbutt, { isolate({ rv$run=F      }) })
   observeEvent(input$resetbutt,{ isolate({ rv$x=mcem_step(as.numeric(unlist(strsplit(input$vec1,","))),c(50,10,100),maxnumspec = 35,MC_ss = input$ss) }) })
-  output$txtOutput = renderText({
-    paste0("Last iteration took: ", rv$LastTime, "\n La: ", rv$x[nrow(rv$x),1], " mu: ", rv$x[nrow(rv$x),2], " K: ", rv$x[nrow(rv$x),3], "\n Proportion of likelihood: ", rv$ll.prop )
-    #paste0("Last parameters:", rv$lambda[length(rv$lambda)])
+  output$txtOutput1 = renderText({
+    paste0("Last iteration took: ", rv$LastTime)
+  })
+  output$txtOutput2 = renderText({
+    paste0("Last iteration took: ", "la: ", rv$x[nrow(rv$x),1], " mu: ", rv$x[nrow(rv$x),2], " K: ", rv$x[nrow(rv$x),3])
+  })
+  output$txtOutput3 = renderText({
+    paste0("Proportion of likelihood: ", rv$ll.prop )
   })
   output$lambda <- renderPlot({
     htit <- sprintf("Hist of %d rnorms",length(rv$x))
