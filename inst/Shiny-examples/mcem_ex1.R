@@ -26,6 +26,7 @@ ui <- fluidPage(
                              actionButton("stopbutt","Stop"),
                              actionButton("resetbutt","Reset"),
                              textOutput("txtOutput1"),
+                             checkboxInput("ddd", "Compare with DDD", FALSE),
                              textOutput("txtOutput2"),
                              textOutput("txtOutput3")
                              ),
@@ -96,25 +97,25 @@ server <- function(input,output,session) {
   output$lambda <- renderPlot({
     htit <- sprintf("Hist of %d rnorms",length(rv$x))
     plot(1:nrow(rv$x),rv$x[,1],type="l")
-    abline(b = 0,a = 0.523708)
+  #  abline(b = 0,a = 0.523708)
     #points(1:length(rv$lambda),rv$lambda)
     ##hist(rv$x,col = "steelblue",main=htit,breaks=12)
   })
   output$mu <- renderPlot({
     htit <- sprintf("Hist of %d rnorms",length(rv$x))
     plot(1:nrow(rv$x),rv$x[,2],type="l")
-    abline(b = 0,a = 0.025529)
+  #  abline(b = 0,a = 0.025529)
     ##hist(rv$x,col = "steelblue",main=htit,breaks=12)
   })
   output$K <- renderPlot({
     htit <- sprintf("K",length(rv$x))
     plot(1:nrow(rv$x),rv$x[,3],type="l")
-    abline(b=0,a=31.723702)
+  #  abline(b=0,a=31.723702)
   })
   output$fhat <- renderPlot({
     htit <- sprintf("fhat",length(rv$fhat))
-    plot(1:length(rv$ftrue),rv$ftrue,ylim=c(0,max(rv$fhat,rv$ftrue)))
-    lines(1:length(rv$fhat),rv$fhat,col="blue")
+    plot(1:length(rv$fhat),rv$fhat,col="blue",type="l")
+    if(input$ddd) points(1:length(rv$ftrue),rv$ftrue)
     lines(1:length(rv$fhat),rv$fhat+1.96*rv$se,col="red")
     lines(1:length(rv$fhat),rv$fhat-1.96*rv$se,col="red")
     
