@@ -43,8 +43,6 @@ ui <- fluidPage(
                              numericInput("K", "Initial K:", 100),
                              textOutput("txtOutput3")
                              ),
-                             #numericInput("brts", "brts:", c(0.1,0.2,3,4)),
-                             #numericInput("la", "Initial lambda:", 10)),
           
                 mainPanel("Parameters",
                           plotOutput("lambda"),
