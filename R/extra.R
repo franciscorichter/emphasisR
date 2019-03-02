@@ -58,7 +58,6 @@ sim.sct.alt <- function(brts,pars){
 #post processing
 post.pro <-function(file,extrafile=NULL){
   load(file)
-  #pars = DDD::dd_ML(brts = btdd, idparsopt = 1:3,soc=2,cond=0)
   MLE = p$MLE
   M = mcem$PARS
   it = NULL

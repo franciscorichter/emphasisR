@@ -68,13 +68,9 @@ Q_approx = function(pars,st,model="dd"){
   return(Q)
 }
 
-# MLE for a set of trees
-#mle.st <-function(S,init_par = c(0.5,0.5,100),topology=TRUE,model="dd"){
-#  po = subplex(par = init_par, fn = Q.approx, topology=topology,st = S,model=model,hessian = TRUE)
-#  return(po)
-#}
+
 M_step <-function(S,init_par = c(0.5,0.5,100),model="dd"){
-  po = subplex(par = init_par, fn = Q_approx,st = S,model=model,hessian = FALSE)
+  po = subplex(par = init_par, fn = Q_approx,st = S,model=model,hessian = TRUE)
   return(po)
 }
 
@@ -183,7 +179,7 @@ sim_setoftrees_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="dd"){
   }
   stopCluster(cl)
   diff_logs = sapply(trees,function(list) list$logf.joint-list$logg.samp)
-  weights = exp(diff_logs)
+  weights = exp(diff_logs) # exp(diff_logs-max(diff_logs))
   trees = lapply(trees, function(list) list$tree)
   return(list(trees=trees,weights=weights))
 }
@@ -404,7 +400,7 @@ mcem <- function(brts,init_par,n_it=10,MC_ss=100,limit_miss_spec,model="dd"){
 
 mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL,selectBestTrees=FALSE,bestTrees=NULL){
   st = sim_setoftrees_p(obs = brts,pars = theta_0,nsim = MC_ss,maxnumspec = maxnumspec,model=model)
-  fhat =mean(st$weights)
+  fhat = mean(st$weights)
   se = sd(st$weights)/sqrt(MC_ss)
   if(selectBestTrees){
     weights = st$weights/sum(st$weights)
@@ -417,8 +413,9 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL
   }
   M = M_step(S = sub_st,init_par = theta_0)
   pars = M$par
-  H = M$hessian
-  return(list(pars=pars,fhat=fhat,se=se,st=st,H=H,loglik.proportion=loglik.proportion))
+  h1 = try(diag(solve(M$hessian))/MC_ss)
+  if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
+  return(list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=loglik.proportion,h1=h1))
 }
 
 phylo2tree <- function(tree){

@@ -3,7 +3,9 @@
 #plethodon
 #brts_d = c(11.3,9.55365380008198,9.26434040327225,8.83592350352767,8.3434446982257,8.17781491491496,7.95978190384214,6.61207494082374,6.5679856688767,6.21838471981418,5.59809615547134,5.37012669852355,4.7638222125791,4.10749650972075,4.02367324807484,3.65931960175062,3.32916292401100,3.23132222435799,3.18206288699248,2.8572235287017,2.58222342582278,2.43078192215161,1.87377417677032,1.79734091086791,1.77566693721338,1.52675067868777,1.11116172787207,0.800771123741394,0.498973146096477)
 
-
+if (file.exists("first.R")) 
+  #Delete file if it exists
+  file.remove("first.R")
 #require("RCurl")
 #download.file("https://github.com/franciscorichter/emphasis/blob/master/inst/Shiny-examples/BirdTree.tre",destfile = "birds.tre")
 phy = read.nexus(file="BirdTree.tre")
@@ -34,7 +36,10 @@ ui <- fluidPage(
                              actionButton("resetbutt","Reset"),
                              textOutput("txtOutput1"),
                              checkboxInput("ddd", "Compare with DDD", FALSE),
-                             textOutput("txtOutput2"),
+                             checkboxInput("CI", "Check CI (after it 10)", FALSE),
+                             checkboxInput("log", "log of estimated lkelihood", FALSE),
+                             numericInput("charts", "See charts from iteration:", 1),
+                          #   textOutput("txtOutput2"),
                              numericInput("K", "Initial K:", 100),
                              textOutput("txtOutput3")
                              ),
@@ -55,29 +60,31 @@ ui <- fluidPage(
 server <- function(input,output,session) {
   #init_pars = c(input$par1,input$par2,input$par3)
   init_pars = c(1,0.1,40000)
-  rv <- reactiveValues(x=c(NULL,NULL,NULL),run=F,fhat=NULL,se=NULL,ftrue=NULL,lambda=NULL,LastTime=NULL,rellik=NULL,ll.prop=NULL,mle_dd=c(NULL,NULL,NULL))
+  rv <- reactiveValues(x=c(NULL,NULL,NULL),run=F,fhat=NULL,se=NULL,ftrue=NULL,LastTime=NULL,rellik=NULL,ll.prop=NULL,mle_dd=c(NULL,NULL,NULL),H=c(NULL,NULL,NULL),sdl=NULL,sdm=NULL,sdk=NULL)
   autoInvalidate <- reactiveTimer(intervalMs=500,session)
-  pars = init_pars
+  #pars = init_pars
   #save(pars,file="first.R")
   observe({
     pars = c(init_pars[1],init_pars[2],input$K)
     autoInvalidate()
     isolate({ if (rv$run) { 
       brts = brts_d <- as.numeric(unlist(strsplit(input$brts,",")))
-      if(brts[1]==11.3) rv$mle_dd = c(0.523708,0.025529,31.723702)
-      if(brts[1]==5) rv$mle_dd = c(3.659926,0.182003,23.507341)
+      if(brts[1] == 11.3) rv$mle_dd = c(0.523708,0.025529,31.723702)
+      if(brts[1] == 5) rv$mle_dd = c(3.659926,0.182003,23.507341)
+      if(brts[1] == 103.31057277) rv$mle_dd = c(0.068739,0.005933,110.066841)
+      if(brts[1] == 35.857845) rv$mle_dd = c(0.135271,0.000160,234.978643)
+      if(brts[1] == 16.761439) rv$mle_dd = c(0.457300,0.048939,37.782661)
       if(max(brts)==brts[1]){
         wt = -diff(c(brts,0))
         brts = cumsum(c(wt))
       }
-      load("first.R")
-      rv$lambda <- c(rv$lambda,pars[1])
+      if(file.exists("first.R")) load("first.R")
       time = proc.time()
       mcem = mcem_step(brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = TRUE,bestTrees = input$Bt)
-      #h1 = try(diag(solve(mcem$hessian))/m)
-      rv$ll.prop = mcem$loglik.proportion
-      rv$rellik = c(rv$rellik,rel.llik(S1=mcem$st$trees,p0=pars,p1=mcem$pars))
-      rv$LastTime <- get.time(time)
+      rv$H =  rbind(rv$H,mcem$h1) # Hessian of the current parameters
+      rv$ll.prop = mcem$loglik.proportion # proportion (on weights) of the likelihood considered for optimization
+      rv$rellik = c(rv$rellik,rel.llik(S1=mcem$st$trees,p0=pars,p1=mcem$pars)) # relative lkelihood
+      rv$LastTime <- get.time(time) 
       ftrue = exp(DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = brts_d,missnumspec = 0))
       pars = mcem$pars
       save(pars,file="first.R")
@@ -89,7 +96,20 @@ server <- function(input,output,session) {
       rv$fhat = c(rv$fhat,fhat)
       rv$se = c(rv$se,se)
       rv$ftrue = c(rv$ftrue,ftrue)
-      #pars = rv$x[nrow(rv$x),]
+      if(length(rv$fhat)>9 & input$CI){
+        rv$mcem_it = data.frame(it=1:length(rv$x[,1]),lambda=rv$x[,1],mu=rv$x[,2],K=rv$x[,3])
+        gamLambda = gam(lambda ~ s(it), data=rv$mcem_it)
+        gamMu = gam(mu ~ s(it), data=rv$mcem_it)
+        gamK = gam(K ~ s(it), data=rv$mcem_it)
+        rv$sdl = c(rv$sdl,sqrt(-mcem$h1[1]+gamLambda$sig2))#/input$ss)
+        rv$sdm = c(rv$sdm,sqrt(-mcem$h1[2]+gamMu$sig2))#/input$ss)
+        rv$sdk = c(rv$sdk,sqrt(-mcem$h1[3]+gamK$sig2))#/input$ss)
+      }else{
+        rv$sdl = c(rv$sdl,NaN)
+        rv$sdm = c(rv$sdm,NaN)
+        rv$sdk = c(rv$sdk,NaN)
+      }
+        
     } })
   })
   
@@ -97,44 +117,75 @@ server <- function(input,output,session) {
   observeEvent(input$stopbutt, { isolate({ rv$run=F      }) })
   observeEvent(input$resetbutt,{ isolate({ rv$x=mcem_step(as.numeric(unlist(strsplit(input$vec1,","))),c(50,10,100),maxnumspec = input$maxspec,MC_ss = input$ss) }) })
   output$txtOutput1 = renderText({
-    paste0("Last iteration took: ", rv$LastTime)
+    timescale = " sec"
+    time_s = rv$LastTime
+    if(rv$LastTime>60 & rv$LastTime < 3600){
+      time_s = rv$LastTime/60
+      timescale = " min"
+    }
+    if(rv$LastTime > 3600){
+      time_s = rv$LastTime/3600
+      timescale = " hour"
+    } 
+    paste0("Last iteration took: ", time_s, timescale)
   })
   output$txtOutput2 = renderText({
-    paste0( "la: ", rv$x[nrow(rv$x),1], " mu: ", rv$x[nrow(rv$x),2], " K: ", rv$x[nrow(rv$x),3])
+    paste0("h1",mcem$h1[1])
   })
   output$txtOutput3 = renderText({
     paste0("Proportion of likelihood: ", rv$ll.prop )
   })
   output$lambda <- renderPlot({
-    htit <- sprintf("lambda estimation, number of iterations: ",length(rv$x))
-    if(length(rv$x)>0) plot(1:nrow(rv$x),rv$x[,1],type="l",main=htit,ylab="lambda",xlab="EM iteration")
-    if(input$ddd) abline(b = 0,a = rv$mle_dd[1])
-    #points(1:length(rv$lambda),rv$lambda)
-    ##hist(rv$x,col = "steelblue",main=htit,breaks=12)
+    htit <- paste("lambda, current estimation: ",rv$x[length(rv$x[,1]),1])
+    if(length(rv$x)>0){ 
+      if(!input$CI){
+        plot(1:nrow(rv$x),rv$x[,1],type="l",main=htit,ylab="lambda",xlab="EM iteration")
+      }else{
+        rv$mcem_it$sdl = rv$sdl
+      #gl=ggplot(MCEMc) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
+        gl=ggplot(rv$mcem_it) + geom_point(aes(it,lambda)) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*sdl, ymax = lambda + 1.96*sdl), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
+        gl
+      }
+    }
+#    if(input$ddd) abline(b = 0,a = rv$mle_dd[1])
   })
   output$mu <- renderPlot({
-    htit <- sprintf("mu estimation, number of iterations: ",length(rv$x))
+    htit <- paste("mu, current estimation: ",rv$x[length(rv$x[,1]),2])
     if(length(rv$x)>0) plot(1:nrow(rv$x),rv$x[,2],type="l",main=htit,ylab="mu",xlab="EM iteration")
     if(input$ddd)  abline(b = 0,a = rv$mle_dd[2])
     ##hist(rv$x,col = "steelblue",main=htit,breaks=12)
   })
   output$K <- renderPlot({
-    htit <- sprintf("K",length(rv$x))
-    if(length(rv$x)>0) plot(1:nrow(rv$x),rv$x[,3],type="l",main=htit,ylab="K",xlab="EM iteration")
+    htit <- paste("K, current estimation: ",rv$x[length(rv$x[,3]),3])
+    if(length(rv$x)>0){
+      if(!input$CI){
+        plot(1:nrow(rv$x),rv$x[,3],type="l",main=htit,ylab="K",xlab="EM iteration")
+      }else{
+        rv$mcem_it$sdk = rv$sdk
+        gl = ggplot(rv$mcem_it) + geom_point(aes(it,K)) + geom_errorbar(aes(x=it, y=K, ymin = K - 1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
+        gl
+      }
+    } 
     if(input$ddd)  abline(b=0,a=rv$mle_dd[3])
   })
   output$fhat <- renderPlot({
-    htit <- sprintf("Estimated loglikelihood, ",length(rv$fhat)," iteratons.")
-    plot(1:length(rv$fhat),rv$fhat,col="blue",type="l",main=htit)
-    if(input$ddd) points(1:length(rv$ftrue),rv$ftrue)
-    lines(1:length(rv$fhat),rv$fhat+1.96*rv$se,col="red")
-    lines(1:length(rv$fhat),rv$fhat-1.96*rv$se,col="red")
+    htit <- paste("Estimated loglikelihood, ",length(rv$fhat)," iteratons.")
+    if(input$log){
+      plot(input$charts:length(rv$fhat),log(rv$fhat)[input$charts:length(rv$fhat)],col="blue",type="l",main=htit)
+      if(input$ddd) points(input$charts:length(rv$ftrue),log(rv$ftrue)[input$charts:length(rv$fhat)])
+      lines(input$charts:length(rv$fhat),log(rv$fhat+1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+      lines(input$charts:length(rv$fhat),log(rv$fhat-1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+    }else{
+      plot(input$charts:length(rv$fhat),rv$fhat[input$charts:length(rv$fhat)],col="blue",type="l",main=htit)
+      if(input$ddd) points(input$charts:length(rv$ftrue),rv$ftrue[input$charts:length(rv$fhat)])
+      lines(input$charts:length(rv$fhat),(rv$fhat+1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+      lines(input$charts:length(rv$fhat),(rv$fhat-1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+    }
     
   })
   output$rellik <- renderPlot({
-    htit <- sprintf("rellik",length(rv$fhat))
-    plot(1:length(rv$rellik),rv$rellik,type="l")
-    
+    htit <- paste("Relative likelihood, last value",rv$rellik[length(rv$rellik)])
+    plot(input$charts:length(rv$rellik),rv$rellik[input$charts:length(rv$rellik)],type="l")
   })
 }
 shinyApp(ui, server)
