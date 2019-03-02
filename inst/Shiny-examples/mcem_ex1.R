@@ -44,14 +44,23 @@ ui <- fluidPage(
                              textOutput("txtOutput3")
                              ),
           
-                mainPanel("Parameters",
-                          plotOutput("lambda"),
-                          plotOutput("mu"),
-                          plotOutput("K"),
-                          "Diagnostics",
-                          plotOutput("fhat"),
-                          plotOutput("rellik")
-                          ),
+                mainPanel(
+                  tabsetPanel(type = "tabs",
+                              tabPanel("Parameters",
+                                       plotOutput("lambda"),
+                                       plotOutput("mu"),
+                                       plotOutput("K")),
+                              tabPanel("Diagnostics",
+                                       plotOutput("fhat"),
+                                       plotOutput("rellik")
+                              ))
+                )
+                  
+                  
+                  
+                          
+                
+                
                 
                 
   ))
