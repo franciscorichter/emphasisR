@@ -7,11 +7,20 @@ brts_birds = sort(branching.times(phy))
 n_cores = detectCores()
 
 ui <- fluidPage(
+  tags$head(tags$style(
+    HTML('
+         #sidebar {
+         background-color:  #D8FCFC;
+         }
+         
+         body, label, input, button, select { 
+         font-family: "Arial";
+         }')
+  )),
   sidebarLayout(position = "left",
                
-                sidebarPanel(
-                  h1("Emphasis"),
-                  h5("Diversity Dependance"),
+                sidebarPanel(id="sidebar",
+                  img(src='logo.png', align = "center",height = 170),
                             h3("Controls"),
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),
@@ -41,7 +50,7 @@ ui <- fluidPage(
                              
                              h3("Options"),
                              checkboxInput("ddd", "Compare with DDD", FALSE),
-                             checkboxInput("CI", "Check CI (after it 10)", FALSE),
+                            # checkboxInput("CI", "Check CI (after it 10)", FALSE),
                              checkboxInput("log", "log of estimated lkelihood", FALSE),
                              numericInput("charts", "See charts from iteration:", 1),
                              numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2)#,
@@ -65,7 +74,8 @@ ui <- fluidPage(
                                   column(6,
                                         h3("Diagnostics"),
                                         plotOutput("fhat"),
-                                        plotOutput("rellik")
+                                        plotOutput("rellik"),
+                                        plotOutput("hist_w")
                                        ),
                                   column(6,
                                          h3("Information"),
@@ -75,7 +85,16 @@ ui <- fluidPage(
                                 )),
                               tabPanel("Help",
                                       # plotOutput("fhat"),
-                                      textOutput("txtOutput1")
+                                      h1("Welcome to Emphasis!"),
+                                      "If you are familiar with the Emphasis diversity dependence app, please move to the analysis tab and enjoy!. If not, take few minutes to read the information bellow.",
+                                      h4("About Emphasis diversity dependence"),
+                                      "Emphasis diversity dependance is...",
+                                      h4("Control buttons"),
+                                      "The system can be initialized and stoped with them" 
+                                      #helpText("Note: while the data view will show only",
+                                       #        "the specified number of observations, the",
+                                      #         "summary will be based on the full dataset."),
+                                     # textOutput("txtOutput1")
                                        )#,
                             #  tabPanel("Information",
                               #         textOutput("txtOutput1"))
@@ -89,7 +108,7 @@ ui <- fluidPage(
               
               
 server <- function(input,output,session) {
-  rv <- reactiveValues(x=c(NULL,NULL,NULL),run=F,fhat=NULL,se=NULL,ftrue=NULL,LastTime=NULL,rellik=NULL,ll.prop=NULL,mle_dd=c(NULL,NULL,NULL),H=c(NULL,NULL,NULL),sdl=NULL,sdm=NULL,sdk=NULL)
+  rv <- reactiveValues(x=c(NULL,NULL,NULL),run=F,fhat=NULL,se=NULL,ftrue=NULL,LastTime=NULL,rellik=NULL,ll.prop=NULL,mle_dd=c(NULL,NULL,NULL),H=c(NULL,NULL,NULL),sdl=NULL,sdm=NULL,sdk=NULL,dim=NULL,weights=NULL)
   autoInvalidate <- reactiveTimer(intervalMs=500,session)
   observe({
     init_pars = c(input$par1,input$par2,input$par3)
@@ -113,6 +132,8 @@ server <- function(input,output,session) {
       rv$H =  rbind(rv$H,mcem$h1) # Hessian of the current parameters
       rv$ll.prop = mcem$loglik.proportion # proportion (on weights) of the likelihood considered for optimization
       rv$rellik = c(rv$rellik,rel.llik(S1=mcem$st$trees,p0=pars,p1=mcem$pars)) # relative lkelihood
+      rv$weights = mcem$st$weights
+      rv$dim = sapply(mcem$st$trees,FUN = function(list) length(list$to))
       rv$LastTime <- get.time(time) 
       ftrue = exp(DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = brts_d,missnumspec = 0))
       pars = mcem$pars
@@ -226,8 +247,7 @@ server <- function(input,output,session) {
     }
   })
   output$hist_w <- renderPlot({
-    htit <- paste("Relative likelihood, last value",rv$rellik[length(rv$rellik)])
-    hist(1:20)
+    qplot(rv$dim/2,log(rv$weights))
   })
 }
 shinyApp(ui, server)
