@@ -22,7 +22,7 @@ ui <- fluidPage(
                                               "Simple" = "0.1,0.2,3,4")
                              ),
                         textInput('vec1', 'Enter a vector (comma delimited) with branching times', "0.1,0.2,3,4"),
-                        "Settings"
+                        "Settings",
                              numericInput("ss", "Monte-Carlo sample size:", 100),
                              numericInput("Bt", "Number of best trees to take:", 10),
                              numericInput("par1", "Initial lambda:", 1),
