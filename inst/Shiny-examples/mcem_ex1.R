@@ -145,7 +145,7 @@ server <- function(input,output,session) {
       rv$fhat = c(rv$fhat,fhat)
       rv$se = c(rv$se,se)
       rv$ftrue = c(rv$ftrue,ftrue)
-      if(length(rv$fhat)>9 & input$CI){
+      if(length(rv$fhat)>9){
         rv$mcem_it = data.frame(it=1:length(rv$x[,1]),lambda=rv$x[,1],mu=rv$x[,2],K=rv$x[,3])
         gamLambda = gam(lambda ~ s(it), data=rv$mcem_it)
         gamMu = gam(mu ~ s(it), data=rv$mcem_it)
@@ -192,15 +192,15 @@ server <- function(input,output,session) {
   output$lambda <- renderPlot({
     htit <- paste("lambda, current estimation: ",rv$x[length(rv$x[,1]),1])
     if(length(rv$x)>0){ 
-      if(!input$CI){
+     # if(!input$CI){
         plot(1:nrow(rv$x),rv$x[,1],type="l",main=htit,ylab="lambda",xlab="EM iteration")
         if(input$ddd)  abline(b = 0,a = rv$mle_dd[1])
-      }else{
-        rv$mcem_it$sdl = rv$sdl
-        #gl=ggplot(MCEMc) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
-        gl=ggplot(rv$mcem_it) + geom_point(aes(it,lambda)) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*sdl, ymax = lambda + 1.96*sdl), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
-        gl
-      }
+    #  }else{
+   #     rv$mcem_it$sdl = rv$sdl
+   #     #gl=ggplot(MCEMc) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
+   #     gl=ggplot(rv$mcem_it) + geom_point(aes(it,lambda)) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*sdl, ymax = lambda + 1.96*sdl), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
+   #     gl
+   #   }
     }
     #    if(input$ddd) abline(b = 0,a = rv$mle_dd[1])
   })
@@ -213,13 +213,13 @@ server <- function(input,output,session) {
   output$K <- renderPlot({
     htit <- paste("K, current estimation: ",rv$x[length(rv$x[,3]),3])
     if(length(rv$x)>0){
-      if(!input$CI){
+      #if(!input$CI){
         plot(1:nrow(rv$x),rv$x[,3],type="l",main=htit,ylab="K",xlab="EM iteration")
-      }else{
-        rv$mcem_it$sdk = rv$sdk
-        gl = ggplot(rv$mcem_it) + geom_point(aes(it,K)) + geom_errorbar(aes(x=it, y=K, ymin = K - 1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
-        gl
-      }
+    #  }else{
+    #    rv$mcem_it$sdk = rv$sdk
+    #    gl = ggplot(rv$mcem_it) + geom_point(aes(it,K)) + geom_errorbar(aes(x=it, y=K, ymin = K - 1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
+    #    gl
+    #  }
     } 
     if(input$ddd)  abline(b=0,a=rv$mle_dd[3])
   })
@@ -247,7 +247,9 @@ server <- function(input,output,session) {
     }
   })
   output$hist_w <- renderPlot({
-    qplot(rv$dim/2,log(rv$weights))
+    if(length(rv$x)>0){ 
+      qplot(rv$dim/2,log(rv$weights))
+    }
   })
 }
 shinyApp(ui, server)
