@@ -21,7 +21,7 @@ ui <- fluidPage(
                                               "Birds" = paste(as.character(brts_birds), collapse=", "),
                                               "Simple" = "0.1,0.2,3,4")
                              ),
-                        textInput('vec1', 'Enter a vector (comma delimited) with branching times', "0.1,0.2,3,4"),
+                        textInput('vec1', 'Or enter a vector (comma delimited) with branching times', ""),
                         "Settings",
                              numericInput("ss", "Monte-Carlo sample size:", 100),
                              numericInput("Bt", "Number of best trees to take:", 10),
