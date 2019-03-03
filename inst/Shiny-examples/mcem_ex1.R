@@ -4,6 +4,7 @@ if (file.exists("first.R")) file.remove("first.R")
 #download.file("https://github.com/franciscorichter/emphasis/blob/master/inst/Shiny-examples/BirdTree.tre",destfile = "birds.tre")
 phy = read.nexus(file="BirdTree.tre")
 brts_birds = sort(branching.times(phy))
+n_cores = detectCores()
 
 ui <- fluidPage(
   sidebarLayout(position = "left",
@@ -11,6 +12,7 @@ ui <- fluidPage(
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),
                              #     actionButton("resetbutt","Reset"),
+                             
                              h2("Data"),  
                              selectInput("brts", "Choose Phylo/Branching times:",
                                          list("Dendroica" = "5,4.806886544,4.70731246478,4.50735197578,4.37856240588,4.29594855558,4.19207515688,4.18261061218,4.11238451758,4.09640902445,3.81723693538,3.71143733895,3.48845298905,3.25729503338,3.11613886835,2.64829864145,2.63531839038,2.37990087748,1.82721570435,0.83704715535,0.64242044758,0.56121103655,0.356333544350001,0.346462849050001",
@@ -18,6 +20,7 @@ ui <- fluidPage(
                                               "Cetacea" = "35.857845,33.799004,32.390661,31.621529,28.000001,26.063017,26.000001,24.698215,22.044392,19.195664,18.226421,18.023412,17.939427,17.890656,16.066686,15.669702,15.099325,14.540283,14.061555,13.042869,12.847396,11.382959,11.079292,11.028304,10.70277,10.472235,9.438013,8.925942,8.81602,8.803019,8.716039,8.252102,8.20904999999999,8.143058,8.100266,7.677423,7.514394,7.176679,6.975185,6.37563,6.28945,6.04702999999999,5.897506,5.796585,5.616381,5.49323999999999,5.466433,5.27807199999999,5.26532599999999,5.263495,5.096383,4.985876,4.947171,4.927157,4.732447,4.57089299999999,4.45271899999999,4.35571699999999,4.32202299999999,4.170967,4.166225,4.045704,3.791853,3.70627600000000,3.62611499999999,3.44535999999999,3.29116399999999,3.21256099999999,3.07916999999999,3.04867399999999,2.919779,2.83297999999999,2.19441299999999,2.09621900000000,1.93481199999999,1.82123899999999,1.622022,1.570433,1.50673699999999,1.47078099999999,1.36135800000000,1.26811400000000,1.01116300000000,0.924861999999997,0.347030000000004,0.283069999999995",
                                               "Heliconius" = "16.761439,15.160156,14.40605,13.815308,13.486476,13.164424,12.373104,10.840648,10.142988,9.911296,9.273213,9.264573,9.142266,8.536825,8.441098,8.17086,7.92524,7.478269,7.255542,6.851304,5.335066,5.335061,5.152996,4.643518,4.506785,4.446959,3.780976,3.768737,3.488772,3.398945,2.433015,2.048552,1.930075,1.602332,1.302335,1.03376100000000,0.884346",
                                               "Plethodon" = "11.3,9.55365380008198,9.26434040327225,8.83592350352767,8.3434446982257,8.17781491491496,7.95978190384214,6.61207494082374,6.5679856688767,6.21838471981418,5.59809615547134,5.37012669852355,4.7638222125791,4.10749650972075,4.02367324807484,3.65931960175062,3.32916292401100,3.23132222435799,3.18206288699248,2.8572235287017,2.58222342582278,2.43078192215161,1.87377417677032,1.79734091086791,1.77566693721338,1.52675067868777,1.11116172787207,0.800771123741394,0.498973146096477",
+                                              "Foraminifera" = "64.95,64.9,61.2,44.15,37.2,30.2,23.8,22.5,21,18.8,18.3,17.3,17,14.8,10.8,10.2,10,8.2,8,7.2,5.2,4.5,3.8,3.5,3.4,3.2,2,2,0.8,0.3,0.3",
                                               "Birds" = paste(as.character(brts_birds), collapse=", "))
                                          # "Simple" = "0.1,0.2,3,4")
                              ),
@@ -31,20 +34,38 @@ ui <- fluidPage(
                              numericInput("par1", "Initial lambda:", 1),
                              numericInput("par2", "Initial mu:", 0.1),
                              numericInput("par3", "Initial K:", 40),
+                             
                              h2("Options"),
                              checkboxInput("ddd", "Compare with DDD", FALSE),
                              checkboxInput("CI", "Check CI (after it 10)", FALSE),
                              checkboxInput("log", "log of estimated lkelihood", FALSE),
                              numericInput("charts", "See charts from iteration:", 1),
+                             numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2),
                              textOutput("txtOutput3")
                 ),
                 
                 mainPanel(
                   tabsetPanel(type = "tabs",
-                              tabPanel("Parameters",
+                              tabPanel("Plots",
+                                fluidRow(
+                                  column(6,
+                                      h2("Parameters"),
                                        plotOutput("lambda"),
                                        plotOutput("mu"),
                                        plotOutput("K")),
+                                  column(6,
+                                         h2("Diagnostics"),
+                                         plotOutput("fhat"),
+                                         plotOutput("rellik")),
+                                  column(5,
+                                         h2("Information"),
+                                         textOutput("txtOutput1"),
+                                         textOutput("txtOutput3")),
+                                  column(6,
+                                        h2("times"),
+                                       plotOutput("hist_w")
+                                       )
+                                )),
                               tabPanel("Diagnostics",
                                        plotOutput("fhat"),
                                        plotOutput("rellik")),
@@ -52,15 +73,13 @@ ui <- fluidPage(
                                        textOutput("txtOutput1"))
                   )
                 )
-                
-                
-                
-                
-                
-                
-                
-                
-  ))
+              )
+  )
+
+            
+  
+              
+              
 server <- function(input,output,session) {
   rv <- reactiveValues(x=c(NULL,NULL,NULL),run=F,fhat=NULL,se=NULL,ftrue=NULL,LastTime=NULL,rellik=NULL,ll.prop=NULL,mle_dd=c(NULL,NULL,NULL),H=c(NULL,NULL,NULL),sdl=NULL,sdm=NULL,sdk=NULL)
   autoInvalidate <- reactiveTimer(intervalMs=500,session)
@@ -188,6 +207,10 @@ server <- function(input,output,session) {
   output$rellik <- renderPlot({
     htit <- paste("Relative likelihood, last value",rv$rellik[length(rv$rellik)])
     plot(input$charts:length(rv$rellik),rv$rellik[input$charts:length(rv$rellik)],type="l")
+  })
+  output$hist_w <- renderPlot({
+    htit <- paste("Relative likelihood, last value",rv$rellik[length(rv$rellik)])
+    hist(1:20)
   })
 }
 shinyApp(ui, server)

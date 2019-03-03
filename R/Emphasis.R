@@ -341,46 +341,6 @@ pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3
   return(list(m=m,p=M[10,],s1=s1,M=M,H=H,MLE=MLE,PM=PM,PH=PH))
 }
 
-#MCEM
-# mcem.tree <- function(brts,p,model="dd"){
-#   m = p$m
-#   s1 = p$s1
-#   sig = 100*s1/m
-#   tol = 2*sig*sqrt(1/5)
-#   D = Inf
-#   k = 1
-#   print("initializing mcem")
-#   pars = p$p
-#   PARS = pars
-#   H = c(NULL,NULL,NULL)
-#   Me = p$M
-#   tE = NULL
-#   tM = NULL
-#   efficiency = NULL
-#   prop = 1
-#   while(abs(D)>tol){
-#     if(m*prop<p$m) m = m/prop
-#     time = proc.time()
-#     S = sim.sct(brts = brts,pars=pars,m = m,model=model)
-#     prop = sum(S$w>0)/length(S$w)
-#     efficiency = c(efficiency,prop)
-#     tE = c(tE,get.time(time))
-#     time = proc.time()
-#     M = mle.st(S = S,model=model)
-#     tM = c(tM,get.time(time))
-#     mle = M$par
-#     h1 = try(diag(solve(M$hessian))/m)
-#     if(is.numeric(h1)) H =  rbind(H,h1)
-#     D = rel.llik(S1 = S,p0 = pars,p1 = mle,model=model)
-#     PARS = rbind(PARS,mle)
-#     pars = mle
-#     print(paste("iteration",k,"Q: ",M$value,'proportion of useful trees',prop,'sampling size',m*prop, " lambda: ", pars[1]," mu: ", pars[2], "K:", pars[3]))
-#     k = k+1
-#   }
-#   PARS = data.frame(it=1:(dim(Me)[1]+dim(PARS)[1]),lambda = c(Me[,1],PARS[,1]),mu=c(Me[,2],PARS[,2]),K=c(Me[,3],PARS[,3]))
-#   return(list(pars=pars,PARS=PARS,H=H,tE=tE,tM=tM,efficiency=efficiency))
-# }
-
 mcem <- function(brts,init_par,n_it=10,MC_ss=100,limit_miss_spec,model="dd"){
   time = proc.time()
   if(brts[1]==max(brts)){
