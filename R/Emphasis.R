@@ -123,47 +123,13 @@ df2tree2 <- function(df){
   return(list(wt=wt,to=to))
 }
 
-
-# Monte-Carlo sampling function / simulation of a set of complete trees
-# sim.sct <- function(brts,pars,m=10,print=TRUE,topology=TRUE,model="dd",truncdim=FALSE,initspec = 2){
-#   no_cores <- detectCores()
-#   cl <- makeCluster(no_cores)
-#   registerDoParallel(cl)
-#   trees <- foreach(i = 1:m, combine = list) %dopar% {
-#     df =  emphasis::sim.extinct2(brts = brts,pars = pars,model=model)
-#     tree = emphasis::df2tree(df,pars,model=model,initspec=initspec)
-#     lsprob = emphasis::lg_prob(tree,topology = topology)
-#     #lw2 = we_cal(tree)
-#     nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model,truncdim = truncdim,initspec = initspec)
-#     lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
-#     fms = df$bt[is.finite(df$bte)][1] #first missing speciation
-#     fe = df$bt[df$to==0][1] # first extinction
-#     return(list(nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
-#   }
-#   stopCluster(cl)
-#   lw = sapply(trees,function(list) list$lw)
-#   lw2 = sapply(trees,function(list) list$lw2)
-#   dim = sapply(trees,function(list) length(list$tree$wt))
-#   nl = sapply(trees,function(list) list$nl)
-#   lg = sapply(trees, function(list) list$lsprob)
-#   fms = sapply(trees, function(list) list$fms)
-#   fe = sapply(trees, function(list) list$fe)
-#   trees = lapply(trees, function(list) list$tree)
-#   w = exp(lw)
-#   eg = exp(lg)
-#   if(print){
-#     g = qplot(dim,w)
-#     print(g)
-#   }
-#   return(list(w=w, dim=dim, nl=nl, trees=trees,g=eg,fms=fms,fe=fe,lw2=lw2))
-# }
-sim_setoftrees_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="dd"){
+sim_setoftrees_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="dd",no_cores=NULL){
   ct <- max(obs)
   if(obs[1]==max(obs)){
     wt = -diff(c(obs,0))
     obs = cumsum(wt)
   }
-  no_cores <- detectCores()
+  if(is.null(no_cores)) no_cores <- detectCores()
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
   trees <- foreach(i = 1:nsim, combine = list) %dopar% {
@@ -358,8 +324,8 @@ mcem <- function(brts,init_par,n_it=10,MC_ss=100,limit_miss_spec,model="dd"){
   
 }
 
-mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL,selectBestTrees=FALSE,bestTrees=NULL){
-  st = sim_setoftrees_p(obs = brts,pars = theta_0,nsim = MC_ss,maxnumspec = maxnumspec,model=model)
+mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL,selectBestTrees=FALSE,bestTrees=NULL,no_cores){
+  st = sim_setoftrees_p(obs = brts,pars = theta_0,nsim = MC_ss,maxnumspec = maxnumspec,model=model,no_cores=no_cores)
   fhat = mean(st$weights)
   se = sd(st$weights)/sqrt(MC_ss)
   if(selectBestTrees){

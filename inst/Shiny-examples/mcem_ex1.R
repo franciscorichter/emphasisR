@@ -8,12 +8,16 @@ n_cores = detectCores()
 
 ui <- fluidPage(
   sidebarLayout(position = "left",
-                sidebarPanel(h2("Controls"),
+               
+                sidebarPanel(
+                  h1("Emphasis"),
+                  h5("Diversity Dependance"),
+                            h3("Controls"),
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),
                              #     actionButton("resetbutt","Reset"),
                              
-                             h2("Data"),  
+                             h3("Data"),  
                              selectInput("brts", "Choose Phylo/Branching times:",
                                          list("Dendroica" = "5,4.806886544,4.70731246478,4.50735197578,4.37856240588,4.29594855558,4.19207515688,4.18261061218,4.11238451758,4.09640902445,3.81723693538,3.71143733895,3.48845298905,3.25729503338,3.11613886835,2.64829864145,2.63531839038,2.37990087748,1.82721570435,0.83704715535,0.64242044758,0.56121103655,0.356333544350001,0.346462849050001",
                                               "Anolis" = "103.31057277,97.96837055,94.923127866,94.866216796,90.810203432,90.44410561,90.080885176,86.938065219,83.192481566,79.903508082,78.144291981,75.916079896,75.270062039,74.19732113,72.825735377,72.5234868711,68.360444962,64.1335159681,63.557121926,63.523319671,63.398403586,60.3209181541,59.490443993,57.576137962,56.933279789,56.6964480574,56.361043545,55.506578472,54.495983232,54.199692129,54.051109589,53.692672898,52.897212802,52.23186871,52.164805405,51.94779018,50.553819579,48.373129976,47.4174457904,47.189946167,46.7942740811,44.287638517,43.296282982,43.242616701,42.272773859,42.1266648041,41.905974158,41.329061036,41.1257958974,39.697767108,39.677765636,39.397083778,37.911582502,37.397487349,34.605557178,32.824929892,32.228763421,31.561908554,30.308206955,30.281651159,30.1639183904,29.8042173411,29.773786118,29.6447104204,29.541373926,29.5407793691,28.623740578,28.506256108,27.105138539,26.439039467,26.378922306,26.285718299,26.233564599,24.159222149,22.974342026,21.370573573,21.247374251,20.091077714,19.6384466391,19.483057152,18.985702599,16.272845218,15.9237660074,15.8035460904,15.7840819411,15.2801426021,15.08030346650,13.1506065141,12.572643169,11.2235612480000,10.5640701490000,10.30031894,9.651984572,9.577378633,9.50317724299997,8.43806557499997,6.837926447,5.73566929399999,5.38425275100001,4.4685701345,4.33572126899998,0.828930356499995,0.552543471999996",
@@ -25,52 +29,56 @@ ui <- fluidPage(
                                          # "Simple" = "0.1,0.2,3,4")
                              ),
                              textInput('vec1', 'Or enter a vector (comma delimited) with branching times', ""),
-                             h2("Settings"),
+                             h3("Settings"),
                              numericInput("ss", "Monte-Carlo sample size:", 100),
                              numericInput("Bt", "Number of best trees to take:", 10),
                              numericInput("maxspec", "Maximum number of missing species:", 40),
                              
-                             h2("Initial parameters"),
+                             h3("Initial parameters"),
                              numericInput("par1", "Initial lambda:", 1),
                              numericInput("par2", "Initial mu:", 0.1),
                              numericInput("par3", "Initial K:", 40),
                              
-                             h2("Options"),
+                             h3("Options"),
                              checkboxInput("ddd", "Compare with DDD", FALSE),
                              checkboxInput("CI", "Check CI (after it 10)", FALSE),
                              checkboxInput("log", "log of estimated lkelihood", FALSE),
                              numericInput("charts", "See charts from iteration:", 1),
-                             numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2),
-                             textOutput("txtOutput3")
+                             numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2)#,
+                             
+                           
+                             
                 ),
                 
                 mainPanel(
+                  
                   tabsetPanel(type = "tabs",
-                              tabPanel("Plots",
+                              tabPanel("Analysis",
+                             
                                 fluidRow(
                                   column(6,
-                                      h2("Parameters"),
+                                      h3("Parameters"),
                                        plotOutput("lambda"),
                                        plotOutput("mu"),
                                        plotOutput("K")),
+                                  
                                   column(6,
-                                         h2("Diagnostics"),
-                                         plotOutput("fhat"),
-                                         plotOutput("rellik")),
-                                  column(5,
-                                         h2("Information"),
-                                         textOutput("txtOutput1"),
-                                         textOutput("txtOutput3")),
+                                        h3("Diagnostics"),
+                                        plotOutput("fhat"),
+                                        plotOutput("rellik")
+                                       ),
                                   column(6,
-                                        h2("times"),
-                                       plotOutput("hist_w")
-                                       )
+                                         h3("Information"),
+                                         textOutput("txtOutput2"),
+                                         textOutput("txtOutput3")
+                                  )
                                 )),
-                              tabPanel("Diagnostics",
-                                       plotOutput("fhat"),
-                                       plotOutput("rellik")),
-                              tabPanel("Information",
-                                       textOutput("txtOutput1"))
+                              tabPanel("Help",
+                                      # plotOutput("fhat"),
+                                      textOutput("txtOutput1")
+                                       )#,
+                            #  tabPanel("Information",
+                              #         textOutput("txtOutput1"))
                   )
                 )
               )
@@ -101,7 +109,7 @@ server <- function(input,output,session) {
       if(file.exists("first.R")) load("first.R")
       time = proc.time()
       rv$x <- rbind(rv$x,pars)
-      mcem = mcem_step(brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = TRUE,bestTrees = input$Bt)
+      mcem = mcem_step(brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = TRUE,bestTrees = input$Bt,no_cores = input$cores)
       rv$H =  rbind(rv$H,mcem$h1) # Hessian of the current parameters
       rv$ll.prop = mcem$loglik.proportion # proportion (on weights) of the likelihood considered for optimization
       rv$rellik = c(rv$rellik,rel.llik(S1=mcem$st$trees,p0=pars,p1=mcem$pars)) # relative lkelihood
@@ -137,20 +145,25 @@ server <- function(input,output,session) {
   observeEvent(input$stopbutt, { isolate({ rv$run=F      }) })
  # observeEvent(input$resetbutt,{ isolate({ rv$x=mcem_step(as.numeric(unlist(strsplit(input$vec1,","))),c(50,10,100),maxnumspec = input$maxspec,MC_ss = input$ss) }) })
   output$txtOutput1 = renderText({
-    timescale = " sec"
-    time_s = rv$LastTime
-    if(rv$LastTime>60 & rv$LastTime < 3600){
-      time_s = rv$LastTime/60
-      timescale = " min"
-    }
-    if(rv$LastTime > 3600){
-      time_s = rv$LastTime/3600
-      timescale = " hour"
-    } 
-    paste0("Last iteration took: ", time_s, timescale)
+   "Welcome to Emphasis"
   })
   output$txtOutput2 = renderText({
-    paste0("h1",mcem$h1[1])
+     if(is.null(rv$LastTime)){
+    "Initializing process"
+      }else{
+      timescale = " sec"
+      time_s = rv$LastTime
+      if(rv$LastTime>60 & rv$LastTime < 3600){
+        time_s = rv$LastTime/60
+        timescale = " min"
+      }
+      if(rv$LastTime > 3600){
+        time_s = rv$LastTime/3600
+        timescale = " hour"
+      } 
+      paste0("Last iteration took: ", time_s, timescale)
+      }
+    #"hola"
   })
   output$txtOutput3 = renderText({
     paste0("Proportion of likelihood: ", rv$ll.prop )
@@ -190,23 +203,27 @@ server <- function(input,output,session) {
     if(input$ddd)  abline(b=0,a=rv$mle_dd[3])
   })
   output$fhat <- renderPlot({
-    htit <- paste("Estimated loglikelihood, ",length(rv$fhat)," iteratons.")
-    if(input$log){
-      plot(input$charts:length(rv$fhat),log(rv$fhat)[input$charts:length(rv$fhat)],col="blue",type="l",main=htit)
-      if(input$ddd) points(input$charts:length(rv$ftrue),log(rv$ftrue)[input$charts:length(rv$fhat)])
-      lines(input$charts:length(rv$fhat),log(rv$fhat+1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
-      lines(input$charts:length(rv$fhat),log(rv$fhat-1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
-    }else{
-      plot(input$charts:length(rv$fhat),rv$fhat[input$charts:length(rv$fhat)],col="blue",type="l",main=htit)
-      if(input$ddd) points(input$charts:length(rv$ftrue),rv$ftrue[input$charts:length(rv$fhat)])
-      lines(input$charts:length(rv$fhat),(rv$fhat+1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
-      lines(input$charts:length(rv$fhat),(rv$fhat-1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+    if(length(rv$x)>0){
+      htit <- paste("Estimated loglikelihood, ",length(rv$fhat)," iteratons.")
+      if(input$log){
+        plot(input$charts:length(rv$fhat),log(rv$fhat)[input$charts:length(rv$fhat)],col="blue",type="l",main=htit,xlab="EM iteration",ylab="Estimated log-likelihood")
+        if(input$ddd) points(input$charts:length(rv$ftrue),log(rv$ftrue)[input$charts:length(rv$fhat)])
+        lines(input$charts:length(rv$fhat),log(rv$fhat+1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+        lines(input$charts:length(rv$fhat),log(rv$fhat-1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+      }else{
+        plot(input$charts:length(rv$fhat),rv$fhat[input$charts:length(rv$fhat)],col="blue",type="l",main=htit,xlab="EM iteration",ylab="Estimated likelihood")
+        if(input$ddd) points(input$charts:length(rv$ftrue),rv$ftrue[input$charts:length(rv$fhat)])
+        lines(input$charts:length(rv$fhat),(rv$fhat+1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+        lines(input$charts:length(rv$fhat),(rv$fhat-1.96*rv$se)[input$charts:length(rv$fhat)],col="red")
+      }
     }
     
   })
   output$rellik <- renderPlot({
+    if(length(rv$x)>0){ 
     htit <- paste("Relative likelihood, last value",rv$rellik[length(rv$rellik)])
-    plot(input$charts:length(rv$rellik),rv$rellik[input$charts:length(rv$rellik)],type="l")
+    plot(input$charts:length(rv$rellik),rv$rellik[input$charts:length(rv$rellik)],type="l",main=htit,xlab="EM iteration",ylab="Relative likelihood")
+    }
   })
   output$hist_w <- renderPlot({
     htit <- paste("Relative likelihood, last value",rv$rellik[length(rv$rellik)])
