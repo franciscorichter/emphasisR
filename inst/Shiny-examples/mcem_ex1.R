@@ -1,3 +1,6 @@
+
+    
+
 if (file.exists("first.R")) file.remove("first.R")
 
 #require("RCurl")
@@ -5,6 +8,7 @@ if (file.exists("first.R")) file.remove("first.R")
 phy = read.nexus(file="BirdTree.tre")
 brts_birds = sort(branching.times(phy))
 n_cores = detectCores()
+rv = NULL
 
 ui <- fluidPage(
   tags$head(tags$style(
@@ -34,10 +38,11 @@ ui <- fluidPage(
                                               "Heliconius" = "16.761439,15.160156,14.40605,13.815308,13.486476,13.164424,12.373104,10.840648,10.142988,9.911296,9.273213,9.264573,9.142266,8.536825,8.441098,8.17086,7.92524,7.478269,7.255542,6.851304,5.335066,5.335061,5.152996,4.643518,4.506785,4.446959,3.780976,3.768737,3.488772,3.398945,2.433015,2.048552,1.930075,1.602332,1.302335,1.03376100000000,0.884346",
                                               "Plethodon" = "11.3,9.55365380008198,9.26434040327225,8.83592350352767,8.3434446982257,8.17781491491496,7.95978190384214,6.61207494082374,6.5679856688767,6.21838471981418,5.59809615547134,5.37012669852355,4.7638222125791,4.10749650972075,4.02367324807484,3.65931960175062,3.32916292401100,3.23132222435799,3.18206288699248,2.8572235287017,2.58222342582278,2.43078192215161,1.87377417677032,1.79734091086791,1.77566693721338,1.52675067868777,1.11116172787207,0.800771123741394,0.498973146096477",
                                               "Foraminifera" = "64.95,64.9,61.2,44.15,37.2,30.2,23.8,22.5,21,18.8,18.3,17.3,17,14.8,10.8,10.2,10,8.2,8,7.2,5.2,4.5,3.8,3.5,3.4,3.2,2,2,0.8,0.3,0.3",
+                                              "Other" = 0,
                                               "Birds" = paste(as.character(brts_birds), collapse=", "))
                                          # "Simple" = "0.1,0.2,3,4")
                              ),
-                             textInput('vec1', 'Or enter a vector (comma delimited) with branching times', ""),
+                             textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', ""),
                              h3("Settings"),
                              numericInput("ss", "Monte-Carlo sample size:", 100),
                              numericInput("Bt", "Number of best trees to take:", 10),
@@ -50,8 +55,9 @@ ui <- fluidPage(
                              
                              h3("Options"),
                              checkboxInput("ddd", "Compare with DDD", FALSE),
-                            # checkboxInput("CI", "Check CI (after it 10)", FALSE),
-                             checkboxInput("log", "log of estimated lkelihood", FALSE),
+                             conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
+                             checkboxInput("log", "show estimated lkelihood on log scale", FALSE),
+                             checkboxInput("log_w", "show weights on log scale", TRUE),
                              numericInput("charts", "See charts from iteration:", 1),
                              numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2)#,
                              
@@ -87,17 +93,44 @@ ui <- fluidPage(
                                       # plotOutput("fhat"),
                                       h1("Welcome to Emphasis!"),
                                       "If you are familiar with the Emphasis diversity dependence app, please move to the analysis tab and enjoy!. If not, take few minutes to read the information bellow.",
-                                      h4("About Emphasis diversity dependence"),
-                                      "Emphasis diversity dependance is...",
-                                      h4("Control buttons"),
-                                      "The system can be initialized and stoped with them" 
-                                      #helpText("Note: while the data view will show only",
-                                       #        "the specified number of observations, the",
-                                      #         "summary will be based on the full dataset."),
-                                     # textOutput("txtOutput1")
-                                       )#,
-                            #  tabPanel("Information",
-                              #         textOutput("txtOutput1"))
+                                      h2("About Emphasis diversity dependence"),
+                                      "Emphasis diversity dependance is a branch of the Emphasis framework for a diversity dependance model.\n",
+                                      "This GUI version of the frameworks allows interactive and user friendy usage for Emphasis analysis.\n",
+                                      "If you are familiar with the emphasis approach for diversification you just need a short description of the functionalities of this app and we are good to go.",
+                                      
+                                      h3("Control butons"),
+                                      "The system can be initialized and stoped with them",
+                                      h3("Data"),
+                                      "Two ways to load data are allowed. Or can use pre-loaded emphirical data, or you can type your own branching times.",
+                                      h3("Settings"),
+                                      h4("Monte Carlo Sampling size"),
+                                      "This is the monte carlo sampling size on the E step. You can check if is big enough looking at the variation on the plots.",
+                                      h4("number of best trees to take"),
+                                      "For the optimization procedure is much more eficcient to take only the meaningful trees.",
+                                      h4("maximum number of species"),
+                                      "The current data augmentation algorithm requieres a limit on the number of missing species, you can check if that limit makes sense checking the weights plot. If the weights are spead all over the plot the you probably need to increase the maximum number of species allowed.",
+                                      h3("Initial parameters"),
+                                      "Initial parameters for diversity dependance model.",
+                                      h3("Options"),
+                                      "Moreover, several options are available for analysis",
+                                      h4("Compare with DDD"),
+                                      "For the given examples a solution is given by DDD package, useful for comparison.",
+                                      h4("Check CI"),
+                                      "Confidence intervals for the parameters on the MCEM process can be calculated. That is considering a combination of the MC error and the EM variance. For relialable calculations of the second one we suggest to click this botom after iteration 10 at last,",
+                                      h4("log of estimated likelihood"),
+                                      "To observed the estimated loglikelihood instead",
+                                      h4("log of weights"),
+                                      "To observe the weights on logarithm scale",
+                                      h4("iteration to show on plot"),
+                                      "For the diagnostic charts",
+                                      h4("Number of processors"),
+                                      "Nomber of cores to be used on paralel can be selected. We suggest 2 for small samples and increase it as the sample size increases"
+                                      
+                                      
+                                       ),
+                              tabPanel("About",
+                                       includeHTML("license.html"),
+                                       textOutput("txtOutput1"))
                   )
                 )
               )
@@ -115,12 +148,18 @@ server <- function(input,output,session) {
     pars = c(init_pars[1],init_pars[2],init_pars[3])
     autoInvalidate()
     isolate({ if (rv$run) { 
-      brts = brts_d <- as.numeric(unlist(strsplit(input$brts,",")))
+      if(input$brts==0){
+        brts = brts_d <- as.numeric(unlist(strsplit(input$vec1,",")))
+      }else{ 
+        brts = brts_d <- as.numeric(unlist(strsplit(input$brts,",")))
+      }
       if(brts[1] == 11.3) rv$mle_dd = c(0.523708,0.025529,31.723702)
       if(brts[1] == 5) rv$mle_dd = c(3.659926,0.182003,23.507341)
       if(brts[1] == 103.31057277) rv$mle_dd = c(0.068739,0.005933,110.066841)
       if(brts[1] == 35.857845) rv$mle_dd = c(0.135271,0.000160,234.978643)
       if(brts[1] == 16.761439) rv$mle_dd = c(0.457300,0.048939,37.782661)
+      if(brts[1] == 4) rv$mle_dd = c(16.132848,0.102192,3.974553)
+      if(brts[1] == 64.95) rv$mle_dd = c(1.144462,0.115144,30.423973)
       if(max(brts)==brts[1]){
         wt = -diff(c(brts,0))
         brts = cumsum(c(wt))
@@ -129,13 +168,13 @@ server <- function(input,output,session) {
       time = proc.time()
       rv$x <- rbind(rv$x,pars)
       mcem = mcem_step(brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = TRUE,bestTrees = input$Bt,no_cores = input$cores)
-      rv$H =  rbind(rv$H,mcem$h1) # Hessian of the current parameters
+      rv$H =  rbind(rv$H,mcem$h1/input$ss) # Hessian of the current parameters
       rv$ll.prop = mcem$loglik.proportion # proportion (on weights) of the likelihood considered for optimization
       rv$rellik = c(rv$rellik,rel.llik(S1=mcem$st$trees,p0=pars,p1=mcem$pars)) # relative lkelihood
       rv$weights = mcem$st$weights
       rv$dim = sapply(mcem$st$trees,FUN = function(list) length(list$to))
       rv$LastTime <- get.time(time) 
-      ftrue = exp(DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = brts_d,missnumspec = 0))
+      if(length(brts_d)<800) rv$ftrue = c(rv$ftrue,exp(DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = brts_d,missnumspec = 0)))
       pars = mcem$pars
       save(pars,file="first.R")
       fhat = mcem$fhat
@@ -144,16 +183,16 @@ server <- function(input,output,session) {
      # save(PARS,file="dinamical.RData")
       rv$fhat = c(rv$fhat,fhat)
       rv$se = c(rv$se,se)
-      rv$ftrue = c(rv$ftrue,ftrue)
       if(length(rv$fhat)>9){
         rv$mcem_it = data.frame(it=1:length(rv$x[,1]),lambda=rv$x[,1],mu=rv$x[,2],K=rv$x[,3])
         gamLambda = gam(lambda ~ s(it), data=rv$mcem_it)
         gamMu = gam(mu ~ s(it), data=rv$mcem_it)
         gamK = gam(K ~ s(it), data=rv$mcem_it)
-        rv$sdl = c(rv$sdl,sqrt(-mcem$h1[1]+gamLambda$sig2))#/input$ss)
-        rv$sdm = c(rv$sdm,sqrt(-mcem$h1[2]+gamMu$sig2))#/input$ss)
-        rv$sdk = c(rv$sdk,sqrt(-mcem$h1[3]+gamK$sig2))#/input$ss)
+        rv$sdl = sqrt(-rv$H[,1]+gamLambda$sig2)#/input$ss)
+        rv$sdm = sqrt(-rv$H[,2]+gamMu$sig2)#/input$ss)
+        rv$sdk = sqrt(-rv$H[,3]+gamK$sig2)#/input$ss)
       }else{
+        #i think i dont need this 
         rv$sdl = c(rv$sdl,NaN)
         rv$sdm = c(rv$sdm,NaN)
         rv$sdk = c(rv$sdk,NaN)
@@ -184,45 +223,55 @@ server <- function(input,output,session) {
       } 
       paste0("Last iteration took: ", time_s, timescale)
       }
-    #"hola"
   })
+  
   output$txtOutput3 = renderText({
     paste0("Proportion of likelihood: ", rv$ll.prop )
   })
+  
   output$lambda <- renderPlot({
     htit <- paste("lambda, current estimation: ",rv$x[length(rv$x[,1]),1])
     if(length(rv$x)>0){ 
-     # if(!input$CI){
+      if(!input$CI){
         plot(1:nrow(rv$x),rv$x[,1],type="l",main=htit,ylab="lambda",xlab="EM iteration")
         if(input$ddd)  abline(b = 0,a = rv$mle_dd[1])
-    #  }else{
-   #     rv$mcem_it$sdl = rv$sdl
-   #     #gl=ggplot(MCEMc) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
-   #     gl=ggplot(rv$mcem_it) + geom_point(aes(it,lambda)) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*sdl, ymax = lambda + 1.96*sdl), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
-   #     gl
-   #   }
+      }else{
+        rv$mcem_it$sdl = rv$sdl
+        #gl=ggplot(MCEMc) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
+        gl = ggplot(rv$mcem_it) + geom_point(aes(it,lambda)) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*sdl, ymax = lambda + 1.96*sdl), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
+        if(input$ddd) gl = gl + geom_hline(yintercept = rv$mle_dd[1])
+        gl
+      }
     }
-    #    if(input$ddd) abline(b = 0,a = rv$mle_dd[1])
   })
+  
   output$mu <- renderPlot({
-    htit <- paste("mu, current estimation: ",rv$x[length(rv$x[,1]),2])
-    if(length(rv$x)>0) plot(1:nrow(rv$x),rv$x[,2],type="l",main=htit,ylab="mu",xlab="EM iteration")
-    if(input$ddd)  abline(b = 0,a = rv$mle_dd[2])
-    ##hist(rv$x,col = "steelblue",main=htit,breaks=12)
+    if(!input$CI){
+      htit <- paste("mu, current estimation: ",rv$x[length(rv$x[,1]),2])
+      if(length(rv$x)>0) plot(1:nrow(rv$x),rv$x[,2],type="l",main=htit,ylab="mu",xlab="EM iteration")
+      if(input$ddd)  abline(b = 0,a = rv$mle_dd[2])
+    }else{
+      rv$mcem_it$sdm = rv$sdm
+      gl = ggplot(rv$mcem_it) + geom_point(aes(it,mu)) + geom_errorbar(aes(x=it, y=mu, ymin = mu-1.96*sdm, ymax = mu + 1.96*sdm), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
+      if(input$ddd) gl = gl + geom_hline(yintercept = rv$mle_dd[2])
+      gl
+    }
   })
+  
   output$K <- renderPlot({
     htit <- paste("K, current estimation: ",rv$x[length(rv$x[,3]),3])
     if(length(rv$x)>0){
-      #if(!input$CI){
+      if(!input$CI){
         plot(1:nrow(rv$x),rv$x[,3],type="l",main=htit,ylab="K",xlab="EM iteration")
-    #  }else{
-    #    rv$mcem_it$sdk = rv$sdk
-    #    gl = ggplot(rv$mcem_it) + geom_point(aes(it,K)) + geom_errorbar(aes(x=it, y=K, ymin = K - 1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
-    #    gl
-    #  }
+        if(input$ddd)  abline(b=0,a=rv$mle_dd[3])
+      }else{
+        rv$mcem_it$sdk = rv$sdk
+        gl = ggplot(rv$mcem_it) + geom_point(aes(it,K)) + geom_errorbar(aes(x=it, y=K, ymin = K - 1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') #+ geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))      
+        gl
+      }
     } 
-    if(input$ddd)  abline(b=0,a=rv$mle_dd[3])
   })
+  
   output$fhat <- renderPlot({
     if(length(rv$x)>0){
       htit <- paste("Estimated loglikelihood, ",length(rv$fhat)," iteratons.")
@@ -240,16 +289,23 @@ server <- function(input,output,session) {
     }
     
   })
+  
   output$rellik <- renderPlot({
     if(length(rv$x)>0){ 
     htit <- paste("Relative likelihood, last value",rv$rellik[length(rv$rellik)])
     plot(input$charts:length(rv$rellik),rv$rellik[input$charts:length(rv$rellik)],type="l",main=htit,xlab="EM iteration",ylab="Relative likelihood")
     }
   })
+  
   output$hist_w <- renderPlot({
-    if(length(rv$x)>0){ 
-      qplot(rv$dim/2,log(rv$weights))
+    if(length(rv$x)>0){
+      if(input$log_w==TRUE){
+        qplot(rv$dim/2,log(rv$weights))
+      }else{
+        qplot(rv$dim/2,rv$weights)
+      }
     }
+    
   })
 }
 shinyApp(ui, server)

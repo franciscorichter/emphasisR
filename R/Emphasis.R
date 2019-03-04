@@ -145,9 +145,11 @@ sim_setoftrees_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="dd",no_cor
   }
   stopCluster(cl)
   diff_logs = sapply(trees,function(list) list$logf.joint-list$logg.samp)
-  weights = exp(diff_logs) # exp(diff_logs-max(diff_logs))
+  #weights = exp(diff_logs) #
+  weights = exp(diff_logs-max(diff_logs))
+  logweights = diff_logs
   trees = lapply(trees, function(list) list$tree)
-  return(list(trees=trees,weights=weights))
+  return(list(trees=trees,weights=weights,logweights=logweights))
 }
 
 ###########################
