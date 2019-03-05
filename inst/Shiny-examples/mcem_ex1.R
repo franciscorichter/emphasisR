@@ -130,7 +130,7 @@ ui <- fluidPage(
                                        ),
                               tabPanel("About",
                                        #img(src='logo.png', align = "left",height = 180),
-                                       helpText("Emphasis is a joint work of Francisco Richter, Rampal Etienne and Ernst Wit. For questions or comments please write to f.richter@rug.nl.\n"),
+                                       helpText("Emphasis is a joint work by Francisco Richter, Rampal Etienne and Ernst Wit. For questions or comments please write to f.richter@rug.nl.\n", align = "center"),
                                        img(src='license.png', align = "right",height = 70)
                               )
                   )
