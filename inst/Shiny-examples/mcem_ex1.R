@@ -92,45 +92,47 @@ ui <- fluidPage(
                               tabPanel("Help",
                                       # plotOutput("fhat"),
                                       h1("Welcome to Emphasis!"),
-                                      "If you are familiar with the Emphasis diversity dependence app, please move to the analysis tab and enjoy!. If not, take few minutes to read the information bellow.",
-                                      h2("About Emphasis diversity dependence"),
+                                      
                                       "Emphasis diversity dependance is a branch of the Emphasis framework for a diversity dependance model.\n",
                                       "This GUI version of the frameworks allows interactive and user friendy usage for Emphasis analysis.\n",
                                       "If you are familiar with the emphasis approach for diversification you just need a short description of the functionalities of this app and we are good to go.",
                                       
-                                      h3("Control butons"),
-                                      "The system can be initialized and stoped with them",
+                                      h3("Controls"),
+                                      "To initialize and stop the MCEM routine",
                                       h3("Data"),
-                                      "Two ways to load data are allowed. Or can use pre-loaded emphirical data, or you can type your own branching times.",
+                                      "For diversity dependance version data consists on a vector with branching times starting from stem age in decreasing order.",
+                                      'It is also posible to use one of the 7 data examples, comparison with DDD values is possible in all of them but the birds tree.',
                                       h3("Settings"),
                                       h4("Monte Carlo Sampling size"),
-                                      "This is the monte carlo sampling size on the E step. You can check if is big enough looking at the variation on the plots.",
-                                      h4("number of best trees to take"),
-                                      "For the optimization procedure is much more eficcient to take only the meaningful trees.",
-                                      h4("maximum number of species"),
-                                      "The current data augmentation algorithm requieres a limit on the number of missing species, you can check if that limit makes sense checking the weights plot. If the weights are spead all over the plot the you probably need to increase the maximum number of species allowed.",
+                                      "This is the monte carlo sampling size on the E step. You can check if is large enough looking at the variation on the plots as well as the weights plot. It is possible to increase it at any moment of the routine, the change will apply since the next iteration.",
+                                      h4("Number of best trees to take"),
+                                      "Numbers of trees to take on the M-step. Check with the weights plot and the percentage of likelihood information if the current is appropiate or not.",
+                                      h4("Maximum number of species"),
+                                      "The current data augmentation algorithm requieres a limit on the number of missing species, you can check if that limit makes sense checking the weights plot. If the weights are spead all over the plot you probably need to increase the maximum number of species allowed to sample in the whole space. If the last meaningful weight is far to the left to your limit then you probably want to decrease this quantity for the sake of efficiency.",
                                       h3("Initial parameters"),
                                       "Initial parameters for diversity dependance model.",
                                       h3("Options"),
                                       "Moreover, several options are available for analysis",
                                       h4("Compare with DDD"),
-                                      "For the given examples a solution is given by DDD package, useful for comparison.",
-                                      h4("Check CI"),
-                                      "Confidence intervals for the parameters on the MCEM process can be calculated. That is considering a combination of the MC error and the EM variance. For relialable calculations of the second one we suggest to click this botom after iteration 10 at last,",
+                                      "For the given examples (except birds tree) a solution is given by DDD package, useful for comparison.",
+                                      h4("Check confidence intervals"),
+                                      "Confidence intervals for the parameters on the MCEM process can be calculated. That is considering a combination of the MC error and the EM variance. For relialable calculations of the second one we suggest to click this botom after iteration 10 at least,",
                                       h4("log of estimated likelihood"),
                                       "To observed the estimated loglikelihood instead",
                                       h4("log of weights"),
                                       "To observe the weights on logarithm scale",
-                                      h4("iteration to show on plot"),
-                                      "For the diagnostic charts",
+                                      h4("Iteration to show on plot"),
+                                      "To observe the plots on more detail from last iterations",
                                       h4("Number of processors"),
-                                      "Nomber of cores to be used on paralel can be selected. We suggest 2 for small samples and increase it as the sample size increases"
+                                      "Number of cores to be used on paralell. We suggest 2 for small samples and increase it as the sample size increases. Ready to go to the analysis tab?"
                                       
                                       
                                        ),
                               tabPanel("About",
-                                       includeHTML("license.html"),
-                                       textOutput("txtOutput1"))
+                                       #img(src='logo.png', align = "left",height = 180),
+                                       helpText("Emphasis is a joint work of Francisco Richter, Rampal Etienne and Ernst Wit. For questions or comments please write to f.richter@rug.nl.\n"),
+                                       img(src='license.png', align = "right",height = 70)
+                              )
                   )
                 )
               )
