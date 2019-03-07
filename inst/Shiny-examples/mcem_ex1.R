@@ -96,7 +96,7 @@ ui <- fluidPage(
                                       "Emphasis diversity dependence is a branch of the Emphasis framework for a diversity dependence model.\n",
                                       "This GUI version of the frameworks allows interactive and user friendly usage for Emphasis analysis.\n",
                                       "If you are familiar with the emphasis approach for diversification you just need a short description of the functionalities of this app and we are good to go.\n",
-                                      "As a simple example we suggest to type the tree 4,3.9,3.8,1. That tree has also a pre-loaded DDD solution to compare."
+                                      "As a simple example we suggest to type the tree 4,3.9,3.8,1. That tree has also a pre-loaded DDD solution to compare.",
                                       
                                       h3("Controls"),
                                       "To initialize and stop the MCEM routine",
