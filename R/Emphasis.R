@@ -115,10 +115,14 @@ df2tree <- function(df,pars,model="dd",initspec=2){
   return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext))
 }
 
-df2tree2 <- function(df){
+df2tree2 <- function(df,trunclast=TRUE){
   dim = nrow(df)
   wt = diff(c(0,df$bt))
-  to = df$to[-dim]
+  if(trunclast){ 
+    to = df$to[-dim]
+  }else{
+    to = df$to
+  }
   to[to==2] = 1
   return(list(wt=wt,to=to))
 }
@@ -133,10 +137,16 @@ sim_setoftrees_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="dd",no_cor
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
   trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-    S = emphasis:::sim.dim(i=i,nsim=nsim,maxnumspec=maxnumspec,deterministic = TRUE)
-    mbts.events = emphasis:::sim.branchingtimes.and.events(S=S ,ct = ct)
+    #S = emphasis:::sim.dim(i=i,nsim=nsim,maxnumspec=maxnumspec,deterministic = TRUE)
+    #mbts.events = emphasis:::sim.branchingtimes.and.events(S=S ,ct = ct)
+    df =  emphasis::sim.extinct2(brts = obs,pars = pars,model=model)
+    tree = emphasis::df2tree(df,pars,model=model,initspec=1)
+    logg.samp = emphasis::lg_prob(tree,topology = TRUE)
+    df = df[df$to!=2,]
+    tree = df2tree2(df,trunclast = FALSE)
+    mbts.events = list(brts=cumsum(tree$wt),to=tree$to)
     conf = emphasis:::possible.configurations(miss = mbts.events,obs = obs)
-    logg.samp = emphasis:::log.samp.prob(to = mbts.events$to,maxnumspec = maxnumspec,ct=ct,conf=conf)
+    #logg.samp = emphasis:::log.samp.prob(to = mbts.events$to,maxnumspec = maxnumspec,ct=ct,conf=conf)
     df = data.frame(bt=c(mbts.events$brts,obs),to=c(mbts.events$to,rep(1,length(obs))))
     df = df[order(df$bt),]
     tree = emphasis:::df2tree2(df)
@@ -145,8 +155,8 @@ sim_setoftrees_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="dd",no_cor
   }
   stopCluster(cl)
   diff_logs = sapply(trees,function(list) list$logf.joint-list$logg.samp)
-  weights = exp(diff_logs) #
-  #weights = exp(diff_logs-max(diff_logs))
+  #weights = exp(diff_logs) #
+  weights = exp(diff_logs-max(diff_logs))
   logweights = diff_logs
   trees = lapply(trees, function(list) list$tree)
   return(list(trees=trees,weights=weights,logweights=logweights))

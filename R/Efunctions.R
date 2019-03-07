@@ -108,13 +108,7 @@ df2tree <- function(df,pars,model="dd",initspec=2){
   return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext))
 }
 
-df2tree2 <- function(df){
-  dim = nrow(df)
-  wt = diff(c(0,df$bt))
-  to = df$to[-dim]
-  to[to==2] = 1
-  return(list(wt=wt,to=to))
-}
+
 
 
 # Monte-Carlo sampling function / simulation of a set of complete trees

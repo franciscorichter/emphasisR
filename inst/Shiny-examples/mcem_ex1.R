@@ -144,7 +144,7 @@ ui <- fluidPage(
               
               
 server <- function(input,output,session) {
-  rv <- reactiveValues(x=c(NULL,NULL,NULL),run=F,fhat=NULL,se=NULL,ftrue=NULL,LastTime=NULL,rellik=NULL,ll.prop=NULL,mle_dd=c(NULL,NULL,NULL),H=c(NULL,NULL,NULL),sdl=NULL,sdm=NULL,sdk=NULL,dim=NULL,weights=NULL)
+  rv <- reactiveValues(x=c(NULL,NULL,NULL),run=F,fhat=NULL,se=NULL,ftrue=NULL,LastTime=NULL,rellik=NULL,ll.prop=NULL,mle_dd=c(NULL,NULL,NULL),H=c(NULL,NULL,NULL),sdl=NULL,sdm=NULL,sdk=NULL,dim=NULL,weights=NULL,logweights=NULL)
   autoInvalidate <- reactiveTimer(intervalMs=500,session)
   observe({
     init_pars = c(input$par1,input$par2,input$par3)
@@ -175,6 +175,7 @@ server <- function(input,output,session) {
       rv$ll.prop = mcem$loglik.proportion # proportion (on weights) of the likelihood considered for optimization
       rv$rellik = c(rv$rellik,rel.llik(S1=mcem$st$trees,p0=pars,p1=mcem$pars)) # relative lkelihood
       rv$weights = mcem$st$weights
+      rv$logweights = mcem$st$logweights
       rv$dim = sapply(mcem$st$trees,FUN = function(list) length(list$to))
       rv$LastTime <- get.time(time) 
       if(length(brts_d)<800) rv$ftrue = c(rv$ftrue,exp(DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = brts_d,missnumspec = 0)))
@@ -303,7 +304,7 @@ server <- function(input,output,session) {
   output$hist_w <- renderPlot({
     if(length(rv$x)>0){
       if(input$log_w==TRUE){
-        qplot(rv$dim/2,log(rv$weights))
+        qplot(rv$dim/2,rv$logweights)
       }else{
         qplot(rv$dim/2,rv$weights)
       }
