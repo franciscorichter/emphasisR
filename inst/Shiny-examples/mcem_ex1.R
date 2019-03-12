@@ -279,7 +279,7 @@ server <- function(input,output,session) {
     if(length(rv$x)>5){ 
       rv$mcem_it$fhat = rv$fhat
      # if(length(rv$fhat)>9) rv$mcem_it$sdk[10:length(rv$fhat)] = rv$sdk
-      gl = ggplot(rv$mcem_it) + geom_line(aes(it,log(fhat))) # + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
+      gl = ggplot(rv$mcem_it) + geom_line(aes(it,log(fhat))) + geom_line(aes(it,log(rv$fhat+1.96*rv$se)),col="red") + geom_line(aes(it,log(rv$fhat-1.96*rv$se)),col="red")# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       if(input$ddd) gl = gl + geom_hline(yintercept = rv$mle_dd[4])
      # if(input$CI) gl = gl + geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') 
       gl  + theme_emphasis + ggtitle(label = "Estimated log likelihood")
@@ -308,7 +308,7 @@ server <- function(input,output,session) {
   output$diff_fhat_hist <- renderPlot({
     if(length(rv$diff_fhat)>10){ 
       rv$mcem_it$diff_fhat = c(0,rv$diff_fhat)
-      gl = ggplot(rv$mcem_it[input$charts:length(rv$diff_fhat),]) + geom_histogram(aes(diff_fhat),binwidth = 0.001)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
+      gl = ggplot(rv$mcem_it[input$charts:length(rv$diff_fhat),]) + geom_histogram(aes(diff_fhat))#,binwidth = (max(diff_fhat)-max(diff_fhat))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       # if(input$ddd) gl = gl + geom_hline(yintercept = rv$mle_dd[4])
       #gl = ggplot(rv$mcem_it) + geom_histogram(aes(diff_fhat))# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       
@@ -320,7 +320,7 @@ server <- function(input,output,session) {
   output$rellik_hist <- renderPlot({
     if(length(rv$rellik)>10){ 
     rv$mcem_it$rellik = rv$rellik
-    gl = ggplot(rv$mcem_it[input$charts:length(rv$diff_fhat),]) + geom_histogram(aes(rellik),binwidth = 0.0001)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
+    gl = ggplot(rv$mcem_it[input$charts:length(rv$diff_fhat),]) + geom_histogram(aes(rellik))#,binwidth = (max(rellik)-max(rellik))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
    # if(input$ddd) gl = gl + geom_hline(yintercept = rv$mle_dd[4])
     # if(input$CI) gl = gl + geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') 
     gl  + theme_emphasis + ggtitle(label = "Relative likelihood")

@@ -327,9 +327,12 @@ mcem <- function(brts,init_par,n_it=10,MC_ss=100,limit_miss_spec,model="dd"){
 }
 
 mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL,selectBestTrees=FALSE,bestTrees=NULL,no_cores){
+  time = proc.time()
   st = sim_setoftrees_p(obs = brts,pars = theta_0,nsim = MC_ss,maxnumspec = maxnumspec,model=model,no_cores=no_cores)
   fhat = mean(st$weights)
   se = sd(st$weights)/sqrt(MC_ss)
+  E_time = get.time(time)
+  time = proc.time()
   if(selectBestTrees){
     weights = st$weights/sum(st$weights)
     max.weight = sort(weights,decreasing = TRUE)[bestTrees]
@@ -340,10 +343,11 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL
     loglik.proportion = 1
   }
   M = M_step(S = sub_st,init_par = theta_0)
+  M_time = get.time(time)
   pars = M$par
-  h1 = try(diag(solve(M$hessian))/MC_ss)
+  hessian_inverse = try(diag(solve(M$hessian)))
   if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
-  return(list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=loglik.proportion,h1=h1))
+  return(list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=loglik.proportion,hessian_inverse=hessian_inverse,E_time=E_time,M_time=M_time))
 }
 
 phylo2tree <- function(tree){
