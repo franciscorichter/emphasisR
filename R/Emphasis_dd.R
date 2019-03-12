@@ -1,6 +1,6 @@
 #' @export
 emphasis_dd <- function() {
-  appDir <- system.file("Shiny-examples", "mcem_ex1.R", package = "emphasis")
+  appDir <- system.file("Shiny-examples", "Emphasis_dd2.R", package = "emphasis")
   if (appDir == "") {
     stop("Could not find example directory. Try re-installing `emphasis`.", call. = FALSE)
   }
