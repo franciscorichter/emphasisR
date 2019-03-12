@@ -40,15 +40,16 @@ ui <- fluidPage(
                                          )       
                              ),
                              textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1"),
-                             h3("Settings"),
-                             numericInput("ss", "Monte-Carlo sample size:", 1000),
-                             numericInput("Bt", "Number of best trees to take:", 20),
-                             numericInput("maxspec", "Maximum number of missing species:", 40),
                              
                              h3("Initial parameters"),
                              numericInput("par1", "Initial lambda:", 1),
                              numericInput("par2", "Initial mu:", 0.1),
                              numericInput("par3", "Initial K:", 40),
+                             
+                             h3("Settings"),
+                             numericInput("ss", "Monte-Carlo sample size:", 1000),
+                             numericInput("Bt", "Number of best trees to take:", 20),
+                             numericInput("maxspec", "Maximum number of missing species:", 40),
                              
                              h3("Options"),
                              checkboxInput("ddd", "Compare with DDD", FALSE),
@@ -167,7 +168,7 @@ server <- function(input,output,session) {
       if(brts[1] == 103.31057277) mle_dd = c(0.068739,0.005933,110.066841)
       if(brts[1] == 35.857845) mle_dd = c(0.135271,0.000160,234.978643)
       if(brts[1] == 16.761439) mle_dd = c(0.457300,0.048939,37.782661)
-      if(brts[1] == 4) mle_dd = c(16.132848,0.102192,3.974553,-1.020150 )
+      if(brts[1] == 4) mle_dd = c(16.132848,0.102192,3.974553)
       if(brts[1] == 64.95) mle_dd = c(1.144462,0.115144,30.423973)
       if(max(brts)==brts[1]){
         wt = -diff(c(brts,0))
@@ -188,7 +189,7 @@ server <- function(input,output,session) {
       rv$em.iteration = rv$em.iteration + 1
       mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = TRUE,bestTrees = input$Bt,no_cores = input$cores)
       
-      if(length(input_values$brts_d)<800) ftrue = exp(DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0))
+      if(length(input_values$brts_d)<800) ftrue = DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0)
       
       MCEM_last = data.frame(par1=pars[1],
                              par2=pars[2],
@@ -227,8 +228,8 @@ server <- function(input,output,session) {
         gamMu = gam(mu ~ s(it), data=em.matrix)
         gamK = gam(K ~ s(it), data=em.matrix)
         rv$MCEM$sdl[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv1/rv$MCEM$mc.samplesize+gamLambda$sig2)
-        rv$MCEM$sdm[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv2/rv$MCEM$mc.samplesize+gamLambda$sig2)
-        rv$MCEM$sdk[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv3/rv$MCEM$mc.samplesize+gamLambda$sig2)
+        rv$MCEM$sdm[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv2/rv$MCEM$mc.samplesize+gamMu$sig2)
+        rv$MCEM$sdk[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv3/rv$MCEM$mc.samplesize+gamK$sig2)
       }
       
      } })#end isolate
@@ -296,7 +297,7 @@ server <- function(input,output,session) {
     if(nrow(rv$MCEM)>5){ 
       K.est = mean(rv$MCEM$par3[input$charts:length(rv$MCEM$par3)])
       K.plot = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est),subtitle =   paste("number of last iterations to consider: ", rv$em.iteration-input$charts)) 
-      if(input$ddd) K.plot = K.plot + geom_hline(yintercept = input_values$mle_dd[2])
+      if(input$ddd) K.plot = K.plot + geom_hline(yintercept = input_values$mle_dd[3])
       if(input$CI & nrow(rv$MCEM)>12) K.plot = K.plot + geom_errorbar(aes(x=em.iteration, y=par3, ymin = par3-1.96*sdk, ymax = par3 + 1.96*sdk), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
@@ -337,12 +338,15 @@ server <- function(input,output,session) {
   })
   
   output$timepie <- renderPlot({
-    df <- data.frame(
-      group = c("E_step", "M_step", "Other"),
-      value = c(rv$MCEM$E_time[nrow(rv$MCEM$E_time)], rv$MCEM$M_time[nrow(rv$MCEM$E_time)], 0)
-    )
-    bp <- ggplot(df, aes(x="", y=value, fill=group)) + coord_polar("y", start=0)
-    bp
+    df = data.frame(it=rep(rv$MCEM$em.iteration,2),time=c(rv$MCEM$E_time,rv$MCEM$M_time),Process=c(rep("E_step",nrow(rv$MCEM)),rep("M_step",nrow(rv$MCEM))))
+    ggplot(df, aes(x=it, y=time, fill=Process)) + 
+      geom_area()
+    #df <- data.frame(
+    #  group = c("E_step", "M_step", "Other"),
+    #  value = c(rv$MCEM$E_time[nrow(rv$MCEM$E_time)], rv$MCEM$M_time[nrow(rv$MCEM$E_time)], 0)
+    #)
+    #bp <- ggplot(df, aes(x="", y=value, fill=group)) + coord_polar("y", start=0)
+    #bp
   })
   
   output$hist_w <- renderPlot({

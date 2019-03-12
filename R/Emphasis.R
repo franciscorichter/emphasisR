@@ -145,11 +145,13 @@ sim_setoftrees_p <- function(obs,pars,nsim=1000,maxnumspec=250,model="dd",no_cor
   }
   stopCluster(cl)
   diff_logs = sapply(trees,function(list) list$logf.joint-list$logg.samp)
-  #weights = exp(diff_logs) #
-  weights = exp(diff_logs-max(diff_logs))
+  max_log = max(diff_logs) #
+  fhat = mean(exp(diff_logs))
+  se = sd(exp(diff_logs))/sqrt(nsim)
+  weights = exp(diff_logs-max_log)
   logweights = diff_logs
   trees = lapply(trees, function(list) list$tree)
-  return(list(trees=trees,weights=weights,logweights=logweights))
+  return(list(trees=trees,weights=weights,logweights=logweights,fhat=fhat,fhat.se=se))
 }
 
 ###########################
@@ -329,8 +331,8 @@ mcem <- function(brts,init_par,n_it=10,MC_ss=100,limit_miss_spec,model="dd"){
 mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL,selectBestTrees=FALSE,bestTrees=NULL,no_cores){
   time = proc.time()
   st = sim_setoftrees_p(obs = brts,pars = theta_0,nsim = MC_ss,maxnumspec = maxnumspec,model=model,no_cores=no_cores)
-  fhat = mean(st$weights)
-  se = sd(st$weights)/sqrt(MC_ss)
+  fhat = st$fhat
+  se = st$fhat.se
   E_time = get.time(time)
   time = proc.time()
   if(selectBestTrees){
