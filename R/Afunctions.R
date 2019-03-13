@@ -123,7 +123,7 @@ extinction.processes <- function(u,inits,mu0){
 
 sim.extinct2 <- function(brts,pars,model='dd',seed=0){
   if(seed>0) set.seed(seed)
-  wt = -diff(c(brts,0))
+  wt = diff(c(0,brts))
   ct = sum(wt)
   lambda0 = pars[1]
   mu0 = mu = pars[2] #mu can be removed
@@ -186,10 +186,10 @@ sim.extinct2 <- function(brts,pars,model='dd',seed=0){
     }
     N = N+1
   }
-  df = data.frame(bt = c(bt,ct-brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
+  df = data.frame(bt = c(bt,brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
   df = df[order(df$bt),]
   df$t.ext = df$bte-df$bt
-  df = df[-1,]
+  df = df[-nrow(df),]
   df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
   return(df)
 }

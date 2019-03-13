@@ -1,7 +1,7 @@
 ### EMPHASIS functions
 
 # negative logLikelihood of a tree
-nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
+nllik.tree = function(pars,tree,topology=T,model="dd",initspec=1){
   wt = tree$wt
   to = tree$to
   to[to==2] = 1
@@ -17,18 +17,12 @@ nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
   }
   mu = max(0,pars[2])
   sigma = (lambda + mu)*n
-#  sigma[n==2] = lambda[n==2]*2
   if(topology){
     rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   }else{
     rho = pmax(n[-length(n)]*(lambda[-length(lambda)]*to+mu*(1-to)),0)
   }
-  if(truncdim){
-    sigma = sigma[-length(sigma)]
-    wt = wt[-length(wt)]
-  }
   nl = -(sum(-sigma*wt)+sum(log(rho)))
-  #if(initspec==1) nl = nl - log(pars[1])
   if(min(pars)<0){nl = Inf}
   return(nl)
 }
@@ -49,17 +43,6 @@ lambda.cr <- function(pars,n){
   rep(pmax(1e-99, pars[1]), length(n))
 }
 
-# negative logLikelihood of a set of trees
-# Q.approx = function(pars,st,topology,model="dd"){
-#   m = length(st$trees)
-#   l = vector(mode="numeric",length=m)
-#   for(i in 1:m){
-#     l[i] = nllik.tree(pars,tree=st$trees[[i]],topology=topology,model=model)
-#   }
-#   w = st$w
-#   Q = sum(l*w)
-#   return(Q)
-# }
 Q_approx = function(pars,st,model="dd"){
   get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = 1,model=model)
   l = sapply(st$trees, get_llik)
@@ -74,26 +57,7 @@ M_step <-function(S,init_par = c(0.5,0.5,100),model="dd"){
   return(po)
 }
 
-lg_prob <- function(tree,topology=T){
-  list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
-  mu = pars[2]
-  if(mu!=0){
-    #term1 = sum(-s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt))))
-    term1 = sum(-2*s*((exp(-r*mu)/mu)*(exp(mu*wt)-1)-(exp(-2*r*mu)/(2*mu))*(exp(2*mu*wt)-1)))-mu*sum(r-wt)
-    la = s/n
-    la = la[is.finite(t_ext)]
-    text = t_ext[is.finite(t_ext)]
-    if(topology){
-      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
-    }else{
-      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(s[is.finite(t_ext)]))
-    }
-    logg = term1 + term2
-  }else{
-    logg = 0
-  }
-  return(logg)
-}
+
 
 df2tree <- function(df,pars,model="dd",initspec=2){
   dim = dim(df)[1]
@@ -178,64 +142,7 @@ IntInvExtant <- function(r,mu,s,u){
 }
 
 ###  simulation of extinct species
-sim.extinct <- function(brts,pars,model='dd',seed=0){
-  if(seed>0) set.seed(seed)
-  wt = diff(c(0,brts))
-  ct = sum(wt)
-  dim = length(wt)
-  mu = pars[2]
-  bt = NULL
-  bte = NULL
-  to = NULL
-  N = 2
-  for(i in 1:dim){
-    cwt = wt[i]
-    cbt = sum(wt[0:(i-1)])
-    key = 0
-    while(key == 0){
-      if(model == "dd"){  # diversity-dependence model
-        lambda = lambda.dd(pars,N)
-      }
-      if(model == "dd1.3"){
-        lambda = lambda.dd.1.3(pars,N)
-      }
-      s = N*lambda
-      t.spe = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
-      sbte = bte[bte>cbt]
-      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
-      mint = min(t.spe,t_ext)
-      if(mint < cwt){
-        if(mint == t.spe){#speciation
-          bt = c(bt,cbt+t.spe)
-          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu)
-          bte = c(bte,text)
-          to = c(to,1)
-          N = N + 1
-          cwt = cwt - t.spe
-          cbt = cbt + t.spe
-        }
-        else{#extinction
-          bt = c(bt,cbt+t_ext)
-          bte = c(bte,Inf)
-          to = c(to,0)
-          cwt = cwt - t_ext
-          cbt = cbt + t_ext
-          N = N-1
-        }
-      }
-      else{
-        key = 1
-      }
-    }
-    N = N+1
-  }
-  df = data.frame(bt = c(bt,ct-brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
-  df = df[order(df$bt),]
-  df$t.ext = df$bte-df$bt
-  df = df[-1,]
-  df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
-  return(df)
-}
+
 
 ####
 
@@ -328,9 +235,9 @@ mcem <- function(brts,init_par,n_it=10,MC_ss=100,limit_miss_spec,model="dd"){
   
 }
 
-mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec,model="dd",givetimes=NULL,selectBestTrees=FALSE,bestTrees=NULL,no_cores){
+mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",givetimes=NULL,selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5){
   time = proc.time()
-  st = sim_setoftrees_p(obs = brts,pars = theta_0,nsim = MC_ss,maxnumspec = maxnumspec,model=model,no_cores=no_cores)
+  st = mc.Estep_parallel(brts = brts,pars = theta_0,nsim = MC_ss,model = model,method = method,no_cores = no_cores,maxnumspec = maxnumspec,p=p)
   fhat = st$fhat
   se = st$fhat.se
   E_time = get.time(time)
@@ -362,3 +269,304 @@ phylo2tree <- function(tree){
   E[E==-1] = 0
   return(list(wt=t,to=E))
 }
+
+
+####### Monte Carlo E step
+mc.Estep_parallel <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=NULL,parallel=TRUE,maxnumspec=NULL,p=0.5){
+  if(brts[1]==max(brts)){
+    wt = -diff(c(brts,0))
+    brts = cumsum(wt)
+  }
+  #### parallel set-up
+  if(is.null(no_cores)) no_cores <- detectCores()
+  cl <- makeCluster(no_cores)
+  registerDoParallel(cl)
+  if(method=="uniform"){
+    trees <- foreach(i = 1:nsim, combine = list) %dopar% {
+      S = emphasis:::sim.dim(i=i,nsim=nsim,maxnumspec=maxnumspec,deterministic = FALSE)
+      ct <- max(brts)
+      mbts.events = emphasis:::sim.branchingtimes.and.events(S=S ,ct = ct,p=p)
+      conf = emphasis:::possible.configurations(miss = mbts.events,obs = brts)
+      logg.samp = emphasis:::log.samp.prob(to = mbts.events$to,maxnumspec = maxnumspec,ct=ct,conf=conf,p=p)
+      tree = list(wt=diff(c(0,conf$tree$brts,ct)),to=as.integer(conf$tree$event>0))
+      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
+      return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree))
+    }
+  }
+  if(method=="emphasis"){
+    trees <- foreach(i = 1:nsim, combine = list) %dopar% {
+      df = emphasis::sim.extinct(brts = brts,pars = pars,model = model)
+      missing.part = df[df$to!=2,]
+      mbts.events = list(brts=missing.part$bt,to=missing.part$to)
+      conf = emphasis:::possible.configurations(miss = mbts.events,obs = brts)
+      tree = emphasis::df2tree(df,pars,model=model,initspec=1)
+      logg.samp = emphasis:::lg_prob(tree = tree,conf=conf)
+      #tree = list(wt=diff(c(0,conf$tree$brts,ct)),to=as.integer(conf$tree$event>0))
+      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
+      return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree))
+    }
+  }
+  stopCluster(cl)
+  logf = sapply(trees,function(list) list$logf.joint)
+  logg = sapply(trees,function(list) list$logg.samp)
+  diff_logs = logf-logg
+  max_log = max(diff_logs) #
+  fhat = mean(exp(diff_logs))
+  se = sd(exp(diff_logs))/sqrt(nsim)
+  weights = exp(diff_logs-max_log)
+  logweights = diff_logs
+  trees = lapply(trees, function(list) list$tree)
+  return(list(trees=trees,weights=weights,logweights=logweights,fhat=fhat,fhat.se=se,logf=logf,logg=logg))
+}
+
+######################
+# Uniform data augmentation importance sampler
+######################
+
+log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  n = n[-length(n)]
+  loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+lprobto(to,p = p)-sum(log(conf$N-conf$P))
+}
+
+lprobto <- function(to,p=0.5){
+  posspec = c(0,cumsum(to==1))<(length(to)/2)
+  posext = !(c(0,cumsum(to==1))==c(0,cumsum(to==0)))
+  expo = sum(posspec & posext)
+  logprob = expo*log(1-p)
+  return(logprob)
+}
+
+sim.branchingtimes.and.events <- function(S=S,ct,p){
+  brts = sort(runif(2*S,min=0,max=ct))
+  to = sampletopology(S,p = p)
+  tree = list(brts=brts,to=to)
+  return(tree)
+}
+
+sim.dim <- function(maxnumspec,deterministic=FALSE,i=NULL,nsim=NULL){
+  if(deterministic){
+    S = floor((maxnumspec+1)*i/nsim)
+  }else{
+    S = sample(0:maxnumspec,1)
+  }
+  return(S)
+}
+
+sampletopology <- function(S,p=0.5){
+  to = NULL
+  if(S>0){
+    for(i in 1:(2*S)){
+      if(sum(to==1)==sum(to==0)){
+        prob = 1
+      }
+      if(sum(to==1)==S){
+        prob = 0
+      }
+      to = c(to,rbinom(n=1,size=1,prob=prob))
+      prob = p
+    }
+  }else{
+    to = NULL
+  }
+  return(to)
+}
+
+############################
+# emphasis data augmentation importance sampler
+##############################
+sim.extinct <- function(brts,pars,model='dd',initspec=1,seed=0){
+  if(seed>0) set.seed(seed)
+  wt = diff(c(0,brts))
+  ct = sum(wt)
+  dim = length(wt)
+  mu = pars[2]
+  bt = NULL
+  bte = NULL
+  to = NULL
+  N = initspec
+  for(i in 1:dim){
+    cwt = wt[i]
+    cbt = sum(wt[0:(i-1)])
+    key = 0
+    while(key == 0){
+      if(model == "dd"){  # diversity-dependence model
+        lambda = lambda.dd(pars,N)
+      }
+      if(model == "dd1.3"){
+        lambda = lambda.dd.1.3(pars,N)
+      }
+      s = N*lambda
+      t.spe = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
+      sbte = bte[bte>(cbt+1e-09)]
+      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
+      mint = min(t.spe,t_ext)
+      
+      if(mint < cwt){
+        if(mint == t.spe){#speciation
+          bt = c(bt,cbt+t.spe)
+          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu)
+          bte = c(bte,text)
+          to = c(to,1)
+          N = N + 1
+          cwt = cwt - t.spe
+          cbt = cbt + t.spe
+        }
+        else{#extinction
+          bt = c(bt,cbt+t_ext)
+          bte = c(bte,Inf)
+          to = c(to,0)
+          cwt = cwt - t_ext
+          cbt = cbt + t_ext
+          N = N-1
+        }
+      }
+      else{
+        key = 1
+      }
+    }
+    N = N+1
+  }
+  df = data.frame(bt = c(bt,brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  df = df[-nrow(df),]
+  df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
+  return(df)
+}
+
+lg_prob <- function(tree,topology=T,conf){
+  list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
+  mu = pars[2]
+  if(mu!=0){
+    term1 = sum(-2*s*((exp(-r*mu)/mu)*(exp(mu*wt)-1)-(exp(-2*r*mu)/(2*mu))*(exp(2*mu*wt)-1)))-mu*sum(r-wt)
+    la = s
+    la = la[is.finite(t_ext)]
+    text = t_ext[is.finite(t_ext)]
+    if(topology){
+      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
+    }else{
+      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(s[is.finite(t_ext)]))
+    }
+    logg = term1 + term2
+  }else{
+    logg = 0
+  }
+  logg=logg-sum(log(conf$N-conf$P))
+  return(logg)
+}
+
+
+
+
+
+possible.configurations  <- function(miss,obs){
+  if (is.vector(obs)){
+    tms <- obs
+    to <- rep(1,length(obs))
+    obs <- list(brts=tms,to=to)
+  }
+  mi = 1 #index for missing
+  ob = 1 #index for observed
+  
+  # (number of) protected species
+  protected = 1
+  P<-NULL
+  
+  # (number of) current species
+  currentspecies = 1
+  N<-NULL
+  
+  # missing branching times
+  brts.m = c(miss$brts,Inf)
+  
+  # set of sets of guardians
+  guardians = list()
+  
+  # missing new species (starting to count at 1 above number of present species)
+  n.obs = length(obs$brts)
+  newspecies.m = n.obs+1
+  
+  # observed new species (starting to count at 1, so next one is 2)
+  newspecies.o = 2
+  
+  # sampled tree
+  tree<-list(brts=NULL,species=NULL,event=NULL)
+  
+  while (mi < length(brts.m) | ob < length(obs$brts)) {
+    if(obs$brts[ob]<brts.m[mi]){ # observed speciation
+      spec = obs$to[ob]
+      #update tree
+      tree$brts = c(tree$brts,obs$brts[ob])
+      tree$species =c(tree$species,spec)
+      tree$event = c(tree$event,newspecies.o)
+      if(spec%in%protected){ # if protected, then both species become protected
+        protected = c(protected,newspecies.o)
+        currentspecies = c(currentspecies,newspecies.o)
+      }else{ # if unprotected, then then (1) its guardian set disappears and (2) both become protected
+        index = unlist(lapply(guardians,function(y,x){x%in%y},x=spec))
+        if (sum(index)>0){
+          index = which(index)
+          n.guardians = length(guardians[[index]])
+          guardians[[index]] = NULL
+        }
+        protected = c(protected,spec,newspecies.o)
+        P = c(P,0) # it is weird, but we want to try 
+        currentspecies = c(currentspecies,newspecies.o)
+        N = c(N,n.guardians) # it is weird, but we want to try 
+      }
+      ob = ob + 1
+      newspecies.o = newspecies.o + 1
+    }else{ # missing event
+      if(miss$to[mi]==1){ # missing speciation
+        mspec = sample(c(currentspecies,currentspecies),1)
+        index = which(mspec==protected)
+        N = c(N,length(currentspecies))
+        P=c(P,0)
+        currentspecies = c(currentspecies,newspecies.m)
+        #update tree
+        tree$brts = c(tree$brts,miss$brts[mi])
+        tree$species =c(tree$species,mspec)
+        tree$event = c(tree$event,newspecies.m)
+        if(sum(index)>0){ # if a protected species speciates, then it becomes unprotected and both guardians
+          protected = protected[-index]
+          guardians[[length(guardians)+1]] = c(mspec,newspecies.m)
+        }else{ # if a unprotected species speciates, then ...
+          index = unlist(lapply(guardians,function(y,x){x%in%y},x=mspec))          
+          if (sum(index)>0){ #... if it is a guardian then new species becomes guardian
+            index=which(index)
+            guardians[[index]] = c(guardians[[index]],newspecies.m)
+          } # ... if it is not a guardian then no changes to guardianship
+        }
+        newspecies.m = newspecies.m + 1
+      } else { #missing extinction
+        N = c(N,length(currentspecies))
+        P = c(P,length(protected))
+        available = setdiff(currentspecies,protected)
+        missextinct = sample(c(available,available),1)
+        if (missextinct<=n.obs){# if we selected the label of an extant species, we arbitrarily pick the label of a missing guardian
+          index = which(unlist(lapply(guardians,function(y,x){x%in%y},x=missextinct)))         
+          missextinct = setdiff(guardians[[index]],missextinct)[1]
+        }
+        #update tree
+        tree$brts = c(tree$brts,miss$brts[mi])
+        tree$species =c(tree$species,missextinct)
+        tree$event = c(tree$event,0)
+        index = unlist(lapply(guardians,function(y,x){x%in%y},x=missextinct))          
+        if (sum(index)>0){ # if it is a guardian then ...
+          index=which(index)
+          if (length(guardians[[index]])>2){ # ... if the set is larger than 2, then take it out of guardian set
+            guardians[[index]] = setdiff(guardians[[index]],missextinct)
+          } else { # ... if guardian set is of size 2, remove guardian set and protect the remaining species
+            protected = c(protected, setdiff(guardians[[index]],missextinct))
+            guardians[[index]] = NULL
+          }
+        }
+        currentspecies = setdiff(currentspecies,missextinct)
+      }
+      mi = mi + 1
+    }
+  }
+  return(list(N=N,P=P,tree=tree))
+}
+

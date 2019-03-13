@@ -1,10 +1,10 @@
-if (file.exists("first.R")) file.remove("first.R")
+load("~/Google Drive/emphasis/inst/Shiny-examples/mcem_temp.RData")
 
-n_cores = detectCores()
-rv = NULL
+
+
+
 theme_emphasis =  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                         panel.background = element_blank(), axis.line = element_line(colour = "black"))
-MCEM = data.frame(par1=NULL,par2=NULL,par3=NULL,fhat=NULL,fhat.se=NULL,ftrue=NULL,E_time=NULL,M_time=NULL,mc.samplesize=NULL,rel.lik=NULL,effective.size=NULL,hessian.inv=NULL)
 
 
 ui <- fluidPage(
@@ -22,12 +22,15 @@ ui <- fluidPage(
                 
                 sidebarPanel(id="sidebar",
                              img(src='logo.png', align = "center",height = 170),
-                             h3("Controls"),
-                             actionButton("gogobutt","Go"),
-                             actionButton("stopbutt","Stop"),
-                             #     actionButton("resetbutt","Reset"),
+                            
+                             # Input: Select a file ----
+                             fileInput("file1", "Choose RDa File",
+                                       multiple = FALSE,
+                                       accept = c("text/csv",
+                                                  "text/comma-separated-values,text/plain",
+                                                  ".csv")),
                              
-                             h3("Data"),  
+                             
                              selectInput("brts", "Choose Phylo/Branching times:",
                                          list("Other" = 0,
                                               "Dendroica" = "5,4.806886544,4.70731246478,4.50735197578,4.37856240588,4.29594855558,4.19207515688,4.18261061218,4.11238451758,4.09640902445,3.81723693538,3.71143733895,3.48845298905,3.25729503338,3.11613886835,2.64829864145,2.63531839038,2.37990087748,1.82721570435,0.83704715535,0.64242044758,0.56121103655,0.356333544350001,0.346462849050001",
@@ -36,33 +39,18 @@ ui <- fluidPage(
                                               "Heliconius" = "16.761439,15.160156,14.40605,13.815308,13.486476,13.164424,12.373104,10.840648,10.142988,9.911296,9.273213,9.264573,9.142266,8.536825,8.441098,8.17086,7.92524,7.478269,7.255542,6.851304,5.335066,5.335061,5.152996,4.643518,4.506785,4.446959,3.780976,3.768737,3.488772,3.398945,2.433015,2.048552,1.930075,1.602332,1.302335,1.03376100000000,0.884346",
                                               "Plethodon" = "11.3,9.55365380008198,9.26434040327225,8.83592350352767,8.3434446982257,8.17781491491496,7.95978190384214,6.61207494082374,6.5679856688767,6.21838471981418,5.59809615547134,5.37012669852355,4.7638222125791,4.10749650972075,4.02367324807484,3.65931960175062,3.32916292401100,3.23132222435799,3.18206288699248,2.8572235287017,2.58222342582278,2.43078192215161,1.87377417677032,1.79734091086791,1.77566693721338,1.52675067868777,1.11116172787207,0.800771123741394,0.498973146096477",
                                               "Foraminifera" = "64.95,64.9,61.2,44.15,37.2,30.2,23.8,22.5,21,18.8,18.3,17.3,17,14.8,10.8,10.2,10,8.2,8,7.2,5.2,4.5,3.8,3.5,3.4,3.2,2,2,0.8,0.3,0.3"#,
-                                           #   "Birds" = paste(as.character(brts_birds), collapse=", "))
+                                              #   "Birds" = paste(as.character(brts_birds), collapse=", "))
                                          )       
                              ),
                              textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1"),
                              
-                             h3("Initial parameters"),
-                             numericInput("par1", "Initial lambda:", 1),
-                             numericInput("par2", "Initial mu:", 0.1),
-                             numericInput("par3", "Initial K:", 40),
-                             
-                             h3("Settings"),
-                             selectInput("method", "Choose Data augmentation sampler:",
-                                         list("emphasis" = "emphasis",
-                                              "uniform" = "uniform")),
-                                              
-                             numericInput("ss", "Monte-Carlo sample size:", 1000),
-                             numericInput("Bt", "Number of best trees to take:", 20),
-                             numericInput("maxspec", "Maximum number of missing species:", 40),
-                             numericInput("p", "speciation probability:", 0.5),
-                             
+                          
                              h3("Options"),
                              checkboxInput("ddd", "Compare with DDD", FALSE),
-                             conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
+                             conditionalPanel(11>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
                              checkboxInput("log", "show estimated lkelihood on log scale", FALSE),
                              checkboxInput("log_w", "show weights on log scale", TRUE),
-                             numericInput("charts", "See charts from iteration:", 1),
-                             numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2)#,
+                             numericInput("charts", "See charts from iteration:", 1)
                 ),
                 
                 mainPanel(
@@ -80,20 +68,14 @@ ui <- fluidPage(
                                          column(5,
                                                 h3("Diagnostics"),
                                                 plotOutput("fhat"),
-                                                plotOutput("diff_fhat_hist"),
-                                                plotOutput("rellik_hist")
-                                         ),
-                                         column(5,
-                                                h3("Weights"),
-                                                plotOutput("hist_w"),  #weight_vs_dimension
-                                                plotOutput("fvsg")
-                                         ),
-                                         column(5,
-                                                h3("Information"),
-                                                plotOutput("timepie"),
-                                                textOutput("txtOutput2"),
-                                                textOutput("txtOutput3")
-                                         )
+                                                plotOutput("diff_fhat_hist")#,
+                                             #   plotOutput("rellik_hist")
+                                         )#,
+                                      #   column(5,
+                                       #         h3("Weights"),
+                                      #          plotOutput("hist_w")  #weight_vs_dimension
+                                     #    )
+                                         
                                        )),
                               tabPanel("Help",
                                        h1("Welcome to Emphasis!"),
@@ -139,13 +121,6 @@ ui <- fluidPage(
                                        #img(src='logo.png', align = "left",height = 180),
                                        helpText("Emphasis is a joint work by Francisco Richter, Rampal Etienne and Ernst Wit. For questions or comments please write to f.richter@rug.nl.\n", align = "left",height = 70),
                                        img(src='license.png', align = "right",height = 60)
-                              ),
-                              tabPanel("log",
-                                       h2("To do"),
-                                       "add log window",
-                                       "add information",
-                                     #  helpText("Emphasis is a joint work by Francisco Richter, Rampal Etienne and Ernst Wit. For questions or comments please write to f.richter@rug.nl.\n", align = "left",height = 70),
-                                       img(src='license.png', align = "right",height = 60)
                               )
                   ) #close tab panel
             ) #close mainpanel
@@ -158,12 +133,15 @@ ui <- fluidPage(
 
 
 server <- function(input,output,session) {
-  rv <- reactiveValues(MCEM=MCEM,run=F,sdl=NULL,sdm=NULL,sdk=NULL,dim=NULL,weights=NULL,logweights=NULL,em.iteration=0,logf=NULL,logg=NULL)
   input_values <- reactiveValues(brts=NULL,mle_dd=NULL,init_pars=NULL,brts_d=NULL)
+  rv <- reactiveValues(MCEM=NULL)
   
-  autoInvalidate <- reactiveTimer(intervalMs=1000,session)
- 
+  observe({
+    rv$MCEM = MCEM_temp[input$charts:nrow(MCEM_temp),]
+  })
+  
    observe({
+     
       if(input$brts==0){
         brts = brts_d <- as.numeric(unlist(strsplit(input$vec1,",")))
       }else{ 
@@ -182,171 +160,90 @@ server <- function(input,output,session) {
       }
       input_values$brts = brts
       input_values$mle_dd = mle_dd
-      input_values$init_pars = c(input$par1,input$par2,input$par3)
-      input_values$brts_d = brts_d
   })
   
-  observe({
-    pars = input_values$init_pars
-    autoInvalidate()  # to make it run withouth changind input 
-    isolate({ if (rv$run) { 
-      
-      if(file.exists("first.R")) load("first.R")
-      rv$em.iteration = rv$em.iteration + 1
-      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = TRUE,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p)
-      
-      if(length(input_values$brts_d)<800) ftrue = DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0)
-      
-      MCEM_last = data.frame(par1=pars[1],
-                             par2=pars[2],
-                             par3=pars[3],
-                             fhat=mcem$fhat,
-                             fhat.se=mcem$se,
-                             ftrue=ftrue,
-                             E_time=mcem$E_time,
-                             M_time=mcem$M_time,
-                             mc.samplesize=input$ss,
-                             rel.lik=rel.llik(S1=mcem$st$trees,p0=pars,p1=mcem$pars),
-                             effective.size=mcem$loglik.proportion,
-                             hessian.inv1 = mcem$hessian_inverse[1],
-                             hessian.inv2 = mcem$hessian_inverse[2],
-                             hessian.inv3 = mcem$hessian_inverse[3],
-                             sdl = NaN,
-                             sdm = NaN,
-                             sdk = NaN,
-                             em.iteration = rv$em.iteration,
-                             diff_fhat = NaN
-                             )
-      rv$MCEM = rbind(rv$MCEM,MCEM_last)
-      
-      rv$weights = mcem$st$weights
-      rv$logweights = mcem$st$logweights
-      rv$dim = sapply(mcem$st$trees,FUN = function(list) length(list$to))
-      rv$logf = mcem$st$logf
-      rv$logg = mcem$st$logg
-      pars = mcem$pars
-      save(pars,file="first.R")
-      MCEM_temp = rv$MCEM
-      save(MCEM_temp,file="mcem_temp.RData")
-      
-      if(nrow(rv$MCEM)>9){
-        em.matrix = data.frame(lambda=rv$MCEM$par1,mu=rv$MCEM$par2,K=rv$MCEM$par3,it=1:length(rv$MCEM$par3))
-        gamLambda = gam(lambda ~ s(it), data=em.matrix)
-        gamMu = gam(mu ~ s(it), data=em.matrix)
-        gamK = gam(K ~ s(it), data=em.matrix)
-        rv$MCEM$sdl[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv1/rv$MCEM$mc.samplesize+gamLambda$sig2)
-        rv$MCEM$sdm[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv2/rv$MCEM$mc.samplesize+gamMu$sig2)
-        rv$MCEM$sdk[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv3/rv$MCEM$mc.samplesize+gamK$sig2)
-      }
-      
-     } })#end isolate
-  }) #end observe
-  
-  observeEvent(input$gogobutt, { isolate({ rv$run=T      }) })
-  observeEvent(input$stopbutt, { isolate({ rv$run=F      }) })
-
   output$txtOutput1 = renderText({
     "Welcome to Emphasis"
   })
   
-  output$txtOutput2 = renderText({
-    if(is.null(rv$LastTime)){
-      "Initializing process"
-    }else{
-      timescale = " sec"
-      time_s = rv$MCEM$E_time[nrow(rv$MCEM)]+rv$MCEM$M_time[nrow(rv$MCEM)]
-      if(time_s>60 & time_s < 3600){
-        time_s = time_s/60
-        timescale = " min"
-      }
-      if(time_s > 3600){
-        time_s = time_s/3600
-        timescale = " hour"
-      } 
-      paste0("Last iteration took: ", time_s, timescale)
-    }
-  })
+
   
-  output$txtOutput3 = renderText({
-    paste0("Proportion of likelihood: ", rv$MCEM$effective.size[nrow(rv$MCEM)] )
-  })
+
   
   output$lambda <- renderPlot({
-    
-    if(nrow(rv$MCEM)>5){ 
-      lambda.est = mean(rv$MCEM$par1[input$charts:length(rv$MCEM$par1)])
-      plot.lambda = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par1)) + ggtitle(label=paste("Last estimation:  ", lambda.est),subtitle =   paste("number of last iterations to consider: ", rv$em.iteration)) 
+      lambda.est = mean(rv$MCEM$par1)
+      plot.lambda = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par1)) + ggtitle(label=paste("Last estimation:  ", lambda.est))#,subtitle =   paste("number of last iterations to consider: ", em.iteration)) 
       if(input$ddd) plot.lambda = plot.lambda + geom_hline(yintercept = input_values$mle_dd[1])
-      if(input$CI & nrow(rv$MCEM)>12) plot.lambda = plot.lambda + geom_errorbar(aes(x=em.iteration, y=par1, ymin = par1-1.96*sdl, ymax = par1 + 1.96*sdl), colour='darkgreen') 
+      if(input$CI) plot.lambda = plot.lambda + geom_errorbar(aes(x=em.iteration, y=par1, ymin = par1-1.96*sdl, ymax = par1 + 1.96*sdl), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
         plot.lambda = plot.lambda + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
       }
       plot.lambda + theme_emphasis+ geom_hline(yintercept = lambda.est, colour="blue")
-    }
   })
   
   output$mu <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
-      mu.est = mean(rv$MCEM$par2[input$charts:length(rv$MCEM$par2)])
-      plot.mu = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est),subtitle =   paste("number of last iterations to consider: ", rv$em.iteration)) 
+  
+      mu.est = mean(rv$MCEM$par2)
+      plot.mu = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est))#,subtitle =   paste("number of last iterations to consider: ", em.iteration)) 
       if(input$ddd) plot.mu = plot.mu + geom_hline(yintercept = input_values$mle_dd[2])
-      if(input$CI & nrow(rv$MCEM)>12) plot.mu = plot.mu + geom_errorbar(aes(x=em.iteration, y=par2, ymin = par2-1.96*sdm, ymax = par2 + 1.96*sdm), colour='darkgreen') 
+      if(input$CI) plot.mu = plot.mu + geom_errorbar(aes(x=em.iteration, y=par2, ymin = par2-1.96*sdm, ymax = par2 + 1.96*sdm), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
         plot.mu = plot.mu + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
       }
       plot.mu + theme_emphasis + geom_hline(yintercept = mu.est, colour="blue")
-    }
+  
   })
   
   output$K <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
-      K.est = mean(rv$MCEM$par3[input$charts:length(rv$MCEM$par3)])
-      K.plot = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est),subtitle =   paste("number of last iterations to consider: ", rv$em.iteration-input$charts)) 
+  
+      K.est = mean(rv$MCEM$par3)
+      K.plot = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est))#,subtitle =   paste("number of last iterations to consider: ", em.iteration-input$charts)) 
       if(input$ddd) K.plot = K.plot + geom_hline(yintercept = input_values$mle_dd[3])
-      if(input$CI & nrow(rv$MCEM)>12) K.plot = K.plot + geom_errorbar(aes(x=em.iteration, y=par3, ymin = par3-1.96*sdk, ymax = par3 + 1.96*sdk), colour='darkgreen') 
+      if(input$CI) K.plot = K.plot + geom_errorbar(aes(x=em.iteration, y=par3, ymin = par3-1.96*sdk, ymax = par3 + 1.96*sdk), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
         K.plot = K.plot + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
       }
       K.plot  + theme_emphasis + geom_hline(yintercept = K.est, colour="blue")
-    }
+    
   })
   
   output$fhat <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
+
       fhat.plot = ggplot(rv$MCEM) + geom_line(aes(em.iteration,log(fhat))) # + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       if(input$ddd) fhat.plot = fhat.plot + geom_point(aes(em.iteration,ftrue))
-      if(input$CI) fhat.plot = fhat.plot + geom_line(aes(em.iteration,log(rv$MCEM$fhat+1.96*rv$MCEM$fhat.se)),col="red") + geom_line(aes(em.iteration,log(rv$MCEM$fhat-1.96*rv$MCEM$fhat.se)),col="red")#+ geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') 
+      if(input$CI) fhat.plot = fhat.plot + geom_line(aes(em.iteration,log(MCEM$fhat+1.96*MCEM$fhat.se)),col="red") + geom_line(aes(em.iteration,log(MCEM$fhat-1.96*MCEM$fhat.se)),col="red")#+ geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') 
       fhat.plot  + theme_emphasis + ggtitle(label = "Estimated log likelihood")
-    }
+    
   })
   
   output$diff_fhat_hist <- renderPlot({
-    if(nrow(rv$MCEM)>12){ 
+     rv$MCEM$diff_fhat = c(0,diff(rv$MCEM$fhat))
+    
       breaks <- pretty(range(rv$MCEM$diff_fhat), n = nclass.FD(rv$MCEM$diff_fhat), min.n = 1)
       bwidth <- breaks[2]-breaks[1]
-      rv$MCEM$diff_fhat = c(0,diff(rv$MCEM$fhat))
-      gl = ggplot(rv$MCEM[input$charts:nrow(rv$MCEM),]) + geom_histogram(aes(diff_fhat),binwidth = bwidth)#,binwidth = (max(diff_fhat)-max(diff_fhat))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
+     
+      gl = ggplot(rv$MCEM) + geom_histogram(aes(diff_fhat),binwidth = bwidth)#,binwidth = (max(diff_fhat)-max(diff_fhat))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       gl  + theme_emphasis + ggtitle(label = "Delta likelihood")
       #stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1))
-    }
+    
   })
   
-  output$rellik_hist <- renderPlot({
-    if(nrow(rv$MCEM)>12){ 
-      breaks <- pretty(range(rv$MCEM$rel.lik), n = nclass.FD(rv$MCEM$rel.lik), min.n = 1)
-      bwidth <- breaks[2]-breaks[1]
-      rv$mcem_it$rellik = rv$rellik
-      gl = ggplot(rv$MCEM[input$charts:nrow(rv$MCEM),]) + geom_histogram(aes(rel.lik),binwidth=bwidth)#,binwidth = (max(rellik)-max(rellik))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
-      gl  + theme_emphasis + ggtitle(label = "Relative likelihood")
-    }
-  })
+ # output$rellik_hist <- renderPlot({
+#    if(nrow(rv$MCEM)>12){ 
+ #     breaks <- pretty(range(rv$MCEM$rel.lik), n = nclass.FD(rv$MCEM$rel.lik), min.n = 1)
+  #    bwidth <- breaks[2]-breaks[1]
+  #   rv$mcem_it$rellik = rv$rellik
+  #    gl = ggplot(rv$MCEM[input$charts:nrow(rv$MCEM),]) + geom_histogram(aes(rel.lik),binwidth=bwidth)#,binwidth = (max(rellik)-max(rellik))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
+  #    gl  + theme_emphasis + ggtitle(label = "Relative likelihood")
+  #  }
+  #})
   
  # output$timepie <- renderPlot({
-  #  df = data.frame(it=rep(rv$MCEM$em.iteration,2),time=c(rv$MCEM$E_time,rv$MCEM$M_time),Process=c(rep("E_step",nrow(rv$MCEM)),rep("M_step",nrow(rv$MCEM))))
- #   ggplot(df, aes(x=it, y=time, fill=Process)) + 
+ #   df = data.frame(it=rep(rv$MCEM$em.iteration,2),time=c(rv$MCEM$E_time,rv$MCEM$M_time),Process=c(rep("E_step",nrow(rv$MCEM)),rep("M_step",nrow(rv$MCEM))))
+#    ggplot(df, aes(x=it, y=time, fill=Process)) + 
 #      geom_area()
     #df <- data.frame(
     #  group = c("E_step", "M_step", "Other"),
@@ -356,22 +253,16 @@ server <- function(input,output,session) {
     #bp
 #  })
   
-  output$hist_w <- renderPlot({
-    if(nrow(rv$MCEM)>5){
-      if(input$log_w==TRUE){
-        qplot(rv$dim/2,rv$logweights)
-      }else{
-        qplot(rv$dim/2,rv$weights)
-      }
-    }
+ # output$hist_w <- renderPlot({
+#    if(length(rv$x)>0){
+#      if(input$log_w==TRUE){
+ #       qplot(rv$dim/2,rv$logweights)
+#      }else{
+#        qplot(rv$dim/2,rv$weights)
+#      }
+#    }
     
-  })
-  
-  output$fvsg <- renderPlot({
-    if(nrow(rv$MCEM)>5){
-        qplot(rv$logf,rv$logg)
-    }
-  })
+#  })
 }
 
 shinyApp(ui, server)

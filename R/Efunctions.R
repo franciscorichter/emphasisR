@@ -1,37 +1,5 @@
-### EMPHASIS functions
+### remaining EMPHASIS functions
 
-# negative logLikelihood of a tree
-nllik.tree = function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
-  wt = tree$wt
-  to = tree$to
-  to[to==2] = 1
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  if(model == "cr"){
-    lambda = lambda.cr(pars,n)
-  }
-  if(model == "dd"){
-    lambda = lambda.dd(pars,n)
-  }
-  if(model == "dd.1.3"){
-    lambda = lamda.dd.1.3(pars,n)
-  }
-  mu = max(0,pars[2])
-  sigma = (lambda + mu)*n
-#  sigma[n==2] = lambda[n==2]*2
-  if(topology){
-    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-  }else{
-    rho = pmax(n[-length(n)]*(lambda[-length(lambda)]*to+mu*(1-to)),0)
-  }
-  if(truncdim){
-    sigma = sigma[-length(sigma)]
-    wt = wt[-length(wt)]
-  }
-  nl = -(sum(-sigma*wt)+sum(log(rho)))
-  #if(initspec==1) nl = nl - log(pars[1])
-  if(min(pars)<0){nl = Inf}
-  return(nl)
-}
 
 lik.tree <- function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
   exp(-nllik.tree(pars,tree,topology=topology,model=model,truncdim=truncdim,initspec=initspec))
@@ -67,26 +35,6 @@ mle.st <-function(S,init_par = c(0.5,0.5,100),topology=TRUE,model="dd"){
   return(po)
 }
 
-lg_prob <- function(tree,topology=T){
-  list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
-  mu = pars[2]
-  if(mu!=0){
-    #term1 = sum(-s*(wt+(exp(-r*mu)/mu)*(1-exp(mu*wt))))
-    term1 = sum(-2*s*((exp(-r*mu)/mu)*(exp(mu*wt)-1)-(exp(-2*r*mu)/(2*mu))*(exp(2*mu*wt)-1)))-mu*sum(r-wt)
-    la = s/n
-    la = la[is.finite(t_ext)]
-    text = t_ext[is.finite(t_ext)]
-    if(topology){
-      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(la))
-    }else{
-      term2 = length(la)*log(mu)-sum(mu*text)+sum(log(s[is.finite(t_ext)]))
-    }
-    logg = term1 + term2
-  }else{
-    logg = 0
-  }
-  return(logg)
-}
 
 df2tree <- function(df,pars,model="dd",initspec=2){
   dim = dim(df)[1]
@@ -168,65 +116,6 @@ IntInvExtant <- function(r,mu,s,u){
   t = log(u*(mu/s)*exp(mu*r)+1)/mu
 }
 
-###  simulation of extinct species
-sim.extinct <- function(brts,pars,model='dd',seed=0){
-  if(seed>0) set.seed(seed)
-  wt = diff(c(0,brts))
-  ct = sum(wt)
-  dim = length(wt)
-  mu = pars[2]
-  bt = NULL
-  bte = NULL
-  to = NULL
-  N = 2
-  for(i in 1:dim){
-    cwt = wt[i]
-    cbt = sum(wt[0:(i-1)])
-    key = 0
-    while(key == 0){
-      if(model == "dd"){  # diversity-dependence model
-        lambda = lambda.dd(pars,N)
-      }
-      if(model == "dd1.3"){
-        lambda = lambda.dd.1.3(pars,N)
-      }
-      s = N*lambda
-      t.spe = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
-      sbte = bte[bte>cbt]
-      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
-      mint = min(t.spe,t_ext)
-      if(mint < cwt){
-        if(mint == t.spe){#speciation
-          bt = c(bt,cbt+t.spe)
-          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu)
-          bte = c(bte,text)
-          to = c(to,1)
-          N = N + 1
-          cwt = cwt - t.spe
-          cbt = cbt + t.spe
-        }
-        else{#extinction
-          bt = c(bt,cbt+t_ext)
-          bte = c(bte,Inf)
-          to = c(to,0)
-          cwt = cwt - t_ext
-          cbt = cbt + t_ext
-          N = N-1
-        }
-      }
-      else{
-        key = 1
-      }
-    }
-    N = N+1
-  }
-  df = data.frame(bt = c(bt,ct-brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
-  df = df[order(df$bt),]
-  df$t.ext = df$bte-df$bt
-  df = df[-1,]
-  df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
-  return(df)
-}
 
 ####
 
