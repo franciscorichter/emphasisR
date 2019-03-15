@@ -58,7 +58,6 @@ M_step <-function(S,init_par = c(0.5,0.5,100),model="dd"){
 }
 
 
-
 df2tree <- function(df,pars,model="dd",initspec=2){
   dim = dim(df)[1]
   wt = diff(c(0,df$bt))
@@ -76,7 +75,7 @@ df2tree <- function(df,pars,model="dd",initspec=2){
   }
   r = df$bt[dim]-c(0,df$bt[-dim])
   t_ext = df$t.ext
-  return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext))
+  return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext,protected=df$protected))
 }
 
 df2tree2 <- function(df){
@@ -295,12 +294,12 @@ mc.Estep_parallel <- function(brts,pars,nsim=1000,model="dd",method="emphasis",n
   }
   if(method=="emphasis"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      df = emphasis::sim.extinct(brts = brts,pars = pars,model = model)
-      missing.part = df[df$to!=2,]
-      mbts.events = list(brts=missing.part$bt,to=missing.part$to)
-      conf = emphasis:::possible.configurations(miss = mbts.events,obs = brts)
+      df = emphasis::augment.tree(tree = bt2tree(brts),pars = pars,model = model)
+      #missing.part = df[df$to!=2,]
+      #mbts.events = list(brts=missing.part$bt,to=missing.part$to)
+      #conf = emphasis:::possible.configurations(miss = mbts.events,obs = brts)
       tree = emphasis::df2tree(df,pars,model=model,initspec=1)
-      logg.samp = emphasis:::lg_prob(tree = tree,conf=conf)
+      logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree)
       #tree = list(wt=diff(c(0,conf$tree$brts,ct)),to=as.integer(conf$tree$event>0))
       logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
       return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree))
@@ -332,8 +331,9 @@ log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
 lprobto <- function(to,p=0.5){
   posspec = c(0,cumsum(to==1))<(length(to)/2)
   posext = !(c(0,cumsum(to==1))==c(0,cumsum(to==0)))
-  expo = sum(posspec & posext)
-  logprob = expo*log(1-p)
+  possibletotal = posspec & posext
+  to_possible = to[possibletotal]
+  logprob = sum(to_possible==1)*log(p)+sum(to_possible==0)*log(1-p)
   return(logprob)
 }
 
@@ -435,6 +435,98 @@ sim.extinct <- function(brts,pars,model='dd',initspec=1,seed=0){
   return(df)
 }
 
+bt2tree <- function(brts){
+  list(brts=brts,df=data.frame(parent=rep("s1",length(brts)-1),child=paste("s",2:length(brts),sep="")))
+}
+
+augment.tree <- function(tree,pars,model='dd',initspec=1,seed=0){
+  if(seed>0) set.seed(seed)
+  brts=tree$brts
+  wt = diff(c(0,brts))
+  ct = sum(wt)
+  dim = length(wt)
+  mu = pars[2]
+  bt = NULL
+  bte = NULL
+  to = NULL
+  N = initspec
+  num.of.branches = length(brts)+1
+  #set of protected species
+  protect = 1
+  
+  #set of species that are going to die
+  extinct = NULL
+  
+  #number of times we need to flip a coin to know which species dies
+  protected = NULL
+
+  for(i in 1:dim){
+    cwt = wt[i]
+    cbt = sum(wt[0:(i-1)])
+    key = 0
+    while(key == 0){
+      if(model == "dd"){  # diversity-dependence model
+        lambda = lambda.dd(pars,N)
+      }
+      if(model == "dd1.3"){
+        lambda = lambda.dd.1.3(pars,N)
+      }
+      s = N*lambda
+      t.spe = rnhe(lambda=s,mu=mu,Ti=ct-cbt)
+      sbte = bte[bte>(cbt+1e-09)]
+      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
+      mint = min(t.spe,t_ext)
+      
+      if(mint < cwt){
+        if(mint == t.spe){#speciation
+          bt = c(bt,cbt+t.spe)
+          parent_spec = sample(c(protect,extinct),1)
+          if(parent_spec %in% protect){
+            # sample between parent_spec and new species
+            protected = c(protected,1)
+          }else{
+            protected = c(protected,0)
+          }
+          extinct = c(extinct,num.of.branches)
+          num.of.branches = num.of.branches + 1
+          
+          # if is protected there is 1/2, save the protected and dash the dead one 
+          #if is extincted, both go to extinct.
+          text = truncdist::rtrunc(1,"exp",a = cbt+t.spe, b =ct,rate=mu)
+          bte = c(bte,text)
+          to = c(to,1)
+          N = N + 1
+          cwt = cwt - t.spe
+          cbt = cbt + t.spe
+        }
+        else{#extinction
+          # remove the "corresponding" species
+          extinct = extinct[-length(extinct)]
+          bt = c(bt,cbt+t_ext)
+          bte = c(bte,Inf)
+          protected = c(protected,0)
+          to = c(to,0)
+          cwt = cwt - t_ext
+          cbt = cbt + t_ext
+          N = N-1
+        }
+      }
+      else{
+        key = 1
+        protected=c(protected,0)
+      }
+    }
+    N = N+1
+  }
+  df = data.frame(bt = c(bt,brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  df = df[-nrow(df),]
+  df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
+  df$protected=protected
+  return(df)
+}
+
 lg_prob <- function(tree,topology=T,conf){
   list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
   mu = pars[2]
@@ -453,6 +545,20 @@ lg_prob <- function(tree,topology=T,conf){
     logg = 0
   }
   logg=logg-sum(log(conf$N-conf$P))
+  return(logg)
+}
+
+log_sampling_prob_emphasis <- function(tree){
+  list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
+  mu = pars[2]
+  if(mu!=0){
+    la = s/n
+    la = la[is.finite(t_ext)]
+    text = t_ext[is.finite(t_ext)]
+    logg = sum(-s * (wt-(exp(-r*mu)/mu) *  (exp(wt*mu)-1)))+length(la)*log(mu)-sum(mu*text)+sum(log(la))-sum(tree$protected)*log(2)
+  }else{
+    logg = 0
+  }
   return(logg)
 }
 
@@ -494,7 +600,7 @@ possible.configurations  <- function(miss,obs){
   tree<-list(brts=NULL,species=NULL,event=NULL)
   
   while (mi < length(brts.m) | ob < length(obs$brts)) {
-    if(obs$brts[ob]<brts.m[mi]){ # observed speciation
+    if(obs$brts[ob] < brts.m[mi]){ # observed speciation
       spec = obs$to[ob]
       #update tree
       tree$brts = c(tree$brts,obs$brts[ob])

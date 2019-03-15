@@ -90,7 +90,7 @@ ui <- fluidPage(
                                          ),
                                          column(5,
                                                 h3("Information"),
-                                                plotOutput("timepie"),
+                                                plotOutput("timeconsumption"),
                                                 textOutput("txtOutput2"),
                                                 textOutput("txtOutput3")
                                          )
@@ -344,17 +344,13 @@ server <- function(input,output,session) {
     }
   })
   
- # output$timepie <- renderPlot({
-  #  df = data.frame(it=rep(rv$MCEM$em.iteration,2),time=c(rv$MCEM$E_time,rv$MCEM$M_time),Process=c(rep("E_step",nrow(rv$MCEM)),rep("M_step",nrow(rv$MCEM))))
- #   ggplot(df, aes(x=it, y=time, fill=Process)) + 
-#      geom_area()
-    #df <- data.frame(
-    #  group = c("E_step", "M_step", "Other"),
-    #  value = c(rv$MCEM$E_time[nrow(rv$MCEM$E_time)], rv$MCEM$M_time[nrow(rv$MCEM$E_time)], 0)
-    #)
-    #bp <- ggplot(df, aes(x="", y=value, fill=group)) + coord_polar("y", start=0)
+  output$timeconsumption <- renderPlot({
+    df = data.frame(it=rep(rv$MCEM$em.iteration,2),time=c(rv$MCEM$E_time,rv$MCEM$M_time),Process=c(rep("E_step",nrow(rv$MCEM)),rep("M_step",nrow(rv$MCEM))))
+    ggplot(df, aes(x=it, y=time, fill=Process)) + 
+    geom_area()
+    #bp <- ggplot(df, aes(x=x, y=value, fill=group)) + coord_polar("y", start=0)
     #bp
-#  })
+  })
   
   output$hist_w <- renderPlot({
     if(nrow(rv$MCEM)>5){
