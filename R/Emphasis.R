@@ -271,7 +271,8 @@ phylo2tree <- function(tree){
 
 
 ####### Monte Carlo E step
-mc.Estep_parallel <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=NULL,parallel=TRUE,maxnumspec=NULL,p=0.5){
+mc.Estep_parallel <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=NULL,parallel=TRUE,maxnumspec=NULL,p=0.5,seed=0){
+  if(seed>0) set.seed(seed)
   if(brts[1]==max(brts)){
     wt = -diff(c(brts,0))
     brts = cumsum(wt)
