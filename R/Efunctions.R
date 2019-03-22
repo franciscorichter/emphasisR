@@ -1,33 +1,6 @@
 ### remaining EMPHASIS functions
 
 
-lik.tree <- function(pars,tree,topology=T,model="dd",truncdim=F,initspec=2){
-  exp(-nllik.tree(pars,tree,topology=topology,model=model,truncdim=truncdim,initspec=initspec))
-}
-
-lambda.dd.1.3 <- function(pars,n){
-  pmax(1e-99, pars[1]*(1-n/pars[3]))
-}
-
-lambda.dd <- function(pars,n){
-  pmax(1e-99, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
-}
-
-lambda.cr <- function(pars,n){
-  rep(pmax(1e-99, pars[1]), length(n))
-}
-
-# negative logLikelihood of a set of trees
-Q.approx = function(pars,st,topology,model="dd"){
-  m = length(st$trees)
-  l = vector(mode="numeric",length=m)
-  for(i in 1:m){
-    l[i] = nllik.tree(pars,tree=st$trees[[i]],topology=topology,model=model)
-  }
-  w = st$w
-  Q = sum(l*w)
-  return(Q)
-}
 
 # MLE for a set of trees
 mle.st <-function(S,init_par = c(0.5,0.5,100),topology=TRUE,model="dd"){

@@ -52,6 +52,7 @@ ui <- fluidPage(
                                               "uniform" = "uniform")),
                                               
                              numericInput("ss", "Monte-Carlo sample size:", 1000),
+                             checkboxInput("selectBestTrees", "Subset of trees for M step", FALSE),
                              numericInput("Bt", "Number of best trees to take:", 20),
                              numericInput("maxspec", "Maximum number of missing species:", 40),
                              numericInput("p", "speciation probability:", 0.5),
@@ -193,7 +194,7 @@ server <- function(input,output,session) {
       
       if(file.exists("first.R")) load("first.R")
       rv$em.iteration = rv$em.iteration + 1
-      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = TRUE,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p)
+      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = input$selectBestTrees,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p)
       
       if(length(input_values$brts_d)<800) ftrue = DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0)
       

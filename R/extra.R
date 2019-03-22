@@ -1,5 +1,61 @@
 # more utilities
+lik.tree <- function(pars,tree,model="dd",initspec=1){
+  exp(-nllik.tree(pars,tree,model=model,initspec=initspec))
+}
 
+# Pilot study
+pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3,60),l1=20,model="dd"){
+  # pilot study suggested by Chan et. al
+  pars = init_par
+  M = matrix(ncol = 3,nrow = l1)
+  H = matrix(ncol = 3,nrow = l1)
+  DD = NULL
+  LL = NULL
+  for(i in 1:l1){
+    S = sim.sct(brts,pars,m=m1,print = F,model =  model)
+    mle =  mle.st(S = S, model=model)
+    #    L = obs.lik.approx(pars = pars,st = S)
+    lL = log(mean(S$w))
+    if(model=="dd.1.3"){pars2[2]=1.3}
+    DDD <- DDD:::dd_loglik(pars1 = pars, pars2 = pars2,
+                           brts = brts, missnumspec = 0)
+    pars = mle$par
+    H[i,] = try(diag(solve(mle$hessian))/m1)
+    M[i,] = pars
+    
+    DD = c(DD,DDD)
+    LL = c(LL,lL)
+    save(DD,LL,M,file = "DyL.RData")
+    print(paste('l:',lL,'DDDlogLik:',DDD,'pars:',pars[1],pars[2],pars[3]))
+  }
+  l = 10
+  PM = M[1:(l1-10),]
+  PH = H[1:(l1-10),]
+  M = M[(l1-9):l1,]
+  H = H[(l1-9):l1,]
+  Q = vector(mode="numeric",length = (l1-10))
+  MLE = list()
+  for(i in 1:10){
+    Delta = vector(mode="numeric",length = l)
+    Me = matrix(ncol = 3,nrow = l)
+    if(printprocess) print(paste('iteration',i))
+    for(j in 1:l){
+      S = sim.sct(brts,pars=M[i,],m=m1,print = F,model=model)
+      mle = mle.st(S = S,model=model)
+      pars = mle$par
+      Me[j,] = pars
+      Delta[j] = rel.llik(S1 = S,p0 = M[i,], p1 = pars,model=model)
+    }
+    MLE[[i]] = Me
+    mD = mean(Delta)
+    Q[i] = sum((Delta-mD)^2)
+  }
+  s2 = sum(Q)/((l-1)*(l1-10+1))
+  s1 = sqrt(s2)
+  m = m1*s1/epsilon
+  m = floor(m) + 1
+  return(list(m=m,p=M[10,],s1=s1,M=M,H=H,MLE=MLE,PM=PM,PH=PH))
+}
 
 # stochastic function
 
@@ -25,36 +81,7 @@ sub.st <- function(S,ntrees=10){
 }
 
 
-sim.sct.alt <- function(brts,pars){
-  no_cores <- detectCores()
-  cl <- makeCluster(no_cores)
-  registerDoParallel(cl)
-  trees <- foreach(i = 1:m, combine = list) %dopar% {
-    df =  emphasis::sim.extinct2(brts = brts,pars = pars,model=model)
-    tree = emphasis::df2tree(df,pars,model=model)
-    lsprob = emphasis::lg_prob(tree,topology = topology)
-    nl = emphasis::nllik.tree(pars,tree=tree,topology = topology,model=model)
-    lw = -nl-lsprob#-DDD:::dd_loglik(pars1 = pars, pars2 = pars2,brts = brts, missnumspec = 0)
-    fms = df$bt[is.finite(df$bte)][1] #first missing speciation
-    fe = df$bt[df$to==0][1] # first extinction
-    return(list(nl=nl,lw=lw,tree=tree,lsprob=lsprob,fms = fms,fe=fe))
-  }
-  stopCluster(cl)
-  lw = sapply(trees,function(list) list$lw)
-  dim = sapply(trees,function(list) length(list$tree$wt))
-  nl = sapply(trees,function(list) list$nl)
-  lg = sapply(trees, function(list) list$lsprob)
-  fms = sapply(trees, function(list) list$fms)
-  fe = sapply(trees, function(list) list$fe)
-  trees = lapply(trees, function(list) list$tree)
-  w = exp(lw)
-  eg = exp(lg)
-  if(print){
-    g = qplot(dim,w)
-    print(g)
-  }
-  return(list(w=w, dim=dim, nl=nl, trees=trees,g=eg,fms=fms,fe=fe))
-}
+
 #post processing
 post.pro <-function(file,extrafile=NULL){
   load(file)
@@ -315,5 +342,5 @@ no.na <- function(vector){
   vector[!is.na(vector)]
 }
 
-pars2 = c(2.5e+02,1.0e+00, 0.0e+00, 1.0e+00, 0.0e+00, 2.0e+00)
+pars2 = c(2.5e+02,1.0e+00, 0.0e+00, 1.0e+00, 0.0e+00, 1.0e+00)
 
