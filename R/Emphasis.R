@@ -2,6 +2,9 @@
 
 # negative logLikelihood of a tree
 nllik.tree = function(pars,tree,model="dd",initspec=1){
+  if(is.data.frame(tree)){
+    tree = emphasis::df2tree(df=tree,pars=pars,model=model,initspec=initspec)
+  }
   wt = tree$wt
   to = tree$to
   to[to==2] = 1
@@ -121,9 +124,9 @@ rel.llik <- function(S1,p0,p1,model="dd"){
   return(Delta)
 }
 
-mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5){
+mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5,parallel=TRUE){
   time = proc.time()
-  st = mc.Estep_parallel(brts = brts,pars = theta_0,nsim = MC_ss,model = model,method = method,no_cores = no_cores,maxnumspec = maxnumspec,p=p)
+  st = E_step(brts = brts,pars = theta_0,nsim = MC_ss,model = model,method = method,no_cores = no_cores,maxnumspec = maxnumspec,p=p,parallel=parallel)
   fhat = st$fhat
   se = st$fhat.se
   E_time = get.time(time)
@@ -149,7 +152,7 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBes
 
 
 ####### Monte Carlo E step
-mc.Estep_parallel <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0){
+mc.Estep_parallel <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0,initspec=1){
   if(seed>0) set.seed(seed)
   if(brts[1]==max(brts)){
     wt = -diff(c(brts,0))
@@ -172,10 +175,11 @@ mc.Estep_parallel <- function(brts,pars,nsim=1000,model="dd",method="emphasis",n
     }
   }
   if(method=="emphasis"){
+    obstree = emphasis::bt2tree(brts)
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      df = emphasis::augment.tree(tree = bt2tree(brts),pars = pars,model = model)
+      df = emphasis::augment.tree(tree = obstree,pars = pars,model = model)
       tree = emphasis::df2tree(df,pars,model=model,initspec=1)
-      logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree)
+      logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars,model = model,initspec = initspec)
       logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
       return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree))
     }
@@ -194,43 +198,48 @@ mc.Estep_parallel <- function(brts,pars,nsim=1000,model="dd",method="emphasis",n
 }
 
 
-mc.Estep <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0){
+E_step <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=2,maxnumspec=NULL,p=0.5,seed=0,parallel=TRUE){
+  if(parallel){
+    E = mc.Estep_parallel(brts,pars,nsim=nsim,model=model,method=method,no_cores=no_cores,maxnumspec=maxnumspec,p=p,seed=seed)
+  }else{
+    E = mc.Estep(brts=brts,pars=pars,nsim=nsim,model=model,method=method,maxnumspec = maxnumspec,p=p,seed=seed)
+  }
+  return(E)
+}
+
+mc.Estep <- function(brts,pars,nsim=1000,model="dd",method="emphasis",maxnumspec=NULL,p=0.5,seed=0){
   if(seed>0) set.seed(seed)
   if(brts[1]==max(brts)){
     wt = -diff(c(brts,0))
     brts = cumsum(wt)
   }
+  trees=vector(mode = "list",length = nsim)
+  logg.samp=vector(mode = "numeric",length = nsim)
+  logf.joint=vector(mode = "numeric",length = nsim)
   if(method=="uniform"){
-    trees <- foreach(i = 1:nsim, combine = list) %dopar% {
+    for(i in 1:nsim){
       dim = emphasis:::sim.dim(i=i,nsim=nsim,maxnumspec=maxnumspec,deterministic = FALSE)
       ct <- max(brts)
       mbts.events = emphasis:::sim.branchingtimes.and.events(S=dim ,ct = ct,p=p)
       conf = emphasis:::possible.configurations(miss = mbts.events,obs = brts)
-      logg.samp = emphasis:::log.samp.prob(to = mbts.events$to,maxnumspec = maxnumspec,ct=ct,conf=conf,p=p)
-      tree = list(wt=diff(c(0,conf$tree$brts,ct)),to=as.integer(conf$tree$event>0))
-      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
-      return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree))
+      logg.samp[i] = emphasis:::log.samp.prob(to = mbts.events$to,maxnumspec = maxnumspec,ct=ct,conf=conf,p=p)
+      trees[[i]] = list(wt=diff(c(0,conf$tree$brts,ct)),to=as.integer(conf$tree$event>0))
+      logf.joint[i] = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
     }
   }
   if(method=="emphasis"){
-    trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      df = emphasis::augment.tree(tree = bt2tree(brts),pars = pars,model = model)
-      tree = emphasis::df2tree(df,pars,model=model,initspec=1)
-      logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree)
-      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
-      return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree))
-    }
+
+    tree[[i]] = emphasis::augment.tree(tree = emphasis::bt2tree(brts),pars = pars,model = model)
+    logg.samp[i] = emphasis:::log_sampling_prob_emphasis(tree = tree)
+    logf.joint[i] = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
+
   }
-  stopCluster(cl)
-  logf = sapply(trees,function(list) list$logf.joint)
-  logg = sapply(trees,function(list) list$logg.samp)
   diff_logs = logf-logg
   max_log = max(diff_logs) #
   fhat = mean(exp(diff_logs))
   se = sd(exp(diff_logs))/sqrt(nsim)
   weights = exp(diff_logs-max_log)
   logweights = diff_logs
-  trees = lapply(trees, function(list) list$tree)
   return(list(trees=trees,weights=weights,logweights=logweights,fhat=fhat,fhat.se=se,logf=logf,logg=logg))
 }
 
@@ -384,9 +393,20 @@ augment.tree <- function(tree,pars,model='dd',initspec=1,seed=0){
 }
 
 
-
-log_sampling_prob_emphasis <- function(tree){
-  list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
+##work in progre
+log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
+  if(is.data.frame(tree)){
+    tree = emphasis::df2tree(df=tree,pars,model=model,initspec=initspec)
+    wt=tree$wt
+    to=tree$to
+    n=tree$n
+    s=tree$s
+    r=tree$r
+    t_ext=tree$t_ext
+    pars
+  }else{
+    list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
+  }
   mu = pars[2]
   if(mu!=0){
     la = s/n
