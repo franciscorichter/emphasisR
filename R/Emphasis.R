@@ -20,7 +20,7 @@ nllik.tree = function(pars,tree,model="dd",initspec=1){
   }
   mu = max(0,pars[2])
   sigma = (lambda + mu)*n
-  rho = pmax(n[-length(n)]*(lambda[-length(lambda)]*to+mu*(1-to)),0)
+  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   nl = -(sum(-sigma*wt)+sum(log(rho)))
   if(min(pars)<0){nl = Inf}
   return(nl)

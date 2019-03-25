@@ -82,6 +82,16 @@ sub.st <- function(S,ntrees=10){
 
 
 
+phylo2tree <- function(tree){
+  # to map newick trees into ther xxxx format
+  ltt = ltt.plot.coords(tree)
+  t = diff(ltt[,1])
+  ltt = ltt[-1,]
+  n = ltt[,2]
+  E = diff(n)
+  E[E==-1] = 0
+  return(list(wt=t,to=E))
+}
 #post processing
 post.pro <-function(file,extrafile=NULL){
   load(file)
