@@ -354,3 +354,77 @@ no.na <- function(vector){
 
 pars2 = c(2.5e+02,1.0e+00, 0.0e+00, 1.0e+00, 0.0e+00, 1.0e+00)
 
+# relative likelihood
+rel.llik <- function(S1,p0,p1,model="dd"){
+  m = length(S1)
+  f1 = vector(mode='numeric',length = m)
+  f2 = vector(mode='numeric',length = m)
+  d = vector(mode='numeric',length = m)
+  #S1 = S1$[S1$w>0]
+  for(i in 1:m){
+    s = S1[[i]]
+    f1[i] = nllik.tree(pars=p1,tree=s,model=model)
+    f2[i] = nllik.tree(pars=p0,tree=s,model=model)
+    #d[i] = length(s$tree$wt)
+    if(is.na(f1[i])) print(s)
+  }
+  Delta = -log(sum(f1/f2)/m)
+  return(Delta)
+}
+
+
+#nee et. al likelihood
+#' @title Pt
+#' @author Giovanni Laudanno
+#' @description Nee's function: pt
+#' @inheritParams default_params_doc
+#' @return pt
+#' @export
+pt  <- function (lambda, mu, t) {
+  time <- t
+  Lambda <- exp((mu - lambda) * time)
+  out    <- (lambda == mu) * (1/(1 + lambda * time)) +
+    (lambda != mu) * ((lambda - mu + (lambda == mu))/(lambda - mu *
+                                                        Lambda * (lambda != mu) + (lambda == mu)))
+  return(unname(out))
+}
+
+#' @title ut
+#' @author Giovanni Laudanno
+#' @description Nee's function: ut
+#' @inheritParams default_params_doc
+#' @return ut
+#' @export
+ut  <- function (lambda, mu, t) {
+  time <- t
+  Lambda <- exp((mu - lambda) * time)
+  out    <- (lambda == mu) * (lambda * time/(1 + lambda * time)) +
+    (lambda != mu) * ((lambda - lambda * Lambda + (lambda == mu)) /
+                        (lambda - mu * Lambda * (lambda != mu) + (lambda == mu)))
+  return(unname(out))
+}
+
+#' @title Pn
+#' @author Giovanni Laudanno
+#' @description Nee's function: pn
+#' @inheritParams default_params_doc
+#' @return pn
+#' @export
+pn <- function(lambda, mu, t, n) {
+  out <- (n > 0) * sls::pt(t = t, lambda = lambda, mu = mu) *
+    (1 - sls::ut(t = t, lambda = lambda, mu = mu)) *
+    sls::ut(t = t, lambda = lambda, mu = mu)^(n - 1 + 2*(n == 0)) +
+    (n == 0) * (1 - sls::pt(t = t, lambda = lambda, mu = mu))
+  return(out)
+}
+
+Nee_likelihood <- function(lambda, mu, brts, cond)
+{
+  BRTS <- c(brts[1], brts)
+  NN <- length(BRTS)
+  out <- prod(
+    pt(lambda = lambda, mu = mu, t = BRTS) * (1 - ut(lambda = lambda, mu
+                                                     = mu, t = BRTS))
+  ) * lambda^(NN - 1) #* factorial(NN - 1)
+  out <- out/((pt(lambda = lambda, mu = mu, t = BRTS[1]))^(2 * cond))
+}

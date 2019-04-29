@@ -95,4 +95,39 @@ mcem.tree <- function(brts,p,model="dd"){
   return(list(pars=pars,PARS=PARS,H=H,tE=tE,tM=tM,efficiency=efficiency))
 }
 
-
+mc.Estep <- function(brts,pars,nsim=1000,model="dd",method="emphasis",maxnumspec=NULL,p=0.5,seed=0){
+  # work in progress
+  if(seed>0) set.seed(seed)
+  if(brts[1]==max(brts)){
+    wt = -diff(c(brts,0))
+    brts = cumsum(wt)
+  }
+  trees=vector(mode = "list",length = nsim)
+  logg.samp=vector(mode = "numeric",length = nsim)
+  logf.joint=vector(mode = "numeric",length = nsim)
+  if(method=="uniform"){
+    for(i in 1:nsim){
+      dim = emphasis:::sim.dim(i=i,nsim=nsim,maxnumspec=maxnumspec,deterministic = FALSE)
+      ct <- max(brts)
+      mbts.events = emphasis:::sim.branchingtimes.and.events(S=dim ,ct = ct,p=p)
+      conf = emphasis:::possible.configurations(miss = mbts.events,obs = brts)
+      logg.samp[i] = emphasis:::log.samp.prob(to = mbts.events$to,maxnumspec = maxnumspec,ct=ct,conf=conf,p=p)
+      trees[[i]] = list(wt=diff(c(0,conf$tree$brts,ct)),to=as.integer(conf$tree$event>0))
+      logf.joint[i] = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
+    }
+  }
+  if(method=="emphasis"){
+    
+    tree[[i]] = emphasis::augment.tree(tree = emphasis::bt2tree(brts),pars = pars,model = model)
+    logg.samp[i] = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars,model = model,initspec = initspec)
+    logf.joint[i] = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
+    
+  }
+  diff_logs = logf-logg
+  max_log = max(diff_logs) #
+  fhat = mean(exp(diff_logs))
+  se = sd(exp(diff_logs))/sqrt(nsim)
+  weights = exp(diff_logs-max_log)
+  logweights = diff_logs
+  return(list(trees=trees,weights=weights,logweights=logweights,fhat=fhat,fhat.se=se,logf=logf,logg=logg))
+}
