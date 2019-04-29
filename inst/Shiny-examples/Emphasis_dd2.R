@@ -6,16 +6,17 @@ theme_emphasis =  theme(panel.grid.major = element_blank(), panel.grid.minor = e
                         panel.background = element_blank(), axis.line = element_line(colour = "black"))
 MCEM = data.frame(par1=NULL,par2=NULL,par3=NULL,fhat=NULL,fhat.se=NULL,ftrue=NULL,E_time=NULL,M_time=NULL,mc.samplesize=NULL,rel.lik=NULL,effective.size=NULL,hessian.inv=NULL)
 
-
+#3C0C62  purple
+#D8FCFC  lightblue 
 ui <- fluidPage(
   tags$head(tags$style(
     HTML('
          #sidebar {
-         background-color:  #D8FCFC;
+         background-color:#D8FCFC;
          }
          
          body, label, input, button, select { 
-         font-family: "Arial";
+         font-family: "Times New Roman";
          }')
   )),
   sidebarLayout(position = "left",
@@ -49,8 +50,10 @@ ui <- fluidPage(
                              h3("Settings"),
                              selectInput("method", "Choose Data augmentation sampler:",
                                          list("emphasis" = "emphasis",
-                                              "uniform" = "uniform")),
-                                              
+                                              "uniform" = "uniform","uniform2"="uniform2")),
+                             selectInput("model", "Choose diversification model:",
+                                         list("Diversity dependance" = "dd",
+                                              "Constant rates" = "cr")),                
                              numericInput("ss", "Monte-Carlo sample size:", 1000),
                              checkboxInput("selectBestTrees", "Subset of trees for M step", FALSE),
                              numericInput("Bt", "Number of best trees to take:", 20),
@@ -61,8 +64,9 @@ ui <- fluidPage(
                              checkboxInput("ddd", "Compare with DDD", FALSE),
                              conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
                              checkboxInput("log", "show estimated lkelihood on log scale", FALSE),
-                             checkboxInput("log_w", "show weights on log scale", TRUE),
+                             checkboxInput("log_w", "show weights on log scale", FALSE),
                              numericInput("charts", "See charts from iteration:", 1),
+                             checkboxInput("parallel", "Parallel", TRUE),
                              numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2)#,
                 ),
                 
@@ -159,7 +163,19 @@ ui <- fluidPage(
 
 
 server <- function(input,output,session) {
-  rv <- reactiveValues(MCEM=MCEM,run=F,sdl=NULL,sdm=NULL,sdk=NULL,dim=NULL,weights=NULL,logweights=NULL,em.iteration=0,logf=NULL,logg=NULL)
+  rv <- reactiveValues(MCEM=MCEM,
+                       run=F,
+                       sdl=NULL,
+                       sdm=NULL,
+                       sdk=NULL,
+                       dim=NULL,
+                       dims=NULL,
+                       weights=NULL,
+                       weights_by_dims=NULL,
+                       logweights=NULL,
+                       em.iteration=0,
+                       logf=NULL,
+                       logg=NULL)
   input_values <- reactiveValues(brts=NULL,mle_dd=NULL,init_pars=NULL,brts_d=NULL)
   
   autoInvalidate <- reactiveTimer(intervalMs=1000,session)
@@ -176,7 +192,10 @@ server <- function(input,output,session) {
       if(brts[1] == 35.857845) mle_dd = c(0.135271,0.000160,234.978643)
       if(brts[1] == 16.761439) mle_dd = c(0.457300,0.048939,37.782661)
       if(brts[1] == 4) mle_dd = c(16.132848,0.102192,3.974553)
-      if(brts[1] == 64.95) mle_dd = c(1.144462,0.115144,30.423973)
+      if(brts[1] == 64.95){
+        if(input$model=="dd") mle_dd = c(1.144462,0.115144,30.423973)
+        if(input$model=="cr") mle_dd = c(0.06540199,0.01837328)
+      } 
       if(max(brts)==brts[1]){
         wt = -diff(c(brts,0))
         brts = cumsum(c(wt))
@@ -189,15 +208,18 @@ server <- function(input,output,session) {
   
   observe({
     pars = input_values$init_pars
+    if(input$model=="cr") pars = pars[-3]
     autoInvalidate()  # to make it run withouth changind input 
     isolate({ if (rv$run) { 
       
       if(file.exists("first.R")) load("first.R")
       rv$em.iteration = rv$em.iteration + 1
-      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = input$selectBestTrees,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p)
+      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = input$selectBestTrees,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p,model = input$model)
       
-      if(length(input_values$brts_d)<800) ftrue = DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0)
-      
+      if(length(input_values$brts_d)<800){
+        if(input$model=="dd") ftrue = DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0)
+        if(input$model=="cr") ftrue = Nee_likelihood(lambda=pars[1],mu=pars[2],brts = input_values$brts_d,cond = 0)
+      }
       MCEM_last = data.frame(par1=pars[1],
                              par2=pars[2],
                              par3=pars[3],
@@ -222,7 +244,18 @@ server <- function(input,output,session) {
       
       rv$weights = mcem$st$weights
       rv$logweights = mcem$st$logweights
-      rv$dim = sapply(mcem$st$trees,FUN = function(list) length(list$to))
+      rv$dim = sapply(mcem$st$trees,FUN = function(list) sum((list$to==0)))
+      ###
+      ta = table(rv$dim)
+      dims = as.numeric(names(ta))
+      lenghts = as.numeric(ta)
+      weights = NULL
+      for(i in 1:length(dims)){
+        weights[i] = sum(mcem$st$weights[rv$dim == dims[i]])
+      }
+      rv$weights_by_dims=weights/nsim
+      rv$dims=dims
+      ###
       rv$logf = mcem$st$logf
       rv$logg = mcem$st$logg
       pars = mcem$pars
@@ -234,10 +267,10 @@ server <- function(input,output,session) {
         em.matrix = data.frame(lambda=rv$MCEM$par1,mu=rv$MCEM$par2,K=rv$MCEM$par3,it=1:length(rv$MCEM$par3))
         gamLambda = gam(lambda ~ s(it), data=em.matrix)
         gamMu = gam(mu ~ s(it), data=em.matrix)
-        gamK = gam(K ~ s(it), data=em.matrix)
-        rv$MCEM$sdl[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv1/rv$MCEM$mc.samplesize+gamLambda$sig2)
-        rv$MCEM$sdm[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv2/rv$MCEM$mc.samplesize+gamMu$sig2)
-        rv$MCEM$sdk[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv3/rv$MCEM$mc.samplesize+gamK$sig2)
+     #  if(input$model=="dd") gamK = gam(K ~ s(it), data=em.matrix)
+       # rv$MCEM$sdl[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv1/rv$MCEM$mc.samplesize+gamLambda$sig2)
+      #  rv$MCEM$sdm[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv2/rv$MCEM$mc.samplesize+gamMu$sig2)
+     #   if(input$model=="dd") rv$MCEM$sdk[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv3/rv$MCEM$mc.samplesize+gamK$sig2)
       }
       
      } })#end isolate
@@ -276,7 +309,8 @@ server <- function(input,output,session) {
     
     if(nrow(rv$MCEM)>5){ 
       lambda.est = mean(rv$MCEM$par1[input$charts:length(rv$MCEM$par1)])
-      plot.lambda = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par1)) + ggtitle(label=paste("Last estimation:  ", lambda.est),subtitle =   paste("number of last iterations to consider: ", rv$em.iteration)) 
+      MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
+      plot.lambda = ggplot(MCEM) + geom_line(aes(em.iteration,par1)) + ggtitle(label=paste("Last estimation:  ", lambda.est),subtitle =   paste("number of last iterations to consider: ")) 
       if(input$ddd) plot.lambda = plot.lambda + geom_hline(yintercept = input_values$mle_dd[1])
       if(input$CI & nrow(rv$MCEM)>12) plot.lambda = plot.lambda + geom_errorbar(aes(x=em.iteration, y=par1, ymin = par1-1.96*sdl, ymax = par1 + 1.96*sdl), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
@@ -290,7 +324,8 @@ server <- function(input,output,session) {
   output$mu <- renderPlot({
     if(nrow(rv$MCEM)>5){ 
       mu.est = mean(rv$MCEM$par2[input$charts:length(rv$MCEM$par2)])
-      plot.mu = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est),subtitle =   paste("number of last iterations to consider: ", rv$em.iteration)) 
+      MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
+      plot.mu = ggplot(MCEM) + geom_line(aes(em.iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est),subtitle =   paste("number of last iterations to consider: ")) 
       if(input$ddd) plot.mu = plot.mu + geom_hline(yintercept = input_values$mle_dd[2])
       if(input$CI & nrow(rv$MCEM)>12) plot.mu = plot.mu + geom_errorbar(aes(x=em.iteration, y=par2, ymin = par2-1.96*sdm, ymax = par2 + 1.96*sdm), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
@@ -302,9 +337,11 @@ server <- function(input,output,session) {
   })
   
   output$K <- renderPlot({
+    if(input$model=="dd"){
     if(nrow(rv$MCEM)>5){ 
       K.est = mean(rv$MCEM$par3[input$charts:length(rv$MCEM$par3)])
-      K.plot = ggplot(rv$MCEM) + geom_line(aes(em.iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est),subtitle =   paste("number of last iterations to consider: ", rv$em.iteration-input$charts)) 
+      MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
+      K.plot = ggplot(MCEM) + geom_line(aes(em.iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est),subtitle =   paste("number of last iterations to consider: ", rv$em.iteration-input$charts)) 
       if(input$ddd) K.plot = K.plot + geom_hline(yintercept = input_values$mle_dd[3])
       if(input$CI & nrow(rv$MCEM)>12) K.plot = K.plot + geom_errorbar(aes(x=em.iteration, y=par3, ymin = par3-1.96*sdk, ymax = par3 + 1.96*sdk), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
@@ -313,11 +350,13 @@ server <- function(input,output,session) {
       }
       K.plot  + theme_emphasis + geom_hline(yintercept = K.est, colour="blue")
     }
+    }
   })
   
   output$fhat <- renderPlot({
     if(nrow(rv$MCEM)>5){ 
-      fhat.plot = ggplot(rv$MCEM) + geom_line(aes(em.iteration,log(fhat))) # + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
+      MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
+      fhat.plot = ggplot(MCEM) + geom_line(aes(em.iteration,log(fhat))) # + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       if(input$ddd) fhat.plot = fhat.plot + geom_point(aes(em.iteration,ftrue))
       if(input$CI) fhat.plot = fhat.plot + geom_line(aes(em.iteration,log(rv$MCEM$fhat+1.96*rv$MCEM$fhat.se)),col="red") + geom_line(aes(em.iteration,log(rv$MCEM$fhat-1.96*rv$MCEM$fhat.se)),col="red")#+ geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen') 
       fhat.plot  + theme_emphasis + ggtitle(label = "Estimated log likelihood")
@@ -346,26 +385,32 @@ server <- function(input,output,session) {
   })
   
   output$timeconsumption <- renderPlot({
+    if(nrow(rv$MCEM)>2){ 
     df = data.frame(it=rep(rv$MCEM$em.iteration,2),time=c(rv$MCEM$E_time,rv$MCEM$M_time),Process=c(rep("E_step",nrow(rv$MCEM)),rep("M_step",nrow(rv$MCEM))))
     ggplot(df, aes(x=it, y=time, fill=Process)) + 
     geom_area()
+    }
     #bp <- ggplot(df, aes(x=x, y=value, fill=group)) + coord_polar("y", start=0)
     #bp
   })
   
   output$hist_w <- renderPlot({
-    if(nrow(rv$MCEM)>5){
-      if(input$log_w==TRUE){
-        qplot(rv$dim/2,rv$logweights)
-      }else{
-        qplot(rv$dim/2,rv$weights)
-      }
+    if(nrow(rv$MCEM)>2){
+      DF = data.frame(dims=rv$dims,weights=rv$weights_by_dims)
+      ggplot(DF) + geom_line(aes(x=dims,y=weights))
+      
+      #if(input$log_w==TRUE){
+      #  qplot(rv$dim/2,rv$logweights)
+      #}else{
+      #  qplot(rv$dim/2,rv$weights)
+      #}
+      
     }
     
   })
   
   output$fvsg <- renderPlot({
-    if(nrow(rv$MCEM)>5){
+    if(nrow(rv$MCEM)>2){
         qplot(rv$logf,rv$logg)
     }
   })
