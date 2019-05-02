@@ -79,27 +79,8 @@ df2tree <- function(df,pars,model="dd",initspec=1){
 
 
 ###########################
-rnhe <- function(lambda,mu,r,extinct=TRUE){  # random non-homogenous exponential
-  ex = rexp(1)
-  if(extinct){
-    rv = IntInv(r=r,mu=mu,s=lambda,u=ex)
-  }else{
-    rv = IntInvExtant(r=r,mu=mu,s=lambda,u=ex)
-  }
-  if(is.na(rv)){
-    rv = Inf
-  }
-  return(rv)
-}
 
-IntInv <- function(r,mu,s,u){
-  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
-  return(t)
-}
 
-IntInvExtant <- function(r,mu,s,u){
-  t = log(u*(mu/s)*exp(mu*r)+1)/mu
-}
 
 ###  simulation of extinct species
 
@@ -168,9 +149,8 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
     }
   }
   if(method=="emphasis"){
-    obstree = emphasis::bt2tree(brts)
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      df = emphasis::augment.tree(tree = obstree,pars = pars3,model = model)
+      df = emphasis::augment.tree(brts,pars = pars3,model = model)
       tree = emphasis::df2tree(df,pars3,model=model,initspec=1)
       logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars3,model = model,initspec = initspec)
       logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
@@ -179,9 +159,21 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
       return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree,dim=dim,num.miss=num.miss))
     }
   }
+  if(method=="emphasis2"){
+    #obstree = emphasis::bt2tree(brts)
+    trees <- foreach(i = 1:nsim, combine = list) %dopar% {
+      df = emphasis::augment.tree2(observed.branching.times = brts,pars = pars3,model = model)
+      tree = emphasis::df2tree(df,pars3,model=model,initspec=1)
+      logg.samp = emphasis:::log_sampling_prob_emphasis2(tree = tree,pars = pars3,model = model,initspec = initspec)
+      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
+      dim = nrow(df)
+      num.miss = sum(df$to==0)
+      return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree,dim=dim,num.miss=num.miss))
+    }
+  }
     if(method=="uniform2"){
       trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-        df = sample.uniform2(brts,nsim,maxnumspec=maxnumspec)
+        df = emphasis:::sample.uniform2(brts,nsim,maxnumspec=maxnumspec)
         log.samp.unif.prob = log.sampling.prob.uniform2(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
         ####df2tree######
         wt = diff(c(0,df$brts))
@@ -246,15 +238,6 @@ sim.branchingtimes.and.events <- function(S=S,ct,p){
   tree = list(brts=brts,to=to)
   return(tree)
 }
-
-#sim.dim <- function(maxnumspec,deterministic=FALSE,i=NULL,nsim=NULL){
-#  if(deterministic){
-#    S = floor((maxnumspec+1)*i/nsim)
-#  }else{
-#    S = sample(0:maxnumspec,1)
-#  }
-#  return(S)
-#}
 
 sampleDyck <- function(S,p=0.5){
   to = NULL
@@ -398,19 +381,34 @@ bt2tree <- function(brts){
   }
 }
 
-augment.tree <- function(tree,pars,model='dd',initspec=1,seed=0){
+rnhe <- function(lambda,mu,r,extinct=TRUE){  # random non-homogenous exponential
+  ex = rexp(1)
+  rv = IntInv(r=r,mu=mu,s=lambda,u=ex)
+  if(is.na(rv)){
+    rv = Inf
+  }
+  return(rv)
+}
+
+IntInv <- function(r,mu,s,u){
+  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
+  return(t)
+}
+
+
+augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
   if(seed>0) set.seed(seed)
-  brts = tree$brts
   wt = diff(c(0,brts))
   ct = sum(wt)
   dim = length(wt)
+  num.of.branches = length(brts)+1
   mu = pars[2]
   kprima = (pars[1]*pars[3])/(pars[1]-pars[2])
   bt = NULL
   bte = NULL
   to = NULL
   N = initspec
-  num.of.branches = length(brts)+1
+  
   #set of protected species
   protect = 1
   
@@ -444,10 +442,8 @@ augment.tree <- function(tree,pars,model='dd',initspec=1,seed=0){
       t.spe = rnhe(lambda=s,mu=mu,r=b)
       t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
       mint = min(t.spe,t_ext)
-      if(mint<0) break
       if(mint < cwt){
         if(mint == t.spe){#speciation
-         # print(paste("speciation at time ",cbt+t.spe))
           bt = c(bt,cbt+t.spe)
           parent_spec = sample(c(protect,extinct),1)
           if(parent_spec %in% protect){
@@ -503,6 +499,121 @@ augment.tree <- function(tree,pars,model='dd',initspec=1,seed=0){
   df$protected=protected
   return(df)
 }
+
+
+########
+
+
+augment.tree2 <- function(observed.branching.times,pars,model='dd',initspec=1,seed=0){
+  if(seed>0) set.seed(seed)
+  brts = observed.branching.times
+  if(max(brts)==brts[1]){
+    wt = - diff(c(brts,0))
+  }else{
+    wt = diff(c(0,brts))
+  }
+  mu = pars[2]
+  kprima = (pars[1]*pars[3])/(pars[1]-pars[2])
+  
+  # vectors of missing speciation times, extinction times and missing event sequence
+  bt = NULL
+  bte = NULL
+  to = NULL
+  
+  #number of species
+  N = initspec
+  
+  #limits on extinction times
+  r = NULL
+  
+  for(i in 1:length(wt)){
+    cwt = wt[i]
+    cbt = sum(wt[0:(i-1)])
+    key = 0
+    while(key == 0){
+      if(model == "dd"){  # diversity-dependence model
+        lambda = lambda.dd(pars,N)
+      }
+      if(model == "dd1.3"){
+        lambda = lambda.dd.1.3(pars,N)
+      }
+      if(model=="cr"){
+        lambda = lambda.cr(pars,N)
+      }
+      s = N*lambda
+      sbte = bte[bte>cbt]
+      b = get.max.speciation.bt(sbt = brts[brts>cbt],ebt = sbte,N = N,max.simultaneous.spec = floor(kprima))-cbt
+      r = c(r,b)
+      t.spe = rnhe(lambda=s,mu=mu,r=b)
+      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
+      mint = min(t.spe,t_ext)
+      if(mint < cwt){
+        if(mint == t.spe){#speciation
+          bt = c(bt,cbt+t.spe)
+          cbt = cbt + t.spe
+          cwt = cwt - t.spe
+          text = cbt + truncdist::rtrunc(1,"exp",a = 0, b = (b-t.spe),rate=mu)
+          bte = c(bte,text)
+          to = c(to,1)
+          N = N + 1
+        }else{#extinction
+          bt = c(bt,cbt+t_ext)
+          bte = c(bte,Inf)
+          to = c(to,0)
+          cwt = cwt - t_ext
+          cbt = cbt + t_ext
+          N = N - 1
+        }
+      }else{
+        key = 1
+      }
+    }
+    N = N+1
+    # print(paste('numberof species: ', N))
+  }
+  df = data.frame(bt = c(bt,brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
+  df = df[order(df$bt),]
+  df$t.ext = df$bte-df$bt
+  df = df[-nrow(df),]
+  df = rbind(df,data.frame(bt=sum(wt),bte=Inf,to=2,t.ext=Inf))
+  df$r = r
+  return(df)
+}
+
+log_sampling_prob_emphasis2 <- function(tree,pars,model=NULL,initspec){
+  if(is.data.frame(tree)){
+    tree = emphasis::df2tree(df=tree,pars,model=model,initspec=initspec)
+    wt=tree$wt
+    to=tree$to
+    n=tree$n
+    s=tree$s
+    r=tree$r
+    t_ext=tree$t_ext
+    top_aug=head(tree$treeaug,-1)
+    pars
+  }else{
+    list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext","treeaug")), .GlobalEnv)
+    top_aug=treeaug
+  }
+  mu = pars[2]
+  if(mu!=0){
+    sa = s[is.finite(t_ext)]
+    text = t_ext[is.finite(t_ext)]
+    logg = sum(-s * (wt-(exp(-r*mu)/mu) *  (exp(wt*mu)-1)  ))+length(sa)*log(mu)-sum(mu*text)+sum(log(sa))+log.factor.samp.prob_emph(top_aug)#-sum(tree$protected)*log(2)#-(sum(tree$augtree==1)-1)*log(2)#-sum(tree$protected)*log(2)#-(sum(tree$augtree==2)-1)*log(2)
+  }else{
+    logg = 0
+  }
+  return(logg)
+}
+
+log.factor.samp.prob_emph <- function(to){
+  top = head(to,-1)
+  number.observed = c(1,1+cumsum(top==2))
+  number.missing = c(0,cumsum(top==1)-cumsum(top==0))
+  factor = -sum(log((2*number.observed+number.missing)[to==1]))#-sum(log(number.missing[to==0]))
+  return(factor)
+}
+
 
 #maximun extinction branching time to create possible trees
 get.max.speciation.bt <- function(sbt,ebt,N,max.simultaneous.spec){
@@ -563,19 +674,6 @@ lprobto <- function(to,p=0.5){
   to_possible = to[possibletotal]
   logprob = sum(to_possible==1)*log(p)+sum(to_possible==0)*log(1-p)
   return(logprob)
-}
-
-
-
-
-
-sim.dim <- function(maxnumspec,deterministic=FALSE,i=NULL,nsim=NULL){
-  if(deterministic){
-    S = floor((maxnumspec+1)*i/nsim)
-  }else{
-    S = sample(0:maxnumspec,1)
-  }
-  return(S)
 }
 
 sampletopology <- function(S,p=0.5){
