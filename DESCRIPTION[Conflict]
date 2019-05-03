@@ -1,0 +1,20 @@
+Package: emphasis
+Type: Package
+Title: Expectation Maximization on PHylogenetic Applications with Simulations and Importance Sampling
+Version: 0.1.0
+Author: F. Richter
+Maintainer: F. Richter <f.richter@rug.nl>
+Description:  Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.
+License: Creative Commons Public Licenses
+Encoding: UTF-8
+LazyData: true
+Depends:
+    ape,
+    subplex,
+    ggplot2,
+    truncdist,
+    doParallel,
+    parallel,
+    mgcv,
+    LambertW,
+    DDD

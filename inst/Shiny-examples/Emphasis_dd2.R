@@ -50,7 +50,7 @@ ui <- fluidPage(
                              h3("Settings"),
                              selectInput("method", "Choose Data augmentation sampler:",
                                          list("emphasis" = "emphasis",
-                                              "uniform" = "uniform","uniform2"="uniform2")),
+                                              "uniform" = "uniform","uniform2"="uniform2","emphasis2"="emphasis2")),
                              selectInput("model", "Choose diversification model:",
                                          list("Diversity dependance" = "dd",
                                               "Constant rates" = "cr")),                
