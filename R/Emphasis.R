@@ -43,7 +43,7 @@ lambda.cr <- function(pars,n){
 Q_approx = function(pars,st,model="dd",initspec=1){
   get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
   l = sapply(st$trees, get_llik)
-  w = st$w
+  w = st$w/(sum(st$w))
   Q = sum(l*w)
   return(Q)
 }
