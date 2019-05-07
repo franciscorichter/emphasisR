@@ -113,8 +113,6 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBes
 }
 
 
-
-
 ####### Monte Carlo E step
 
 mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0,initspec=1){
@@ -130,24 +128,6 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
   if(is.null(no_cores)) no_cores <- detectCores()
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
-  if(method=="uniform"){
-    trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      # simulate number of missing species
-      S = sample(0:maxnumspec,1)
-      # simulate missing branching times and dyck word
-      mbts.events = emphasis:::sim.branchingtimes.and.events(S=S ,ct = max(brts),p=p)
-      # allocation algorithm
-      conf = emphasis:::possible.configurations(miss = mbts.events,obs = brts)
-      # sampling probability
-      logg.samp = emphasis:::log.samp.prob(to = mbts.events$to,maxnumspec = maxnumspec,ct=max(brts),conf=conf,p=p)
-      # joint probability
-      df = data.frame(brts=conf$tree$brts,to=as.integer(conf$tree$event>0))
-      df = df[order(df$brts),]
-      tree = list(wt=diff(c(0,df$brts,max(brts))),to=df$to)
-      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
-      return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree,dim=length(tree$wt)))
-    }
-  }
   if(method=="emphasis"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
       df = emphasis::augment.tree(brts,pars = pars3,model = model)
@@ -171,10 +151,10 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
       return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree,dim=dim,num.miss=num.miss))
     }
   }
-    if(method=="uniform2"){
+    if(method=="uniform"){
       trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-        df = emphasis:::sample.uniform2(brts,nsim,maxnumspec=maxnumspec)
-        log.samp.unif.prob = log.sampling.prob.uniform2(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
+        df = emphasis:::sample.uniform(brts,nsim,maxnumspec=maxnumspec)
+        log.samp.unif.prob = log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
         ####df2tree######
         wt = diff(c(0,df$brts))
         to = df$to
@@ -197,7 +177,10 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
   logweights = diff_logs
   trees = lapply(trees, function(list) list$tree)
   time = get.time(time)
-  return(list(weights=weights,logweights=logweights,fhat=fhat,fhat.se=se,logf=logf,logg=logg,trees=trees,dim=dim,Etime=time))
+  E = list(weights=weights,logweights=logweights,fhat=fhat,fhat.se=se,logf=logf,logg=logg,trees=trees,dim=dim,Etime=time)
+  pw = proper_weighting(E)
+  fhat2 = log(mean(pw$W))
+  return(c(E,list(fhat2=fhat2)))
 }
 
 
@@ -211,162 +194,6 @@ E_step <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=2,m
   return(E)
 }
 
-
-
-######################
-# Uniform data augmentation importance sampler
-######################
-
-log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  n = n[-length(n)]
-  loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+lprobto(to,p = p)-sum(log(conf$N-conf$P))
-}
-
-lprobto <- function(to,p=0.5){
-  posspec = c(0,cumsum(to==1))<(length(to)/2)
-  posext = !(c(0,cumsum(to==1))==c(0,cumsum(to==0)))
-  possibletotal = posspec & posext
-  to_possible = to[possibletotal]
-  logprob = sum(to_possible==1)*log(p)+sum(to_possible==0)*log(1-p)
-  return(logprob)
-}
-
-sim.branchingtimes.and.events <- function(S=S,ct,p){
-  brts = sort(runif(2*S,min=0,max=ct))
-  to = sampleDyck(S)
-  tree = list(brts=brts,to=to)
-  return(tree)
-}
-
-sampleDyck <- function(S,p=0.5){
-  to = NULL
-  if(S>0){
-    for(i in 1:(2*S)){
-      if(sum(to==1)==sum(to==0)){
-        prob = 1
-      }
-      if(sum(to==1)==S){
-        prob = 0
-      }
-      to = c(to,rbinom(n=1,size=1,prob=prob))
-      prob = p
-    }
-  }
-  return(to)
-}
-
-
-
-possible.configurations  <- function(miss,obs){
-  if (is.vector(obs)){
-    tms <- obs
-    to <- rep(1,length(obs))
-    obs <- list(brts=tms,to=to)
-  }
-  mi = 1 #index for missing
-  ob = 1 #index for observed
-  
-  # (number of) protected species
-  protected = 1
-  P<-NULL
-  
-  # (number of) current species
-  currentspecies = 1
-  N<-NULL
-  
-  # missing branching times
-  brts.m = c(miss$brts,Inf)
-  
-  # set of sets of guardians
-  guardians = list()
-  
-  # missing new species (starting to count at 1 above number of present species)
-  n.obs = length(obs$brts)
-  newspecies.m = n.obs+1
-  
-  # observed new species (starting to count at 1, so next one is 2)
-  newspecies.o = 2
-  
-  # sampled tree
-  tree<-list(brts=NULL,species=NULL,event=NULL)
-  
-  while (mi < length(brts.m) | ob < length(obs$brts)) {
-    if(obs$brts[ob] < brts.m[mi]){ # observed speciation
-      spec = obs$to[ob]
-      #update tree
-      tree$brts = c(tree$brts,obs$brts[ob])
-      tree$species =c(tree$species,spec)
-      tree$event = c(tree$event,newspecies.o)
-      if(spec%in%protected){ # if protected, then both species become protected
-        protected = c(protected,newspecies.o)
-        currentspecies = c(currentspecies,newspecies.o)
-      }else{ # if unprotected, then then (1) its guardian set disappears and (2) both become protected
-        index = unlist(lapply(guardians,function(y,x){x%in%y},x=spec))
-        if (sum(index)>0){
-          index = which(index)
-          n.guardians = length(guardians[[index]])
-          guardians[[index]] = NULL
-        }
-        protected = c(protected,spec,newspecies.o)
-        P = c(P,0) # it is weird, but we want to try 
-        currentspecies = c(currentspecies,newspecies.o)
-        N = c(N,n.guardians) # it is weird, but we want to try 
-      }
-      ob = ob + 1
-      newspecies.o = newspecies.o + 1
-    }else{ # missing event
-      if(miss$to[mi]==1){ # missing speciation
-        mspec = sample(c(currentspecies,currentspecies),1)
-        index = which(mspec==protected)
-        N = c(N,length(currentspecies))
-        P=c(P,0)
-        currentspecies = c(currentspecies,newspecies.m)
-        #update tree
-        tree$brts = c(tree$brts,miss$brts[mi])
-        tree$species =c(tree$species,mspec)
-        tree$event = c(tree$event,newspecies.m)
-        if(sum(index)>0){ # if a protected species speciates, then it becomes unprotected and both guardians
-          protected = protected[-index]
-          guardians[[length(guardians)+1]] = c(mspec,newspecies.m)
-        }else{ # if a unprotected species speciates, then ...
-          index = unlist(lapply(guardians,function(y,x){x%in%y},x=mspec))          
-          if (sum(index)>0){ #... if it is a guardian then new species becomes guardian
-            index=which(index)
-            guardians[[index]] = c(guardians[[index]],newspecies.m)
-          } # ... if it is not a guardian then no changes to guardianship
-        }
-        newspecies.m = newspecies.m + 1
-      } else { #missing extinction
-        N = c(N,length(currentspecies))
-        P = c(P,length(protected))
-        available = setdiff(currentspecies,protected)
-        missextinct = sample(c(available,available),1)
-        if (missextinct<=n.obs){# if we selected the label of an extant species, we arbitrarily pick the label of a missing guardian
-          index = which(unlist(lapply(guardians,function(y,x){x%in%y},x=missextinct)))         
-          missextinct = setdiff(guardians[[index]],missextinct)[1]
-        }
-        #update tree
-        tree$brts = c(tree$brts,miss$brts[mi])
-        tree$species =c(tree$species,missextinct)
-        tree$event = c(tree$event,0)
-        index = unlist(lapply(guardians,function(y,x){x%in%y},x=missextinct))          
-        if (sum(index)>0){ # if it is a guardian then ...
-          index=which(index)
-          if (length(guardians[[index]])>2){ # ... if the set is larger than 2, then take it out of guardian set
-            guardians[[index]] = setdiff(guardians[[index]],missextinct)
-          } else { # ... if guardian set is of size 2, remove guardian set and protect the remaining species
-            protected = c(protected, setdiff(guardians[[index]],missextinct))
-            guardians[[index]] = NULL
-          }
-        }
-        currentspecies = setdiff(currentspecies,missextinct)
-      }
-      mi = mi + 1
-    }
-  }
-  return(list(N=N,P=P,tree=tree))
-}
 
 
 ############################
@@ -696,7 +523,7 @@ sampletopology <- function(S,p=0.5){
 }
 
 
-sample.uniform2 <- function(brts,nsim,maxnumspec){
+sample.uniform <- function(brts,nsim,maxnumspec){
   S = sample(0:maxnumspec,1)
   mbts.events = emphasis:::sim.branchingtimes.and.events(S=S ,ct = max(brts),p=0.5)
   df = data.frame(brts=c(brts,mbts.events$brts),to=c(rep(2,length(brts)),mbts.events$to))
@@ -719,15 +546,13 @@ log.factor.samp.prob <- function(to){
   return(factor)
 }
 
-
-
-log.sampling.prob.uniform2 <- function(df,maxnumspec,initspec=1,p=0.5){
+log.sampling.prob.uniform <- function(df,maxnumspec,initspec=1,p=0.5){
   ct = max(df$brts)
   to = top = df$to
   tom = top[top!=2]
   to[to==2] = 1
   num.miss = 2*sum((to==0))
-  loggprob <- -log((maxnumspec+1))+lgamma(num.miss+1)-num.miss*log(ct)+lprobto(tom,p = p)+log.factor.samp.prob(top)   #-sum(log(conf$N-conf$P))
+  loggprob <- -log((maxnumspec+1))+lgamma(num.miss+1)-num.miss*log(ct)+lprobto(tom,p = p)+log.factor.samp.prob(top) 
   return(loggprob)
 }
 
@@ -735,4 +560,24 @@ log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   n = n[-length(n)]
   loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+lprobto(to,p = p)-sum(log(conf$N-conf$P))
+}
+
+
+
+
+####  
+
+proper_weighting <- function(E){
+  ta = table(E$dim)
+  dims = as.numeric(names(ta))
+  sizes = as.numeric(ta)
+  weights = NULL
+  for(i in 1:length(dims)){
+    weights[i] = sum(E$weights[E$dim == dims[i]])
+  }
+  W = weights
+  w_tilde = weights/length(E$trees)
+  Z = weights/sizes
+  #fhat2[j] = mean(W)
+  return(list(W=W,w_tilde=w_tilde,Z=Z))
 }
