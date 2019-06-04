@@ -3,7 +3,7 @@
 # negative logLikelihood of a tree
 nllik.tree = function(pars,tree,model="dd",initspec=1){
   if(is.data.frame(tree)){
-    tree = emphasis::df2tree(df=tree,pars=pars,model=model,initspec=initspec)
+    tree = df2tree2(df=tree,pars=pars,model=model,initspec=initspec)
   }
   wt = tree$wt
   to = tree$to
@@ -56,7 +56,6 @@ M_step <-function(S,init_par = NULL,model="dd"){
 
 ##to do: M-step parallel
 
-
 df2tree <- function(df,pars,model="dd",initspec=1){
   dim = dim(df)[1]
   wt = diff(c(0,df$bt))
@@ -80,13 +79,9 @@ df2tree <- function(df,pars,model="dd",initspec=1){
 
 ###########################
 
-
-
 ###  simulation of extinct species
 
-
 ####
-
 
 mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5,parallel=TRUE){
   time = proc.time()
@@ -115,7 +110,7 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBes
 
 ####### Monte Carlo E step
 
-mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0,initspec=1){
+mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0,initspec=1,single_dimension=NULL){
   time=proc.time()
   if(seed>0) set.seed(seed)
   #we need brts on ascending order
@@ -130,6 +125,7 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
   registerDoParallel(cl)
   if(method=="emphasis"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
+      ## check for dendroica_norm with pars3=2,1,30
       df = emphasis::augment.tree(brts,pars = pars3,model = model)
       tree = emphasis::df2tree(df,pars3,model=model,initspec=1)
       logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars3,model = model,initspec = initspec)
@@ -153,8 +149,9 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
   }
     if(method=="uniform"){
       trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-        df = emphasis:::sample.uniform(brts,nsim,maxnumspec=maxnumspec)
-        log.samp.unif.prob = log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
+        df = emphasis:::sample.uniform(brts,maxnumspec=maxnumspec,single_dimension = single_dimension)
+        if(!is.null(single_dimension)) maxnumspec=0
+        log.samp.unif.prob = emphasis:::log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
         ####df2tree######
         wt = diff(c(0,df$brts))
         to = df$to
@@ -195,7 +192,6 @@ E_step <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=2,m
 }
 
 
-
 ############################
 # emphasis data augmentation importance sampler
 ##############################
@@ -225,7 +221,12 @@ IntInv <- function(r,mu,s,u){
 
 augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
   if(seed>0) set.seed(seed)
-  wt = diff(c(0,brts))
+  if(brts[1]==max(brts)){
+    wt = -diff(c(brts,0))
+    brts = cumsum(wt)
+  }else{
+    wt = diff(c(0,brts))
+  }
   ct = sum(wt)
   dim = length(wt)
   num.of.branches = length(brts)+1
@@ -485,14 +486,9 @@ log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
   return(logg)
 }
 
-
-
-
 ###############################################################
 # Uniform data augmentation importance sampler (Bart version) #
 ###############################################################
-
-
 
 lprobto <- function(to,p=0.5){
   posspec = c(0,cumsum(to==1))<(length(to)/2)
@@ -523,8 +519,12 @@ sampletopology <- function(S,p=0.5){
 }
 
 
-sample.uniform <- function(brts,nsim,maxnumspec){
-  S = sample(0:maxnumspec,1)
+sample.uniform <- function(brts,maxnumspec,single_dimension=NULL){
+  if(is.null(single_dimension)){
+    S = sample(0:maxnumspec,1)
+  }else{
+    S = single_dimension
+  }
   mbts.events = emphasis:::sim.branchingtimes.and.events(S=S ,ct = max(brts),p=0.5)
   df = data.frame(brts=c(brts,mbts.events$brts),to=c(rep(2,length(brts)),mbts.events$to))
   df = df[order(df$brts),]
@@ -561,9 +561,6 @@ log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
   n = n[-length(n)]
   loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+lprobto(to,p = p)-sum(log(conf$N-conf$P))
 }
-
-
-
 
 ####  
 
