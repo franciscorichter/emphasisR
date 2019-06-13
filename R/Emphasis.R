@@ -83,7 +83,7 @@ df2tree <- function(df,pars,model="dd",initspec=1){
 
 ####
 
-mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5,parallel=TRUE){
+mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5,parallel=TRUE,recicled_trees=NULL,previous_theta=NULL){
   time = proc.time()
   st = E_step(brts = brts,pars = theta_0,nsim = MC_ss,model = model,method = method,no_cores = no_cores,maxnumspec = maxnumspec,p=p,parallel=parallel)
   fhat = st$fhat
@@ -97,7 +97,13 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBes
     loglik.proportion = sum(weights[weights>=max.weight])
   }else{
     sub_st = lapply(st, "[", st$weights!=0)
-    loglik.proportion = 1
+    loglik.proportion = sum(st$weights[st$weights>0])
+  }
+  if(!is.null(recicled_trees)){
+    sub_st$trees = c(sub_st$trees,recicled_trees$trees)
+    get_weight_correction <- function(tree) exp(nllik.tree(pars = previous_theta,tree = tree)-nllik.tree(pars=theta_0,tree=tree))
+    recicled_weights = recicled_trees$weights*sapply(recicled_trees$trees, get_weight_correction)
+    sub_st$weights = c(sub_st$weights,recicled_weights)
   }
   M = M_step(S = sub_st,init_par = theta_0,model = model)
   M_time = get.time(time)
@@ -110,7 +116,7 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBes
 
 ####### Monte Carlo E step
 
-mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0,initspec=1,single_dimension=NULL){
+mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0,initspec=1,single_dimension=NULL,limit_on_species=NULL){
   time=proc.time()
   if(seed>0) set.seed(seed)
   #we need brts on ascending order
@@ -126,13 +132,19 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
   if(method=="emphasis"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
       ## check for dendroica_norm with pars3=2,1,30
-      df = emphasis::augment.tree(brts,pars = pars3,model = model)
-      tree = emphasis::df2tree(df,pars3,model=model,initspec=1)
-      logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars3,model = model,initspec = initspec)
-      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
-      dim = nrow(df)
-      num.miss = sum(df$to==0)
-      return(list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree,dim=dim,num.miss=num.miss))
+      df = emphasis::augment.tree(brts,pars = pars3,model = model,limit_on_species=limit_on_species)
+      if(!is.null(df)){
+        tree = emphasis::df2tree(df,pars3,model=model,initspec=1)
+        logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars3,model = model,initspec = initspec)
+        logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
+        dim = nrow(df)
+        num.miss = sum(df$to==0)
+        tree.info = list(logf.joint=logf.joint,logg.samp=logg.samp,tree=tree,dim=dim,num.miss=num.miss)
+      }else{
+        tree.info = list(logf.joint=0,logg.samp=0,tree=0,dim=0,num.miss=0)
+      }
+      
+      return(tree.info)
     }
   }
   if(method=="emphasis2"){
@@ -219,7 +231,7 @@ IntInv <- function(r,mu,s,u){
 }
 
 
-augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
+augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0,limit_on_species=NULL){
   if(seed>0) set.seed(seed)
   if(brts[1]==max(brts)){
     wt = -diff(c(brts,0))
@@ -236,6 +248,7 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
   bte = NULL
   to = NULL
   N = initspec
+  df=1
   
   #set of protected species
   protect = 1
@@ -253,7 +266,13 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
     cwt = wt[i]
     cbt = sum(wt[0:(i-1)])
     key = 0
-    while(key == 0){
+    if(!is.null(limit_on_species)){
+      if(length(bt) >= limit_on_species){
+        df = NULL
+        break
+      }
+    }
+    while(key == 0 & !is.null(df)){
       if(model == "dd"){  # diversity-dependence model
         lambda = lambda.dd(pars,N)
       }
@@ -270,7 +289,7 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
       t.spe = rnhe(lambda=s,mu=mu,r=b)
       t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
       mint = min(t.spe,t_ext)
-      if(mint < cwt){
+      if(mint < cwt & !is.null(df)){
         if(mint == t.spe){#speciation
           bt = c(bt,cbt+t.spe)
           parent_spec = sample(c(protect,extinct),1)
@@ -294,7 +313,12 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
           N = N + 1
       #    print(paste('numberof species: ', N))
           cwt = cwt - t.spe
-          
+          if(!is.null(limit_on_species)){
+            if(length(bt) >= limit_on_species){
+              df = NULL
+              break
+            }
+          }
         }else{#extinction
      #     print(paste("extinction at time ",cbt+t_ext))
           # remove the "corresponding" species
@@ -312,12 +336,13 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
       }else{
     #    print(paste("nothing between ",cbt," and ",cbt + cwt))
         key = 1
-        protected=c(protected,0)
+        protected = c(protected,0)
       }
     }
     N = N+1
    # print(paste('numberof species: ', N))
   }
+  if(!is.null(df)){
   df = data.frame(bt = c(bt,brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
   df = df[order(df$bt),]
   df$t.ext = df$bte-df$bt
@@ -325,6 +350,7 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0){
   df = rbind(df,data.frame(bt=ct,bte=Inf,to=2,t.ext=Inf))
   df$r = r
   df$protected=protected
+  }
   return(df)
 }
 

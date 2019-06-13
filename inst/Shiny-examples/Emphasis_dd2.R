@@ -56,6 +56,8 @@ ui <- fluidPage(
                                          list("Diversity dependance" = "dd",
                                               "Constant rates" = "cr")),                
                              numericInput("ss", "Monte-Carlo sample size:", 1000),
+                             checkboxInput("recicling", "Recicle trees", FALSE),
+                             numericInput("num_rec", "Number of trees to recicle:", 10),
                              checkboxInput("selectBestTrees", "Subset of trees for M step", FALSE),
                              numericInput("Bt", "Number of best trees to take:", 20),
                              numericInput("maxspec", "Maximum number of missing species:", 40),
@@ -182,11 +184,13 @@ server <- function(input,output,session) {
   autoInvalidate <- reactiveTimer(intervalMs=1000,session)
  
    observe({
+     # load branching times
       if(input$brts==0){
         brts = brts_d <- as.numeric(unlist(strsplit(input$vec1,",")))
       }else{ 
         brts = brts_d <- as.numeric(unlist(strsplit(input$brts,",")))
       }
+     # load known mle for comparison
       if(brts[1] == 11.3) mle_dd = c(0.523708,0.025529,31.723702)
       if(brts[1] == 5) mle_dd = c(3.659926,0.182003,23.507341)
       if(brts[1] == 1) mle_dd = c(18.260192,0.909032,23.509248)
@@ -198,10 +202,12 @@ server <- function(input,output,session) {
         if(input$model=="dd") mle_dd = c(1.144462,0.115144,30.423973)
         if(input$model=="cr") mle_dd = c(0.06540199,0.01837328)
       } 
+      # correct for descending branching times
       if(max(brts)==brts[1]){
         wt = -diff(c(brts,0))
         brts = cumsum(c(wt))
       }
+      # load reactive input values
       input_values$brts = brts
       input_values$mle_dd = mle_dd
       input_values$init_pars = c(input$par1,input$par2,input$par3)
@@ -210,13 +216,18 @@ server <- function(input,output,session) {
   
   observe({
     pars = input_values$init_pars
-    if(input$model=="cr") pars = pars[-3]
-    autoInvalidate()  # to make it run withouth changind input 
+ #   if(input$model=="cr") pars = pars[-3]
+    autoInvalidate()  # to make it run withouth changing input 
     isolate({ if (rv$run) { 
       
       if(file.exists("first.R")) load("first.R")
       rv$em.iteration = rv$em.iteration + 1
-      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = input$selectBestTrees,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p,model = input$model)
+      if(!input$recicling){
+        recicled_trees=NULL
+        previous_theta=NULL
+      }
+        
+      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = input$selectBestTrees,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p,model = input$model,recicled_trees = recicled_trees,previous_theta = previous_theta)
       
       if(length(input_values$brts_d)<800){
         if(input$model=="dd") ftrue = DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0)
@@ -247,6 +258,7 @@ server <- function(input,output,session) {
       rv$weights = mcem$st$weights
       rv$logweights = mcem$st$logweights
       rv$dim = sapply(mcem$st$trees,FUN = function(list) sum((list$to==0)))
+      
       ###
       ta = table(rv$dim)
       dims = as.numeric(names(ta))
@@ -260,8 +272,16 @@ server <- function(input,output,session) {
       ###
       rv$logf = mcem$st$logf
       rv$logg = mcem$st$logg
+      previous_pars=pars
       pars = mcem$pars
-      save(pars,file="first.R")
+      
+      if(input$recicling){
+        max.weight = sort(weights,decreasing = TRUE)[input$num_rec]
+        sub_st = lapply(st, "[", weights>=max.weight)
+      }
+      
+      recicled_trees = sub_st
+      save(pars,previous_pars,recicled_trees,file="first.R")
       MCEM_temp = rv$MCEM
       save(MCEM_temp,file="mcem_temp.RData")
       
