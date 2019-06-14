@@ -48,6 +48,10 @@ Q_approx = function(pars,st,model="dd",initspec=1){
   return(Q)
 }
 
+Q_SAEM = function(sample,previous_Q,gamma){
+  
+}
+
 
 M_step <-function(S,init_par = NULL,model="dd"){
   po = subplex(par = init_par, fn = Q_approx,st = S,model=model,hessian = TRUE)
@@ -83,7 +87,7 @@ df2tree <- function(df,pars,model="dd",initspec=1){
 
 ####
 
-mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5,parallel=TRUE,recicled_trees=NULL,previous_theta=NULL){
+mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5,parallel=TRUE){
   time = proc.time()
   st = E_step(brts = brts,pars = theta_0,nsim = MC_ss,model = model,method = method,no_cores = no_cores,maxnumspec = maxnumspec,p=p,parallel=parallel)
   fhat = st$fhat
@@ -98,12 +102,6 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBes
   }else{
     sub_st = lapply(st, "[", st$weights!=0)
     loglik.proportion = sum(st$weights[st$weights>0])
-  }
-  if(!is.null(recicled_trees)){
-    sub_st$trees = c(sub_st$trees,recicled_trees$trees)
-    get_weight_correction <- function(tree) exp(nllik.tree(pars = previous_theta,tree = tree)-nllik.tree(pars=theta_0,tree=tree))
-    recicled_weights = recicled_trees$weights*sapply(recicled_trees$trees, get_weight_correction)
-    sub_st$weights = c(sub_st$weights,recicled_weights)
   }
   M = M_step(S = sub_st,init_par = theta_0,model = model)
   M_time = get.time(time)

@@ -227,7 +227,7 @@ server <- function(input,output,session) {
         previous_theta=NULL
       }
         
-      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = input$selectBestTrees,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p,model = input$model,recicled_trees = recicled_trees,previous_theta = previous_theta)
+      mcem = mcem_step(input_values$brts,pars,maxnumspec = input$maxspec,MC_ss = input$ss,selectBestTrees = input$selectBestTrees,bestTrees = input$Bt,no_cores = input$cores,method = input$method,p=input$p,model = input$model)
       
       if(length(input_values$brts_d)<800){
         if(input$model=="dd") ftrue = DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0)
