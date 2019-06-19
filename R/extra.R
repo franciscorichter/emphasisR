@@ -92,6 +92,59 @@ phylo2tree <- function(tree){
   E[E==-1] = 0
   return(list(wt=t,to=E))
 }
+
+vectors2phylo <- function(list,initspec=1){
+  wt=list$wt
+  to=list$to
+  to[to==2] = 1
+  ct=sum(wt)
+  newick = paste(sl[1],";",sep="")
+  N=1
+  identf = data.frame(Spec="a",Time=0) # Labels of species
+  for (i in 1:(length(wt)-1)){
+    # speciation
+    bt = sum(wt[1:i])
+    BD = sample(1:N,1)
+    species = as.character(identf[BD,1])  
+    if (to[i] == 1){
+      ind = regexpr(species,newick)[1]-1
+      atm = bt-identf[which(identf[,1]==species),2]
+      newick = paste(substr(newick,1,ind),"(",substr(newick,ind+1,ind+4),",",sl[i+1],"):",as.character(atm),substring(newick,ind+5),sep="")
+      identf = rbind(identf,data.frame(Spec=substr(sl[i+1],1,2),Time=bt))
+      identf[identf$Spec == species,2] = bt
+      N = N+1
+    }
+    # extinction
+    if (to[i]==0){
+      ind = regexpr(species,newick)[1] + 2
+      atm = bt-identf[which(identf[,1]==species),2]
+      identf = identf[!identf$Spec==species,]
+      newick = paste(substr(newick,1,ind),as.character(atm),substring(newick,ind+2),sep="")
+      N=N-1
+    }
+  }
+  newick = compphyl(newi=newick,identf=identf,ct=ct)
+  newick = read.tree(text=newick)
+  return(newick)
+}
+
+compphyl <- function(newi,identf,ct){
+  #set to extant species to the present time
+  identf[,1] = as.character(identf[,1])
+  identf[,2] = ct-identf[,2]
+  for(i in 1:length(identf[,1])){
+    ind = regexpr(identf[i,1],newi)[1] + 2
+    newi = paste(substr(newi,1,ind),as.character(identf[i,2]),substring(newi,ind+2),sep="")
+  }
+  return(newi)
+}
+
+sl = paste(letters[1],letters,":0",sep="")
+for (i in 2:26){
+  ll = paste(letters[i],letters,":0",sep="")
+  sl = c(sl,ll)
+}
+
 #post processing
 post.pro <-function(file,extrafile=NULL){
   load(file)
