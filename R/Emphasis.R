@@ -67,15 +67,11 @@ loglik.tree <- function(pars,tree,model,initspec=1){
     lambda = pars[1] + pars[2]*pd
     rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
     sigma_over_tree = 0
-    lower=0
-    upper=wt[1]
     for(i in 1:length(wt)){
       pd_t <- function(t){
-        pd[i] - n[i]*(tree$brts[i]-t)
+        (pd[i] - n[i]*(wt[i]-t))
       }
-      sigma_over_tree = sigma_over_tree + (pars[1]+pars[3])*wt[i]+pars[2]*integrate(pd_t,lower=lower,upper=upper)$value
-      lower = upper
-      upper = upper + wt[i]
+      sigma_over_tree = sigma_over_tree + ((pars[1]+pars[3])*wt[i]+pars[2]*integrate(pd_t,lower=0,upper=wt[i])$value)*n[i]
     }
     log.lik = -sigma_over_tree + sum(log(rho))
   }
@@ -103,7 +99,7 @@ lambda.cr <- function(pars,n){
 Q_approx = function(pars,st,model="dd",initspec=1){
   get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
   l = sapply(st$trees, get_llik)
-  w = st$w/(sum(st$w))
+  w = st$weights/(sum(st$weights))
   Q = sum(l*w)
   return(Q)
 }

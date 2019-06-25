@@ -228,7 +228,7 @@ server <- shinyServer(function(input,output,session) {
       input_values$brts = brts
       input_values$mle_dd = mle_dd
       input_values$init_pars = c(input$par1,input$par2,input$par3)
-      input_values$brts_d = brts_d
+  
   })
   
   observe({
