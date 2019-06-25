@@ -1,39 +1,99 @@
 ### EMPHASIS functions
 
 # negative logLikelihood of a tree
-nllik.tree = function(pars,tree,model="dd",initspec=1){
-  if(is.data.frame(tree)){
-    tree = df2tree2(df=tree,pars=pars,model=model,initspec=initspec)
+nllik.tree = function(pars,tree,model="dd",initspec=1,K=FALSE){
+  if(K){
+    if(is.data.frame(tree)){
+      tree = df2tree(df=tree,pars=pars,model=model,initspec=initspec)
+    }
+    wt = tree$wt
+    to = tree$to
+    to[to==2] = 1
+    n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+    if(model == "cr"){
+      lambda = lambda.cr(pars,n)
+    }
+    if(model == "dd"){
+      lambda = lambda.dd(pars,n,GLM = FALSE)
+    }
+    if(model == "dd.1.3"){
+      lambda = lamda.dd.1.3(pars,n)
+    }
+    mu = max(0,pars[2])
+    sigma = (lambda + mu)*n
+    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+    nl = -(sum(-sigma*wt)+sum(log(rho)))
+    if(min(pars)<0){nl = Inf}
+  }else{
+    nl = -loglik.tree(pars,tree,model,initspec)
   }
-  wt = tree$wt
-  to = tree$to
-  to[to==2] = 1
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  if(model == "cr"){
-    lambda = lambda.cr(pars,n)
-  }
-  if(model == "dd"){
-    lambda = lambda.dd(pars,n)
-  }
-  if(model == "dd.1.3"){
-    lambda = lamda.dd.1.3(pars,n)
-  }
-  mu = max(0,pars[2])
-  sigma = (lambda + mu)*n
-  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-  nl = -(sum(-sigma*wt)+sum(log(rho)))#-sum(to==1)*log(2))
-  if(min(pars)<0){nl = Inf}
   return(nl)
 }
 
+
+loglik.tree <- function(pars,tree,model,initspec=1){
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  if(model == "dd"){
+    lambda = lambda.dd(pars,n,GLM=TRUE)
+    sigma = (lambda + mu)*n
+    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+    log.lik = (sum(-sigma*wt)+sum(log(rho)))
+  }
+  if(model == "pd"){ 
+    n.obs = cumsum(c(1,tree$to==2))
+    n.obs = head(n.obs,-1)
+    pd_obs = cumsum(n.obs*wt)
+    pd_miss = n.miss_vec = ext.miss_vec = NULL
+    for(j in 1:nrow(tree)){
+      if(is.null(n.miss_vec)){
+        pd_miss[j] = 0
+      }else{
+        pd_miss[j] = sum(tree$brts[j] - n.miss_vec)
+      }
+      if(tree$to[j]==1){
+        n.miss_vec = c(n.miss_vec,tree$brts[j])
+        ext.miss_vec = c(ext.miss_vec,tree$t_exp[j])
+      }
+      if(tree$to[j]==0){
+        n.miss_vec = n.miss_vec[ext.miss_vec != tree$brts[j]]
+      }
+    }
+    pd = pd_obs + pd_miss
+    lambda = pars[1] + pars[2]*pd
+    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+    sigma_over_tree = 0
+    lower=0
+    upper=wt[1]
+    for(i in 1:length(wt)){
+      pd_t <- function(t){
+        pd[i] - n[i]*(tree$brts[i]-t)
+      }
+      sigma_over_tree = sigma_over_tree + (pars[1]+pars[3])*wt[i]+pars[2]*integrate(pd_t,lower=lower,upper=upper)$value
+      lower = upper
+      upper = upper + wt[i]
+    }
+    log.lik = -sigma_over_tree + sum(log(rho))
+  }
+  return(log.lik)
+}
 
 
 lambda.dd.1.3 <- function(pars,n){
   pmax(1e-99, pars[1]*(1-n/pars[3]))
 }
 
-lambda.dd <- function(pars,n){
-  pmax(0, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
+lambda.dd <- function(pars,n,GLM=FALSE){
+  if(GLM){
+    lambdas =  pmax(0, pars[1] + pars[2]*n)
+  }else{
+    lambdas = pmax(0, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
+  }
+  return(lambdas)
 }
 
 lambda.cr <- function(pars,n){
@@ -53,16 +113,23 @@ Q_SAEM = function(sample,previous_Q,gamma){
 }
 
 
-M_step <-function(S,init_par = NULL,model="dd"){
-  po = subplex(par = init_par, fn = Q_approx,st = S,model=model,hessian = TRUE)
-  return(po)
+M_step <-function(st,init_par = NULL,model="dd",proportion_of_subset=1){
+  weights = st$weights/sum(st$weights)
+  weights_sorted = sort(weights,decreasing = TRUE)
+  a = which(cumsum(weights_sorted)>=proportion_of_subset)[1]
+  max.weight = weights_sorted[a]
+  sub_st = lapply(st, "[", weights>=max.weight)
+  loglik_proportion = sum(weights[weights>=max.weight])/sum(weights)
+  effective_sample_size = length(weights[weights>=max.weight])
+  po = subplex(par = init_par, fn = Q_approx,st = sub_st,model=model,hessian = TRUE)
+  return(list(po=po,loglik_proportion=loglik_proportion,effective_sample_size=effective_sample_size))
 }
 
 ##to do: M-step parallel
 
 df2tree <- function(df,pars,model="dd",initspec=1){
-  dim = dim(df)[1]
-  wt = diff(c(0,df$bt))
+  dim = nrow(df)
+  wt = diff(c(0,df$brts))
   to = df$to[-dim]
   to[to==2] = 1
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
@@ -90,23 +157,16 @@ df2tree <- function(df,pars,model="dd",initspec=1){
 mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5,parallel=TRUE){
   time = proc.time()
   st = E_step(brts = brts,pars = theta_0,nsim = MC_ss,model = model,method = method,no_cores = no_cores,maxnumspec = maxnumspec,p=p,parallel=parallel)
-  fhat = st$fhat
-  se = st$fhat.se
   E_time = get.time(time)
+  
   time = proc.time()
-  if(selectBestTrees){
-    weights = st$weights/sum(st$weights)
-    max.weight = sort(weights,decreasing = TRUE)[bestTrees]
-    sub_st = lapply(st, "[", weights>=max.weight)
-    loglik.proportion = sum(weights[weights>=max.weight])
-  }else{
-    sub_st = lapply(st, "[", st$weights!=0)
-    loglik.proportion = sum(st$weights[st$weights>0])
-  }
   M = M_step(S = sub_st,init_par = theta_0,model = model)
   M_time = get.time(time)
-  pars = M$par
+  
+  pars = M$po$par
   hessian_inverse = try(diag(solve(M$hessian)))
+  fhat = st$fhat
+  se = st$fhat.se
   if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
   return(list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=loglik.proportion,hessian_inverse=hessian_inverse,E_time=E_time,M_time=M_time))
 }
@@ -114,7 +174,7 @@ mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBes
 
 ####### Monte Carlo E step
 
-mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,p=0.5,seed=0,initspec=1,single_dimension=NULL,limit_on_species=NULL){
+mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="emphasis",no_cores=NULL,maxnumspec=NULL,seed=0,initspec=1,single_dimension=NULL,limit_on_species=NULL){
   time=proc.time()
   if(seed>0) set.seed(seed)
   #we need brts on ascending order
@@ -163,13 +223,25 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
         if(!is.null(single_dimension)) maxnumspec=0
         log.samp.unif.prob = emphasis:::log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
         ####df2tree######
-        wt = diff(c(0,df$brts))
-        to = df$to
-        to = head(to,-1)
-        tree=list(wt=wt,to=to)
+        #wt = diff(c(0,df$brts))
+        #to = df$to
+        #to = head(to,-1)
+        #tree=list(wt=wt,to=to)
+        df$t_exp = rep(Inf,nrow(df)) 
+        missing_speciations = NULL
+        for(j in 1:nrow(df)){
+          if(df$to[j]==1){
+            missing_speciations = c(missing_speciations,df$brts[j])
+          }
+          if(df$to[j]==0){
+            sample_ext_time_index = sample(length(missing_speciations),1)
+            df$t_exp[j] = missing_speciations[sample_ext_time_index]
+            missing_speciations = missing_speciations[-sample_ext_time_index]
+          }
+        }
         ##################
-        logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
-        return(list(logf.joint=logf.joint,logg.samp=log.samp.unif.prob,dim=nrow(df),tree=tree))
+        logf.joint = -emphasis:::nllik.tree(pars=pars,tree=df,model=model,initspec = 1)
+        return(list(logf.joint=logf.joint,logg.samp=log.samp.unif.prob,dim=nrow(df),tree=df))
       }
     }
   stopCluster(cl)
@@ -177,10 +249,10 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
   logg = sapply(trees,function(list) list$logg.samp)
   dim = sapply(trees,function(list) list$dim)
   diff_logs = logf-logg
-  max_log = max(diff_logs) #
+  max_log = max(diff_logs) 
   fhat = mean(exp(diff_logs))
   se = sd(exp(diff_logs))/sqrt(nsim)
-  weights = exp(diff_logs)#-max_log)
+  weights = exp(diff_logs)
   logweights = diff_logs
   trees = lapply(trees, function(list) list$tree)
   time = get.time(time)
@@ -191,9 +263,9 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
 }
 
 
-E_step <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=2,maxnumspec=NULL,p=0.5,seed=0,parallel=TRUE){
+E_step <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=2,maxnumspec=NULL,seed=0,parallel=TRUE){
   if(parallel){
-    E = mc.Estep_parallel(brts,pars,nsim=nsim,model=model,method=method,no_cores=no_cores,maxnumspec=maxnumspec,p=p,seed=seed)
+    E = mc.Estep_parallel(brts,pars,nsim=nsim,model=model,method=method,no_cores=no_cores,maxnumspec=maxnumspec,seed=seed)
   }else{
     print("non parallel Em not ready")
   #  E = mc.Estep(brts=brts,pars=pars,nsim=nsim,model=model,method=method,maxnumspec = maxnumspec,p=p,seed=seed)
@@ -542,10 +614,14 @@ sampletopology <- function(S,p=0.5){
   return(to)
 }
 
+sample_dim_prob <- function(d,max){
+  factorial(2*d)/sum(factorial(seq(from = 0,to = 2*max,by=2)))
+}
 
 sample.uniform <- function(brts,maxnumspec,single_dimension=NULL){
   if(is.null(single_dimension)){
-    S = sample(0:maxnumspec,1)
+    probs = sample_dim_prob(0:maxnumspec,maxnumspec)
+    S = sample(1:maxnumspec,1)
   }else{
     S = single_dimension
   }
