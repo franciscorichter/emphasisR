@@ -17,5 +17,4 @@ Depends:
     parallel,
     mgcv,
     LambertW,
-    DDD,
     shiny

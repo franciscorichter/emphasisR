@@ -1,5 +1,5 @@
 
-lambda.dd <- function(pars,n,GLM=FALSE){
+lambda.dd <- function(pars,n,GLM=TRUE){
   if(GLM){
     lambdas =  pmax(0, pars[1] + pars[2]*n)
   }else{
@@ -13,10 +13,25 @@ lambda.edd <- function(pars,n,GLM=FALSE){
   return(lambdas)
 }
 
+lambda.gddx <- function(pars,n,GLM=FALSE){
+  lambdas =  pmax(pars[1]*(n^(-pars[3])),0)
+  return(lambdas)
+}
+
+
+
 lambda.pd_t <- function(w_time,pars,pd,n,wt){
-  lambda = pars[1]+pars[2]*(pd - n*(wt-w_time))
+  lambda = max(0,pars[1]+pars[2]*(pd - n*(wt-w_time)))
   return(lambda)
 }
+
+lambda.dpdx_t <- function(w_time,pars,pd,n,wt){
+  lambda = pmax(pars[1]*((pd - n*(wt-w_time)+1)^(-pars[3])),0)
+  return(lambda)
+}
+
+
+
 
 lambda.epd_t <- function(w_time,pars,pd,n,wt){
   lambda = exp(pars[1]+pars[2]*(pd - n*(wt-w_time)))
@@ -38,6 +53,7 @@ Q_SAEM = function(sample,previous_Q,gamma){
 
 
 M_step <-function(st,init_par = NULL,model="dd",proportion_of_subset=1){
+  time0 = proc.time()
   weights = st$weights/sum(st$weights)
   weights_sorted = sort(weights,decreasing = TRUE)
   a = which(cumsum(weights_sorted)>=proportion_of_subset)[1]
@@ -46,7 +62,8 @@ M_step <-function(st,init_par = NULL,model="dd",proportion_of_subset=1){
   loglik_proportion = sum(weights[weights>=max.weight])/sum(weights)
   effective_sample_size = length(weights[weights>=max.weight])
   po = subplex(par = init_par, fn = Q_approx,st = sub_st,model=model,hessian = TRUE)
-  return(list(po=po,loglik_proportion=loglik_proportion,effective_sample_size=effective_sample_size))
+  M_time = get.time(time0)
+  return(list(po=po,loglik_proportion=loglik_proportion,effective_sample_size=effective_sample_size,M_time=M_time))
 }
 
 ##to do: M-step parallel
@@ -146,11 +163,6 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
         df = emphasis:::sample.uniform(brts,maxnumspec=maxnumspec,single_dimension = single_dimension)
         if(!is.null(single_dimension)) maxnumspec=0
         log.samp.unif.prob = emphasis:::log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
-        ####df2tree######
-        #wt = diff(c(0,df$brts))
-        #to = df$to
-        #to = head(to,-1)
-        #tree=list(wt=wt,to=to)
         df$t_exp = rep(Inf,nrow(df)) 
         missing_speciations = NULL
         for(j in 1:nrow(df)){
@@ -545,7 +557,7 @@ sample_dim_prob <- function(d,max){
 sample.uniform <- function(brts,maxnumspec,single_dimension=NULL){
   if(is.null(single_dimension)){
     probs = sample_dim_prob(0:maxnumspec,maxnumspec)
-    S = sample(1:maxnumspec,1)
+    S = sample(0:maxnumspec,1)
   }else{
     S = single_dimension
   }

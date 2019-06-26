@@ -62,7 +62,9 @@ ui <- fluidPage(
                                          list("Diversity dependence" = "dd",
                                               "Exponential diversity dependence" = "edd",
                                               "Phylodiversity dependence" = "pd",
-                                              "Exponential Phylodiversity dependence" = "epd"
+                                              "Exponential Phylodiversity dependence" = "epd",
+                                              "GDDX" = "gddx",
+                                              "GDPX" = "gpdx"
                                               )),                
                              numericInput("ss", "Monte-Carlo sample size:", 1000),
                              numericInput("proportion_of_subset", "Proportion of best trees to take:", 0.99),
@@ -173,13 +175,13 @@ ui <- fluidPage(
 
 server <- shinyServer(function(input,output,session) {
   
-  output$open_end <- renderUI({
-   if (!(input$brts[1] == 0)){
-     return(NULL)
-   }else {
-     textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1")
-   }
-  })
+ # output$open_end <- renderUI({
+#   if (!(input$brts[1] == 0)){
+#     return(NULL)
+#   }else {
+#     textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1")
+#   }
+#  })
   
 
   
@@ -196,7 +198,7 @@ server <- shinyServer(function(input,output,session) {
                        em.iteration=0,
                        logf=NULL,
                        logg=NULL)
-  input_values <- reactiveValues(brts=NULL,mle_dd=NULL,init_pars=NULL,brts_d=NULL)
+  input_values <- reactiveValues(brts=NULL,init_pars=NULL,brts_d=NULL)
 
 
   
@@ -210,25 +212,13 @@ server <- shinyServer(function(input,output,session) {
         brts = brts_d <- as.numeric(unlist(strsplit(input$brts,",")))
       }
      # load known mle for comparison
-      if(brts[1] == 11.3) mle_dd = c(0.523708,0.025529,31.723702)
-      if(brts[1] == 5) mle_dd = c(3.659926,0.182003,23.507341)
-      if(brts[1] == 1) mle_dd = c(18.260192,0.909032,23.509248)
-      if(brts[1] == 103.31057277) mle_dd = c(0.068739,0.005933,110.066841)
-      if(brts[1] == 35.857845) mle_dd = c(0.135271,0.000160,234.978643)
-      if(brts[1] == 16.761439) mle_dd = c(0.457300,0.048939,37.782661)
-      if(brts[1] == 4) mle_dd = c(16.132848,0.102192,3.974553)
-      if(brts[1] == 64.95){
-        if(input$model=="dd") mle_dd = c(1.144462,0.115144,30.423973)
-        if(input$model=="cr") mle_dd = c(0.06540199,0.01837328)
-      } 
-      if(brts[1] == 9.77) mle_dd = c(1.937372,0.060144,5.748757)
+     
       # correct for descending branching times
       if(max(brts)==brts[1]){
         wt = -diff(c(brts,0))
       }
       # load reactive input values
       input_values$brts = brts
-      input_values$mle_dd = mle_dd
       input_values$init_pars = c(input$par1,input$par2,input$par3)
   
   })
@@ -364,7 +354,6 @@ server <- shinyServer(function(input,output,session) {
       lambda.est = rv$MCEM$par1[length(rv$MCEM$par1)]
       MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
       plot.lambda = ggplot(MCEM) + geom_line(aes(em.iteration,par1)) + ggtitle(label=paste("Last estimation:  ", lambda.est)) + ylab(expression(lambda0)) + xlab("EM iteration")
-     # if(input$ddd) plot.lambda = plot.lambda + geom_hline(yintercept = input_values$mle_dd[1])
       if(input$CI & nrow(rv$MCEM)>12) plot.lambda = plot.lambda + geom_errorbar(aes(x=em.iteration, y=par1, ymin = par1-1.96*sdl, ymax = par1 + 1.96*sdl), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
@@ -379,7 +368,6 @@ server <- shinyServer(function(input,output,session) {
       mu.est = rv$MCEM$par2[length(rv$MCEM$par2)]
       MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
       plot.mu = ggplot(MCEM) + geom_line(aes(em.iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est)) + ylab(expression(lambda1)) + xlab("EM iteration")
-     # if(input$ddd) plot.mu = plot.mu + geom_hline(yintercept = input_values$mle_dd[2])
       if(input$CI & nrow(rv$MCEM)>12) plot.mu = plot.mu + geom_errorbar(aes(x=em.iteration, y=par2, ymin = par2-1.96*sdm, ymax = par2 + 1.96*sdm), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
