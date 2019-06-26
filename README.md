@@ -8,6 +8,12 @@ To install `emphasis` do the following command from within R:
 
 ```
 install.package("devtools")
-instal.package("curl")
+install.package("curl")
 devtools::install_github("franciscorichter/emphasis")
+```
+
+### Usage
+
+```
+emphasis_dd()
 ```

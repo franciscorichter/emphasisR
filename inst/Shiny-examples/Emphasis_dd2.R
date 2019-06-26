@@ -60,8 +60,10 @@ ui <- fluidPage(
                                               "emphasis" = "emphasis")),
                              selectInput("model", "Choose diversification model:",
                                          list("Diversity dependence" = "dd",
-                                              "Constant rates" = "cr",
-                                              "Phylodiversity dependence" = "pd")),                
+                                              "Exponential diversity dependence" = "edd",
+                                              "Phylodiversity dependence" = "pd",
+                                              "Exponential Phylodiversity dependence" = "epd"
+                                              )),                
                              numericInput("ss", "Monte-Carlo sample size:", 1000),
                              numericInput("proportion_of_subset", "Proportion of best trees to take:", 0.99),
                              numericInput("maxspec", "Maximum number of missing species:", 30),

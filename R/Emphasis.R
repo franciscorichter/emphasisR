@@ -1,87 +1,3 @@
-### EMPHASIS functions
-
-# negative logLikelihood of a tree
-nllik.tree = function(pars,tree,model="dd",initspec=1,K=FALSE){
-  if(K){
-    if(is.data.frame(tree)){
-      tree = df2tree(df=tree,pars=pars,model=model,initspec=initspec)
-    }
-    wt = tree$wt
-    to = tree$to
-    to[to==2] = 1
-    n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-    if(model == "cr"){
-      lambda = lambda.cr(pars,n)
-    }
-    if(model == "dd"){
-      lambda = lambda.dd(pars,n,GLM = FALSE)
-    }
-    if(model == "dd.1.3"){
-      lambda = lamda.dd.1.3(pars,n)
-    }
-    mu = max(0,pars[2])
-    sigma = (lambda + mu)*n
-    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-    nl = -(sum(-sigma*wt)+sum(log(rho)))
-    if(min(pars)<0){nl = Inf}
-  }else{
-    nl = -loglik.tree(pars,tree,model,initspec)
-  }
-  return(nl)
-}
-
-
-loglik.tree <- function(pars,tree,model,initspec=1){
-  to = tree$to
-  to = head(to,-1)
-  to[to==2] = 1
-  mu = max(0,pars[3])
-  wt = diff(c(0,tree$brts))
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  if(model == "dd"){
-    lambda = lambda.dd(pars,n,GLM=TRUE)
-    sigma = (lambda + mu)*n
-    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-    log.lik = (sum(-sigma*wt)+sum(log(rho)))
-  }
-  if(model == "pd"){ 
-    n.obs = cumsum(c(1,tree$to==2))
-    n.obs = head(n.obs,-1)
-    pd_obs = cumsum(n.obs*wt)
-    pd_miss = n.miss_vec = ext.miss_vec = NULL
-    for(j in 1:nrow(tree)){
-      if(is.null(n.miss_vec)){
-        pd_miss[j] = 0
-      }else{
-        pd_miss[j] = sum(tree$brts[j] - n.miss_vec)
-      }
-      if(tree$to[j]==1){
-        n.miss_vec = c(n.miss_vec,tree$brts[j])
-        ext.miss_vec = c(ext.miss_vec,tree$t_exp[j])
-      }
-      if(tree$to[j]==0){
-        n.miss_vec = n.miss_vec[ext.miss_vec != tree$brts[j]]
-      }
-    }
-    pd = pd_obs + pd_miss
-    lambda = pars[1] + pars[2]*pd
-    rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-    sigma_over_tree = 0
-    for(i in 1:length(wt)){
-      pd_t <- function(t){
-        (pd[i] - n[i]*(wt[i]-t))
-      }
-      sigma_over_tree = sigma_over_tree + ((pars[1]+pars[3])*wt[i]+pars[2]*integrate(pd_t,lower=0,upper=wt[i])$value)*n[i]
-    }
-    log.lik = -sigma_over_tree + sum(log(rho))
-  }
-  return(log.lik)
-}
-
-
-lambda.dd.1.3 <- function(pars,n){
-  pmax(1e-99, pars[1]*(1-n/pars[3]))
-}
 
 lambda.dd <- function(pars,n,GLM=FALSE){
   if(GLM){
@@ -92,9 +8,21 @@ lambda.dd <- function(pars,n,GLM=FALSE){
   return(lambdas)
 }
 
-lambda.cr <- function(pars,n){
-  rep(pmax(1e-99, pars[1]), length(n))
+lambda.edd <- function(pars,n,GLM=FALSE){
+  lambdas =  exp(pars[1] + pars[2]*n)
+  return(lambdas)
 }
+
+lambda.pd_t <- function(w_time,pars,pd,n,wt){
+  lambda = pars[1]+pars[2]*(pd - n*(wt-w_time))
+  return(lambda)
+}
+
+lambda.epd_t <- function(w_time,pars,pd,n,wt){
+  lambda = exp(pars[1]+pars[2]*(pd - n*(wt-w_time)))
+  return(lambda)
+}
+
 
 Q_approx = function(pars,st,model="dd",initspec=1){
   get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
