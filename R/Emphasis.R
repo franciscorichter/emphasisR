@@ -20,18 +20,10 @@ lambda.gddx <- function(pars,n,GLM=FALSE){
 
 
 
-lambda.pd_t <- function(w_time,pars,pd,n,wt){
-  lambda = max(0,pars[1]+pars[2]*(pd - n*(wt-w_time)))
-  return(lambda)
-}
-
 lambda.dpdx_t <- function(w_time,pars,pd,n,wt){
   lambda = pmax(pars[1]*((pd - n*(wt-w_time)+1)^(-pars[3])),0)
   return(lambda)
 }
-
-
-
 
 lambda.epd_t <- function(w_time,pars,pd,n,wt){
   lambda = exp(pars[1]+pars[2]*(pd - n*(wt-w_time)))
@@ -94,23 +86,6 @@ df2tree <- function(df,pars,model="dd",initspec=1){
 ###  simulation of extinct species
 
 ####
-
-mcem_step <- function(brts,theta_0,MC_ss=10,maxnumspec=NULL,model="dd",selectBestTrees=FALSE,bestTrees=NULL,no_cores,method="emphasis",p=0.5,parallel=TRUE){
-  time = proc.time()
-  st = E_step(brts = brts,pars = theta_0,nsim = MC_ss,model = model,method = method,no_cores = no_cores,maxnumspec = maxnumspec,p=p,parallel=parallel)
-  E_time = get.time(time)
-  
-  time = proc.time()
-  M = M_step(S = sub_st,init_par = theta_0,model = model)
-  M_time = get.time(time)
-  
-  pars = M$po$par
-  hessian_inverse = try(diag(solve(M$hessian)))
-  fhat = st$fhat
-  se = st$fhat.se
-  if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
-  return(list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=loglik.proportion,hessian_inverse=hessian_inverse,E_time=E_time,M_time=M_time))
-}
 
 
 ####### Monte Carlo E step
@@ -518,85 +493,7 @@ log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
   return(logg)
 }
 
-###############################################################
-# Uniform data augmentation importance sampler (Bart version) #
-###############################################################
 
-lprobto <- function(to,p=0.5){
-  posspec = c(0,cumsum(to==1))<(length(to)/2)
-  posext = !(c(0,cumsum(to==1))==c(0,cumsum(to==0)))
-  possibletotal = posspec & posext
-  to_possible = to[possibletotal]
-  logprob = sum(to_possible==1)*log(p)+sum(to_possible==0)*log(1-p)
-  return(logprob)
-}
-
-sampletopology <- function(S,p=0.5){
-  to = NULL
-  if(S>0){
-    for(i in 1:(2*S)){
-      if(sum(to==1)==sum(to==0)){
-        prob = 1
-      }
-      if(sum(to==1)==S){
-        prob = 0
-      }
-      to = c(to,rbinom(n=1,size=1,prob=prob))
-      prob = p
-    }
-  }else{
-    to = NULL
-  }
-  return(to)
-}
-
-sample_dim_prob <- function(d,max){
-  factorial(2*d)/sum(factorial(seq(from = 0,to = 2*max,by=2)))
-}
-
-sample.uniform <- function(brts,maxnumspec,single_dimension=NULL){
-  if(is.null(single_dimension)){
-    probs = sample_dim_prob(0:maxnumspec,maxnumspec)
-    S = sample(0:maxnumspec,1)
-  }else{
-    S = single_dimension
-  }
-  mbts.events = emphasis:::sim.branchingtimes.and.events(S=S ,ct = max(brts),p=0.5)
-  df = data.frame(brts=c(brts,mbts.events$brts),to=c(rep(2,length(brts)),mbts.events$to))
-  df = df[order(df$brts),]
-  return(df)
-}
-
-sim.branchingtimes.and.events <- function(S=S,ct,p){
-  brts = sort(runif(2*S,min=0,max=ct))
-  to = sampletopology(S,p = p)
-  tree = list(brts=brts,to=to)
-  return(tree)
-}
-  
-log.factor.samp.prob <- function(to){
-  top = head(to,-1)
-  number.observed = c(1,1+cumsum(top==2))
-  number.missing = c(0,cumsum(top==1)-cumsum(top==0))
-  factor = -sum(log((2*number.observed+number.missing)[to==1]))-sum(log(number.missing[to==0]))
-  return(factor)
-}
-
-log.sampling.prob.uniform <- function(df,maxnumspec,initspec=1,p=0.5){
-  ct = max(df$brts)
-  to = top = df$to
-  tom = top[top!=2]
-  to[to==2] = 1
-  num.miss = 2*sum((to==0))
-  loggprob <- -log((maxnumspec+1))+lgamma(num.miss+1)-num.miss*log(ct)+lprobto(tom,p = p)+log.factor.samp.prob(top) 
-  return(loggprob)
-}
-
-log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  n = n[-length(n)]
-  loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+lprobto(to,p = p)-sum(log(conf$N-conf$P))
-}
 
 ####  
 

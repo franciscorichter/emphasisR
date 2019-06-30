@@ -17,4 +17,5 @@ Depends:
     parallel,
     mgcv,
     LambertW,
-    shiny
+    shiny,
+    pracma
