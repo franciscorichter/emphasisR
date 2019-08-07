@@ -28,7 +28,7 @@ ui <- fluidPage(
                              h3("Controls"),
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),
-                             #     actionButton("resetbutt","Reset"),
+                             #actionButton("resetbutt","Reset"),
                              
                              
                              h3("Data"),  
@@ -47,7 +47,7 @@ ui <- fluidPage(
                              ),
                             # uiOutput("open_end"),
                              textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1"),
-                          #   actionButton("goTree","Load Tree"),
+                          #  actionButton("goTree","Load Tree"),
                              h3("Initial parameters"),
                              numericInput("par1", "Initial lambda_0:", 2),
                              numericInput("par2", "Initial lambda_1:", -0.3),
@@ -70,19 +70,16 @@ ui <- fluidPage(
                              numericInput("maxspec", "Maximum number of missing species:", 30),
                              checkboxInput("save", "Save Current MCEM state", FALSE),
                              textInput("file", "Directory where you want to save:", "~/Google Drive/scripts for jobs and data/Experiments/MCEM/MCEM.RData"),
-                             
                              h3("Options"),
-                   #          checkboxInput("ddd", "Compare with DDD", FALSE),
+                   #         checkboxInput("ddd", "Compare with DDD", FALSE),
                              conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
-                            # checkboxInput("log", "show estimated lkelihood on log scale", FALSE),
+                            #checkboxInput("log", "show estimated lkelihood on log scale", FALSE),
                              checkboxInput("log_w", "show weights on log scale", FALSE),
                              numericInput("charts", "See charts from iteration:", 1),
                              checkboxInput("parallel", "Parallel", TRUE),
                              numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2)#,
                 ),
-                
                 mainPanel(
-                  
                   tabsetPanel(type = "tabs",
                               
                               tabPanel("Help",
@@ -246,7 +243,7 @@ server <- shinyServer(function(input,output,session) {
         hessian_inverse = try(diag(solve(M$po$hessian)))
         fhat = st$fhat
         se = st$fhat.se
-        if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
+       # if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
         
         mcem = list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=M$loglik_proportion,effective_sample_size=M$effective_sample_size,hessian_inverse=hessian_inverse,E_time=E_time,M_time=M_time)
 

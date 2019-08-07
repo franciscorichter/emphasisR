@@ -1,5 +1,5 @@
-library(shiny)
-library(ggplot2)
+library(emphasis)
+library(xtable)
 rm(list = ls())
 
 
@@ -21,25 +21,28 @@ ui <- fluidPage(
       ),
       
       # Input: Selector for choosing dataset ----
-      selectInput(inputId = "par",
-                  label = "Choose plot parameter:",
-                  choices = c("par1", "par2", "par3","par1VSpar3","eff.sizeVSpar1","oneline","lambdaHist")),
-      
       uiOutput('columns1'),
       uiOutput('columns2'),
       
       # Input: Numeric entry for number of obs to view ----
       numericInput(inputId = "obs",
-                   label = "Number of observations to view:",
-                   value = 10),
+                   label = "Number of plot observations:",
+                   value = 1),
+      
+      selectInput(inputId = "typePlot",
+                  label = "Type of plot:",
+                  choices = c("Path","Points")),
       
       numericInput(inputId = "burning",
                    label = "Number of observations to burn:",
-                   value = 10),
+                   value = 1),
       
       numericInput(inputId = "filter",
-                   label = "Filter by size:",
-                   value = 0),
+                   label = "Set maximum number of iterations to consider for all data sets:",
+                   value = 2000),
+      
+      checkboxInput("logY",
+                    label="Log scale on Y axis"),
       
       selectInput(inputId = "rep",
                   label = "Choose plot replicant:",
@@ -54,15 +57,10 @@ ui <- fluidPage(
       plotOutput("parameter_estimation_general"),
       
       # Output: Verbatim text for data summary ----
-      verbatimTextOutput("summary")#,
-      #verbatimTextOutput("summary2"),
-     # verbatimTextOutput("In")
       
-      # Output: HTML table with requested number of observations ----
-      #tableOutput("view")
-      #plotOutput("sample_size"),
-      #plotOutput("lambda2"),
-      #plotOutput("logfhat")
+      tableOutput("view"),
+      verbatimTextOutput("summary"),
+      verbatimTextOutput("code")
       
     )
   )
@@ -70,16 +68,7 @@ ui <- fluidPage(
 
 # Define server logic to summarize and view selected dataset ----
 server <- function(input, output) {
-  
-  # Return the requested dataset ----
-  # By declaring datasetInput as a reactive expression we ensure
-  # that:
-  #
-  # 1. It is only called when the inputs it depends on changes
-  # 2. The computation and result are shared by all the callers,
-  #    i.e. it only executes a single time
  
-  
   DF <- reactive({
     inFile <- input$file1
     DF_temp = NULL
@@ -96,6 +85,7 @@ server <- function(input, output) {
       DF_temp = rbind(DF_temp,DF)
     }
     DF_temp$rep = as.character(DF_temp$rep)
+    save(DF_temp,file="palPaper.RData")
     return(DF_temp)
   })
   
@@ -117,105 +107,66 @@ server <- function(input, output) {
                 choices=names(DF()))
   })
   
-  
-  
-  # Create caption ----
-  # The output$caption is computed based on a reactive expression
-  # that returns input$caption. When the user changes the
-  # "caption" field:
-  #
-  # 1. This function is automatically called to recompute the output
-  # 2. New caption is pushed back to the browser for re-display
-  #
-  # Note that because the data-oriented reactive expressions
-  # below don't depend on input$caption, those expressions are
-  # NOT called when input$caption changes
   output$caption <- renderText({
     input$caption
   })
-  
-  # Generate a summary of the dataset ----
-  # The output$summary depends on the datasetInput reactive
-  # expression, so will be re-executed whenever datasetInput is
-  # invalidated, i.e. whenever the input$dataset changes
+
   output$summary <- renderPrint({
     df = DF()
-    df = df[input$burning:nrow(df),]
+    df = df[input$burning:input$filter,]
     summary(df)
   })
   
-  output$summary2 <- renderPrint({
+  data_to_table <- function(df,replicant,init_plot=input$burning,end_point=input$filter){
+    df = df[df$rep==replicant,]
+    df = df[init_plot:end_point,]
+    gampar1 = gam(par1 ~ s(iteration), data=df)
+    standard_error_par1 = sqrt(1/df$h1+gampar1$sig2/nrow(df))
+    gampar2 = gam(par2 ~ s(iteration), data=df)
+    standard_error_par2 = sqrt(1/df$h2+gampar2$sig2/nrow(df))
+    gampar3 = gam(par3 ~ s(iteration), data=df)
+    standard_error_par3 = sqrt(1/df$h3+gampar3$sig2/nrow(df))
+    summ = data.frame(MSS = mean(df$efective_sample_size),replicant=replicant,par1=mean(df$par1),SD1=mean(standard_error_par1),par2=mean(df$par2),SD2=mean(standard_error_par2),par3=mean(df$par3),SD3=mean(standard_error_par3))
+    return(summ)
+  }
+  
+  output$code <- renderPrint({
+    ta=NULL
     df = DF()
-    df = df[input$burning:nrow(df),]
-    df = df[df$efective_sample_size > input$filter,]
-    summary(log(df$fhat))
+    for(i in unique(df$rep)){
+      ta = rbind(ta,data_to_table(df=df,replicant=i,init_plot=input$burning)) 
+    }
+    xtable(ta,digits=3)
   })
   
   output$In <- renderPrint({
     In()
   })
   
-  # Show the first "n" observations ----
-  # The output$view depends on both the databaseInput reactive
-  # expression and input$obs, so it will be re-executed whenever
-  # input$dataset or input$obs is changed
   output$view <- renderTable({
-    head(datasetInput(), n = input$obs)
-  })
-  
-  output$parameter_estimation <- renderPlot({
+    ta=NULL
     df = DF()
-    df = df[input$obs:nrow(df),]
-    df = df[df$efective_sample_size >= input$filter,]
-    if(input$par == "par1"){
-      par_est = mean(df$par1[input$burning:nrow(df)])
-      plot_par_est = ggplot(df)+geom_line(aes(x=iteration,y=par1, colour=rep))+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
+    for(i in unique(df$rep)){
+      ta = rbind(ta,data_to_table(df=df,replicant=i,init_plot=input$burning)) 
     }
-    if(input$par == "par2"){
-      par_est = mean(df$par2[input$burning:nrow(df)])
-      plot_par_est = ggplot(df)+geom_line(aes(x=iteration,y=par2))+ggtitle("beta Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
-    }
-    if(input$par == "par3"){
-      par_est = mean(df$par3[input$burning:nrow(df)])
-      plot_par_est = ggplot(df)+geom_line(aes(x=iteration,y=par3))+ggtitle("mu Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
-    }
-    if(input$par == "par1VSpar3"){
-      plot_par_est = ggplot(df)+geom_path(aes(x=par1,y=par3,colour=rep))+ggtitle("lambda vs mu Estimation")#+geom_hline(yintercept = par_est,colour="red")
-    }
-    if(input$par == "eff.sizeVSpar1"){
-      plot_par_est = ggplot(df)+geom_path(aes(x=efective_sample_size,y=par1,colour=rep))+ggtitle("lambda vs mu Estimation")#+geom_hline(yintercept = par_est,colour="red")
-    }
-    if(input$par == "oneline"){
-      df2 = df[order(df$efective_sample_size),]
-      df2$iteration = 1:nrow(df2)
-      plot_par_est = ggplot(df2) + geom_line(aes(x=iteration,y=par1))
-    }
-    if(input$par == "lambdaHist"){
-      plot_par_est = ggplot(df)+geom_histogram(aes(x=par1))
-    }
-    if(input$par == "samplesize"){
-      plot_par_est = ggplot(df)+geom_line(aes(x=iteration,y=efective_sample_size))+ggtitle("Effective sample size")
-    }
-    
-    
-    
-    if("mc.samplesize" %in% names(df)){
-      change.ss = which(diff(df$mc.samplesize)>0)
-    }else{
-      change.ss = NULL
-    }
-    if(sum(change.ss)>0){
-      plot_par_est = plot_par_est + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
-    }
-    plot_par_est
-  })
+    ta
+  },
+   digits = 6)
+  
+ 
   
   output$parameter_estimation_general <- renderPlot({
     df = DF()
     df = df[input$obs:nrow(df),]
-    df = df[df$efective_sample_size >= input$filter,]
-   # df2 = data.frame()
-    plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes_string(x=input$par1,y=input$par2))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
+    if(input$typePlot=="Path"){
+      plot_par_est = ggplot(df,aes(colour=rep))+geom_path(aes_string(x=input$par1,y=input$par2))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
+    }
+    if(input$typePlot=="Points"){
+      plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes_string(x=input$par1,y=input$par2,alpha=(1:nrow(df))/(2*nrow(df))))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
+    }
+    if(input$logY){
+      plot_par_est = plot_par_est + scale_y_log10() 
+    }
     plot_par_est
   })
   
@@ -231,13 +182,6 @@ server <- function(input, output) {
     plot.lambda
   })
   
-  output$lambda2 <- renderPlot({
-    df = DF()
-    lambda.est = mean(df$par1[input$burning:nrow(df)])
-    df = df[input$obs:nrow(df),]
-    ggplot(df)+geom_histogram(aes(x=par1))
-
-  })
   
   output$logfhat <- renderPlot({
     df = DF()
@@ -245,33 +189,6 @@ server <- function(input, output) {
     df = df[input$obs:nrow(df),]
     ggplot(df)+geom_histogram(aes(x=log(fhat)))
     
-  })
-  
-  output$mu <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
-      mu.est = rv$MCEM$par2[length(rv$MCEM$par2)]
-      MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
-      plot.mu = ggplot(MCEM) + geom_line(aes(iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est)) + ylab(expression(lambda1)) + xlab("EM iteration")
-      if(input$CI & nrow(rv$MCEM)>12) plot.mu = plot.mu + geom_errorbar(aes(x=iteration, y=par2, ymin = par2-1.96*sdm, ymax = par2 + 1.96*sdm), colour='darkgreen') 
-      change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
-      if(sum(change.ss)>0){
-        plot.mu = plot.mu + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
-      }
-      plot.mu + theme_emphasis
-    }
-  })
-  
-  output$K <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
-      K.est = mean(rv$MCEM$par3[input$charts:length(rv$MCEM$par3)])
-      MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
-      K.plot = ggplot(MCEM) + geom_line(aes(iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est)) + ylab(expression(mu)) + xlab("EM iteration")
-      change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
-      if(sum(change.ss)>0){
-        K.plot = K.plot + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
-      }
-      K.plot  + theme_emphasis 
-    }
   })
   
   output$fhat <- renderPlot({

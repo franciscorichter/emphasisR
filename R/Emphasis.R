@@ -18,8 +18,6 @@ lambda.gddx <- function(pars,n,GLM=FALSE){
   return(lambdas)
 }
 
-
-
 lambda.dpdx_t <- function(w_time,pars,pd,n,wt){
   lambda = pmax(pars[1]*((pd - n*(wt-w_time)+1)^(-pars[3])),0)
   return(lambda)
@@ -29,7 +27,6 @@ lambda.epd_t <- function(w_time,pars,pd,n,wt){
   lambda = exp(pars[1]+pars[2]*(pd - n*(wt-w_time)))
   return(lambda)
 }
-
 
 Q_approx = function(pars,st,model="dd",initspec=1){
   get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
@@ -42,7 +39,6 @@ Q_approx = function(pars,st,model="dd",initspec=1){
 Q_SAEM = function(sample,previous_Q,gamma){
   
 }
-
 
 M_step <-function(st,init_par = NULL,model="dd",proportion_of_subset=1){
   time0 = proc.time()
