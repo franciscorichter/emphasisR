@@ -48,7 +48,6 @@ loglik.tree.dd <- function(pars,tree,model,initspec=1){
   sigma = (lambda + mu)*n
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   log.lik = (sum(-sigma*wt)+sum(log(rho)))
- # if(min(pars)<0){nl = Inf}
   return(log.lik)
 }
 
@@ -177,7 +176,47 @@ loglik.tree.gpdx <- function(pars,tree,model,initspec=1){
   return(log.lik)
 }
 
+speciation_rate <- function(pars,N,model){
+  if(model == "dd"){  # diversity-dependence model
+    lambda = lambda.dd(pars,N)
+  }
+  if(model == "dd1.3"){
+    lambda = lambda.dd.1.3(pars,N)
+  }
+  if(model=="cr"){
+    lambda = lambda.cr(pars,N)
+  }
+  return(lambda)
+}
 
+lambda.dd <- function(pars,n,GLM=TRUE){
+  if(GLM){
+    lambdas =  pmax(0, pars[1] + pars[2]*n)
+  }else{
+    lambdas = pmax(0, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
+  }
+  return(lambdas)
+}
+
+lambda.edd <- function(pars,n,GLM=FALSE){
+  lambdas =  exp(pars[1] + pars[2]*n)
+  return(lambdas)
+}
+
+lambda.gddx <- function(pars,n,GLM=FALSE){
+  lambdas =  pmax(pars[1]*(n^(-pars[3])),0)
+  return(lambdas)
+}
+
+lambda.dpdx_t <- function(w_time,pars,pd,n,wt){
+  lambda = pmax(pars[1]*((pd - n*(wt-w_time)+1)^(-pars[3])),0)
+  return(lambda)
+}
+
+lambda.epd_t <- function(w_time,pars,pd,n,wt){
+  lambda = exp(pars[1]+pars[2]*(pd - n*(wt-w_time)))
+  return(lambda)
+}
 
 ###############################################################
 # Uniform data augmentation importance sampler (Bart version) #
@@ -218,7 +257,7 @@ sample_dim_prob <- function(d,max){
 sample.uniform <- function(brts,maxnumspec,single_dimension=NULL){
   if(is.null(single_dimension)){
     probs = sample_dim_prob(0:maxnumspec,maxnumspec)
-    S = sample(1:maxnumspec,1)
+    S = sample(0:maxnumspec,1)
   }else{
     S = single_dimension
   }
@@ -249,7 +288,7 @@ log.sampling.prob.uniform <- function(df,maxnumspec,initspec=1,p=0.5){
   tom = top[top!=2]
   to[to==2] = 1
   num.miss = 2*sum((to==0))
-  loggprob <- -log((maxnumspec))+lgamma(num.miss+1)-num.miss*log(ct)+lprobto(tom,p = p)+log.factor.samp.prob(top) 
+  loggprob <- -log((maxnumspec+1))+lgamma(num.miss+1)-num.miss*log(ct)+lprobto(tom,p = p)+log.factor.samp.prob(top) 
   return(loggprob)
 }
 
@@ -257,4 +296,192 @@ log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   n = n[-length(n)]
   loggprob <- -log((maxnumspec+1))+lgamma(length(to)+1)-length(to)*log(ct)+lprobto(to,p = p)-sum(log(conf$N-conf$P))
+}
+
+
+#################################
+## emphasis sampler
+rnhpp <- function(s,mu,r){  # random non-homogenous exponential (NHPP)
+  ex = rexp(1)
+  rv = IntInv(r=r,mu=mu,s=s,u=ex)
+  if(is.na(rv)){
+    rv = Inf
+  }
+  return(rv)
+}
+
+IntInv <- function(r,mu,s,u){
+  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
+  return(t)
+}
+
+time_limit_dd <- function(obs_brts,missing_speciations,missing_extinctions,max_num_spec){
+ df = data.frame(bt = c(obs_brts,missing_speciations,missing_extinctions),to = c(rep(1,length(obs_brts)+length(missing_speciations)),rep(-1,length(missing_extinctions)))) 
+ df = df[order(df$bt),]
+ N = c(1,cumsum(df$to))
+ b = tail(df$bt[N <= max_num_spec],1)
+ return(b)
+}
+
+augment.tree <- function(observed.branching.times,pars,model='dd',initspec=1,seed=0){
+  if(seed>0) set.seed(seed)
+  #wt = - diff(c(observed.branching.times,0))
+  wt = diff(c(0,sort(observed.branching.times)))
+  observed.branching.times = cumsum(wt)
+  mu = pars[3]
+  kprima = -pars[1]/pars[2]
+  #max_num_spec = floor(kprima)
+  
+  missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
+  
+  #number of species
+  N = initspec
+  cbt = 0 
+  
+  while(cbt < sum(wt)){
+    lambda = speciation_rate(pars,N,model)
+    s = N*lambda
+    #b = time_limit_dd(obs_brts=observed.branching.times,missing_speciations=missing_branches$speciation_time,missing_extinctions=missing_branches$extinction_time,max_num_spec=max_num_spec)
+    b = sum(wt)-cbt
+    next_speciation_time = rnhpp(s=s,mu=mu,r=b)
+    next_bt = min(observed.branching.times[observed.branching.times>cbt],missing_branches$speciation_time[missing_branches$speciation_time>cbt],missing_branches$extinction_time[missing_branches$extinction_time>cbt])
+    if((cbt+next_speciation_time) < next_bt){ # add new species
+      extinction_time = (cbt+next_speciation_time) + truncdist::rtrunc(1,"exp",a = 0, b = (b-(next_speciation_time)),rate=mu)
+      missing_branches = rbind(missing_branches,data.frame(speciation_time=cbt+next_speciation_time,extinction_time=extinction_time))
+      cbt = cbt+next_speciation_time
+      N = N+1
+    }else{
+      cbt = min(observed.branching.times[observed.branching.times>cbt],missing_branches$speciation_time[missing_branches$speciation_time>cbt],missing_branches$extinction_time[missing_branches$extinction_time>cbt],sum(wt))
+      if(ifelse(length(missing_branches$extinction_time[missing_branches$extinction_time>cbt])==0,FALSE,min(missing_branches$extinction_time[missing_branches$extinction_time>cbt])==cbt)){
+        N = N-1
+      }else{
+        N = N+1
+      }
+    }
+  }
+  df = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),bte = c(missing_branches$extinction_time, rep(Inf,length(wt)+nrow(missing_branches))),to = c(rep(1,nrow(missing_branches)),rep(2,length(wt)),rep(0,nrow(missing_branches))))
+  df = df[order(df$brts),]
+  df$t.ext = df$bte-df$brts
+  df$r = max(df$brts)-c(0,df$brts[-nrow(df)])
+  return(df)
+}
+
+log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
+  tree = emphasis::df2tree(df=tree,pars,model=model,initspec=initspec)
+  wt=tree$wt
+  to=tree$to
+  n=tree$n
+  s=tree$s
+  r=tree$r
+  t_ext=tree$t_ext
+  top_aug=head(tree$treeaug,-1)
+  mu = pars[3]
+  if(mu!=0){
+    sa = s[is.finite(t_ext)]
+    text = t_ext[is.finite(t_ext)]
+    logg = sum(-s * (wt-(exp(-r*mu)/mu) *  (exp(wt*mu)-1)  ))+sum(is.finite(t_ext))*log(mu)-sum(mu*text)+sum(log(sa))+log.factor.samp.prob_emph(top_aug)
+  }else{
+    logg = 0
+  }
+  return(logg)
+}
+
+log.factor.samp.prob_emph <- function(to){
+  top = head(to,-1)
+  number.observed = c(1,1+cumsum(top==2))
+  number.missing = c(0,cumsum(top==1)-cumsum(top==0))
+  factor = -sum(log((2*number.observed+number.missing)[to==1]))
+  return(factor)
+}
+
+log_sampling_prob_emphasis(){
+  b=1
+  df = st2$trees[[8]]
+  # at everyone branching point 
+  to = top = head(df$to,-1)
+  to[to==2] = 1
+  initspec=1
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  lambda = lambda.dd(pars,n)
+  brts_i = df$brts
+  brts_im1 = c(0,df$brts[-nrow(df)])
+  # at missing speciation times
+  missing_speciations = (df$to == 1)
+  nb = n[missing_speciations]
+  No = c(1,1+cumsum(top==2))[missing_speciations]
+  Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
+  lambda_b = lambda[missing_speciations]
+  text = df$t.ext[missing_speciations]
+
+  logg = sum(-n * lambda * (brts_i-brts_im1-(exp(-b*mu)/mu) *  (exp(brts_i*mu)-exp(brts_im1*mu))  ))+sum(log(nb)+log(mu)-sum(mu*text)+sum(log(lambda_b))-log(2*No+Ne))
+
+  logg
+}
+
+
+##################################
+
+mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,initspec=1,single_dimension=NULL,limit_on_species=NULL){
+  time=proc.time()
+  if(seed>0) set.seed(seed)
+  if(brts[1] != max(brts)){
+    stop("please add brts on descending order")
+  }
+  wt = -diff(c(brts,0))
+  brts = cumsum(wt)
+  if(is.null(pars3)) pars3=pars
+  #### parallel set-up
+  cl <- makeCluster(no_cores)
+  registerDoParallel(cl)
+  ##
+  if(method=="emphasis"){
+    trees <- foreach(i = 1:nsim, combine = list) %dopar% {
+      df = emphasis::augment.tree(brts,pars = pars,model = model)
+      if(!is.null(df)){
+        #something wrong with tree
+        tree = emphasis::df2tree(df,pars,model=model,initspec=1)
+        logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars,model = model,initspec = initspec)
+        logf.joint = -emphasis:::nllik.tree(pars=pars,tree=df,model=model,initspec = 1)
+        dim = nrow(df)
+        num.miss = sum(df$to==0)
+        tree.info = list(logf.joint=logf.joint,logg.samp=logg.samp,dim=dim,tree=df)
+      }else{
+        tree.info = list(logf.joint=0,logg.samp=0,tree=0,dim=0,num.miss=0)
+      }
+      return(tree.info)
+    }
+  }
+  if(method=="uniform"){
+    trees <- foreach(i = 1:nsim, combine = list) %dopar% {
+      df = emphasis:::sample.uniform(brts,maxnumspec=maxnumspec,single_dimension = single_dimension)
+      if(!is.null(single_dimension)) maxnumspec = 0
+      log.samp.unif.prob = emphasis:::log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
+      df$t_exp = rep(Inf,nrow(df)) 
+      missing_speciations = NULL
+      for(j in 1:nrow(df)){
+        if(df$to[j]==1){
+          missing_speciations = c(missing_speciations,df$brts[j])
+        }
+        if(df$to[j]==0){
+          sample_ext_time_index = sample(length(missing_speciations),1)
+          df$t_exp[j] = missing_speciations[sample_ext_time_index]
+          missing_speciations = missing_speciations[-sample_ext_time_index]
+        }
+      }
+      ##################
+      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=df,model=model,initspec = 1)
+      return(list(logf.joint=logf.joint,logg.samp=log.samp.unif.prob,dim=nrow(df),tree=df))
+    }
+  }
+  stopCluster(cl)
+  logf = sapply(trees,function(list) list$logf.joint)
+  logg = sapply(trees,function(list) list$logg.samp)
+  dim = sapply(trees,function(list) list$dim)
+  logweights = logf-logg
+  weights = exp(logweights)
+  fhat = mean(weights)
+  trees = lapply(trees, function(list) list$tree)
+  time = get.time(time)
+  E = list(weights=weights,logweights=logweights,fhat=fhat,logf=logf,logg=logg,trees=trees,dim=dim,Etime=time)
+  return(E)
 }

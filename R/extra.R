@@ -231,8 +231,6 @@ get.time <- function(time,mode='sec'){
   return(ti)
 }
 
-
-
 W <- function (z, branch = 0)
 {
   stopifnot(length(branch) == 1, is.numeric(z))
@@ -270,7 +268,6 @@ W <- function (z, branch = 0)
     return(W.z)
   }
 }
-
 
 get.topologies <- function(M){
   if(M == 0)

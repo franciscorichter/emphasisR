@@ -1,32 +1,5 @@
 
-lambda.dd <- function(pars,n,GLM=TRUE){
-  if(GLM){
-    lambdas =  pmax(0, pars[1] + pars[2]*n)
-  }else{
-    lambdas = pmax(0, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
-  }
-  return(lambdas)
-}
 
-lambda.edd <- function(pars,n,GLM=FALSE){
-  lambdas =  exp(pars[1] + pars[2]*n)
-  return(lambdas)
-}
-
-lambda.gddx <- function(pars,n,GLM=FALSE){
-  lambdas =  pmax(pars[1]*(n^(-pars[3])),0)
-  return(lambdas)
-}
-
-lambda.dpdx_t <- function(w_time,pars,pd,n,wt){
-  lambda = pmax(pars[1]*((pd - n*(wt-w_time)+1)^(-pars[3])),0)
-  return(lambda)
-}
-
-lambda.epd_t <- function(w_time,pars,pd,n,wt){
-  lambda = exp(pars[1]+pars[2]*(pd - n*(wt-w_time)))
-  return(lambda)
-}
 
 Q_approx = function(pars,st,model="dd",initspec=1){
   get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
@@ -58,6 +31,7 @@ M_step <-function(st,init_par = NULL,model="dd",proportion_of_subset=1){
 
 df2tree <- function(df,pars,model="dd",initspec=1){
   dim = nrow(df)
+  if(is.null(df$brts)) df$brts = df$bt
   wt = diff(c(0,df$brts))
   to = df$to[-dim]
   to[to==2] = 1
@@ -73,7 +47,7 @@ df2tree <- function(df,pars,model="dd",initspec=1){
   }
   r = df$r
   t_ext = df$t.ext
-  return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext,protected=df$protected,treeaug=df$to))
+  return(list(wt=wt,to=to,n=n,s=s,r=r,pars=pars,t_ext=t_ext,treeaug=df$to))
 }
 
 
@@ -101,9 +75,9 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
   registerDoParallel(cl)
   if(method=="emphasis"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      ## check for dendroica_norm with pars3=2,1,30
       df = emphasis::augment.tree(brts,pars = pars3,model = model,limit_on_species=limit_on_species)
       if(!is.null(df)){
+        df$brts = df$bt
         tree = emphasis::df2tree(df,pars3,model=model,initspec=1)
         logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars3,model = model,initspec = initspec)
         logf.joint = -emphasis:::nllik.tree(pars=pars,tree=tree,model=model,initspec = 1)
@@ -113,7 +87,6 @@ mc.Estep_parallel <- function(brts,pars,pars3=NULL,nsim=1000,model="dd",method="
       }else{
         tree.info = list(logf.joint=0,logg.samp=0,tree=0,dim=0,num.miss=0)
       }
-      
       return(tree.info)
     }
   }
@@ -208,7 +181,7 @@ IntInv <- function(r,mu,s,u){
 }
 
 
-augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0,limit_on_species=NULL){
+augment.tree_old <- function(brts,pars,model='dd',initspec=1,seed=0,limit_on_species=NULL){
   if(seed>0) set.seed(seed)
   if(brts[1]==max(brts)){
     wt = -diff(c(brts,0))
@@ -219,8 +192,7 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0,limit_on_species
   ct = sum(wt)
   dim = length(wt)
   num.of.branches = length(brts)+1
-  mu = pars[2]
-  kprima = (pars[1]*pars[3])/(pars[1]-pars[2])
+  kprima = -pars[1]/pars[2]
   bt = NULL
   bte = NULL
   to = NULL
@@ -263,7 +235,7 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0,limit_on_species
       sbte = bte[bte>cbt]
       b = get.max.speciation.bt(sbt = brts[brts>cbt],ebt = sbte,N = N,max.simultaneous.spec = floor(kprima))-cbt
       r = c(r,b)
-      t.spe = rnhe(lambda=s,mu=mu,r=b)
+      t.spe = rnhe(lambda=s,mu=pars[3],r=b)
       t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
       mint = min(t.spe,t_ext)
       if(mint < cwt & !is.null(df)){
@@ -282,7 +254,7 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0,limit_on_species
           # if is protected there is 1/2, save the protected and dash the dead one 
           #if is extincted, both go to extinct.
           cbt = cbt + t.spe
-          text = cbt + truncdist::rtrunc(1,"exp",a = 0, b = (b-t.spe),rate=mu)
+          text = cbt + truncdist::rtrunc(1,"exp",a = 0, b = (b-t.spe),rate=pars[3])
        #   print(paste("saving extinction at: ",text))
           #t_ext_limits = c(t_ext_limits,b)
           bte = c(bte,text)
@@ -335,115 +307,6 @@ augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0,limit_on_species
 ########
 
 
-augment.tree2 <- function(observed.branching.times,pars,model='dd',initspec=1,seed=0){
-  if(seed>0) set.seed(seed)
-  brts = observed.branching.times
-  if(max(brts)==brts[1]){
-    wt = - diff(c(brts,0))
-  }else{
-    wt = diff(c(0,brts))
-  }
-  mu = pars[2]
-  kprima = (pars[1]*pars[3])/(pars[1]-pars[2])
-  
-  # vectors of missing speciation times, extinction times and missing event sequence
-  bt = NULL
-  bte = NULL
-  to = NULL
-  
-  #number of species
-  N = initspec
-  
-  #limits on extinction times
-  r = NULL
-  
-  for(i in 1:length(wt)){
-    cwt = wt[i]
-    cbt = sum(wt[0:(i-1)])
-    key = 0
-    while(key == 0){
-      if(model == "dd"){  # diversity-dependence model
-        lambda = lambda.dd(pars,N)
-      }
-      if(model == "dd1.3"){
-        lambda = lambda.dd.1.3(pars,N)
-      }
-      if(model=="cr"){
-        lambda = lambda.cr(pars,N)
-      }
-      s = N*lambda
-      sbte = bte[bte>cbt]
-      b = get.max.speciation.bt(sbt = brts[brts>cbt],ebt = sbte,N = N,max.simultaneous.spec = floor(kprima))-cbt
-      r = c(r,b)
-      t.spe = rnhe(lambda=s,mu=mu,r=b)
-      t_ext = ifelse(length(sbte)>0,min(sbte),Inf) - cbt
-      mint = min(t.spe,t_ext)
-      if(mint < cwt){
-        if(mint == t.spe){#speciation
-          bt = c(bt,cbt+t.spe)
-          cbt = cbt + t.spe
-          cwt = cwt - t.spe
-          text = cbt + truncdist::rtrunc(1,"exp",a = 0, b = (b-t.spe),rate=mu)
-          bte = c(bte,text)
-          to = c(to,1)
-          N = N + 1
-        }else{#extinction
-          bt = c(bt,cbt+t_ext)
-          bte = c(bte,Inf)
-          to = c(to,0)
-          cwt = cwt - t_ext
-          cbt = cbt + t_ext
-          N = N - 1
-        }
-      }else{
-        key = 1
-      }
-    }
-    N = N+1
-    # print(paste('numberof species: ', N))
-  }
-  df = data.frame(bt = c(bt,brts),bte = c(bte, rep(Inf,length(wt))),to = c(to,rep(2,length(wt))))
-  df = df[order(df$bt),]
-  df$t.ext = df$bte-df$bt
-  df = df[-nrow(df),]
-  df = rbind(df,data.frame(bt=sum(wt),bte=Inf,to=2,t.ext=Inf))
-  df$r = r
-  return(df)
-}
-
-log_sampling_prob_emphasis2 <- function(tree,pars,model=NULL,initspec){
-  if(is.data.frame(tree)){
-    tree = emphasis::df2tree(df=tree,pars,model=model,initspec=initspec)
-    wt=tree$wt
-    to=tree$to
-    n=tree$n
-    s=tree$s
-    r=tree$r
-    t_ext=tree$t_ext
-    top_aug=head(tree$treeaug,-1)
-    pars
-  }else{
-    list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext","treeaug")), .GlobalEnv)
-    top_aug=treeaug
-  }
-  mu = pars[2]
-  if(mu!=0){
-    sa = s[is.finite(t_ext)]
-    text = t_ext[is.finite(t_ext)]
-    logg = sum(-s * (wt-(exp(-r*mu)/mu) *  (exp(wt*mu)-1)  ))+length(sa)*log(mu)-sum(mu*text)+sum(log(sa))+log.factor.samp.prob_emph(top_aug)#-sum(tree$protected)*log(2)#-(sum(tree$augtree==1)-1)*log(2)#-sum(tree$protected)*log(2)#-(sum(tree$augtree==2)-1)*log(2)
-  }else{
-    logg = 0
-  }
-  return(logg)
-}
-
-log.factor.samp.prob_emph <- function(to){
-  top = head(to,-1)
-  number.observed = c(1,1+cumsum(top==2))
-  number.missing = c(0,cumsum(top==1)-cumsum(top==0))
-  factor = -sum(log((2*number.observed+number.missing)[to==1]))#-sum(log(number.missing[to==0]))
-  return(factor)
-}
 
 
 #maximun extinction branching time to create possible trees
@@ -462,7 +325,8 @@ get.max.speciation.bt <- function(sbt,ebt,N,max.simultaneous.spec){
 }
 
 
-##work in progre
+###
+
 log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
   if(is.data.frame(tree)){
     tree = emphasis::df2tree(df=tree,pars,model=model,initspec=initspec)
@@ -477,7 +341,7 @@ log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
   }else{
     list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
   }
-  mu = pars[2]
+  mu = pars[3]
   if(mu!=0){
     la = s/n
     la = la[is.finite(t_ext)]
@@ -489,21 +353,5 @@ log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
   return(logg)
 }
 
-
-
 ####  
 
-proper_weighting <- function(E){
-  ta = table(E$dim)
-  dims = as.numeric(names(ta))
-  sizes = as.numeric(ta)
-  weights = NULL
-  for(i in 1:length(dims)){
-    weights[i] = sum(E$weights[E$dim == dims[i]])
-  }
-  W = weights
-  w_tilde = weights/length(E$trees)
-  Z = weights/sizes
-  #fhat2[j] = mean(W)
-  return(list(W=W,w_tilde=w_tilde,Z=Z))
-}

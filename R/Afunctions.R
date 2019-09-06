@@ -34,6 +34,21 @@ Q.approx2 = function(pars, st){
   return(L)
 }
 
+proper_weighting <- function(E){
+  ta = table(E$dim)
+  dims = as.numeric(names(ta))
+  sizes = as.numeric(ta)
+  weights = NULL
+  for(i in 1:length(dims)){
+    weights[i] = sum(E$weights[E$dim == dims[i]])
+  }
+  W = weights
+  w_tilde = weights/length(E$trees)
+  Z = weights/sizes
+  #fhat2[j] = mean(W)
+  return(list(W=W,w_tilde=w_tilde,Z=Z))
+}
+
 
 sim.sct2 <- function(brts,pars,m=10,oc=0){
   no_cores <- detectCores() - oc

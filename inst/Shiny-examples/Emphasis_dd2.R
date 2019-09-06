@@ -1,3 +1,5 @@
+library(emphasis)
+
 if (file.exists("first.R")) file.remove("first.R")
 
 n_cores = detectCores()
@@ -54,7 +56,11 @@ ui <- fluidPage(
                              numericInput("par3", "Initial mu_0:", 0.05),
                              
                              h3("Settings"),
-                             selectInput("method", "Choose Data augmentation sampler:",
+                          selectInput("method", "Choose EM method:",
+                                                        list("MCEM" = "MCEM",
+                                                             "MHMC-EM" = "MHMC-EM",
+                                                             "SAEM" = "SAEM")),
+                             selectInput("importance_sampler", "Choose Data augmentation sampler:",
                                          list("uniform" = "uniform",
                                               "emphasis" = "emphasis")),
                              selectInput("model", "Choose diversification model:",
@@ -231,7 +237,7 @@ server <- shinyServer(function(input,output,session) {
         
         time = proc.time()
         setProgress(value=0,detail = "Performing E step")
-        st = E_step(brts = input_values$brts,pars = pars,nsim = input$ss,model = input$model,method = input$method,no_cores = input$cores,maxnumspec = input$maxspec,parallel=TRUE)
+        st = E_step(brts = input_values$brts,pars = pars,nsim = input$ss,model = input$model,method = input$importance_sampler,no_cores = input$cores,maxnumspec = input$maxspec,parallel=TRUE)
         E_time = get.time(time)
         
         time = proc.time()
