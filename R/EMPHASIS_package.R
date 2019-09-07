@@ -394,13 +394,10 @@ log.factor.samp.prob_emph <- function(to){
   return(factor)
 }
 
-log_sampling_prob_emphasis(){
-  b=1
-  df = st2$trees[[8]]
-  # at everyone branching point 
+log_sampling_prob_nh <- function(df,pars,model="dd",initspec=1){
+  b = max(df$brts)
   to = top = head(df$to,-1)
   to[to==2] = 1
-  initspec=1
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   lambda = lambda.dd(pars,n)
   brts_i = df$brts
@@ -412,10 +409,10 @@ log_sampling_prob_emphasis(){
   Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
   lambda_b = lambda[missing_speciations]
   text = df$t.ext[missing_speciations]
+  mu = pars[3]
+  logg = sum(-n * lambda * (brts_i-brts_im1-(exp(-b*mu)/mu) *  (exp(brts_i*mu)-exp(brts_im1*mu))  ))+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
 
-  logg = sum(-n * lambda * (brts_i-brts_im1-(exp(-b*mu)/mu) *  (exp(brts_i*mu)-exp(brts_im1*mu))  ))+sum(log(nb)+log(mu)-sum(mu*text)+sum(log(lambda_b))-log(2*No+Ne))
-
-  logg
+  return(logg)
 }
 
 
@@ -440,7 +437,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",method="e
       if(!is.null(df)){
         #something wrong with tree
         tree = emphasis::df2tree(df,pars,model=model,initspec=1)
-        logg.samp = emphasis:::log_sampling_prob_emphasis(tree = tree,pars = pars,model = model,initspec = initspec)
+        logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
         logf.joint = -emphasis:::nllik.tree(pars=pars,tree=df,model=model,initspec = 1)
         dim = nrow(df)
         num.miss = sum(df$to==0)

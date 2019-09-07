@@ -326,32 +326,3 @@ get.max.speciation.bt <- function(sbt,ebt,N,max.simultaneous.spec){
 
 
 ###
-
-log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
-  if(is.data.frame(tree)){
-    tree = emphasis::df2tree(df=tree,pars,model=model,initspec=initspec)
-    wt=tree$wt
-    to=tree$to
-    n=tree$n
-    s=tree$s
-    r=tree$r
-    t_ext=tree$t_ext
-    #t_ext_limits=tree$t_ext_limits
-    pars
-  }else{
-    list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
-  }
-  mu = pars[3]
-  if(mu!=0){
-    la = s/n
-    la = la[is.finite(t_ext)]
-    text = t_ext[is.finite(t_ext)]
-    logg = sum(-s * (wt-(exp(-r*mu)/mu) *  (exp(wt*mu)-1)  ))+length(la)*log(mu)-sum(mu*text)+sum(log(la))-sum(tree$protected)*log(2)#-(sum(tree$augtree==1)-1)*log(2)#-sum(tree$protected)*log(2)#-(sum(tree$augtree==2)-1)*log(2)
-  }else{
-    logg = 0
-  }
-  return(logg)
-}
-
-####  
-
