@@ -235,11 +235,10 @@ server <- shinyServer(function(input,output,session) {
 
       withProgress(message = paste("Performing MCEM iteration", rv$em.iteration), value = 0, {
         
-        time = proc.time()
-        setProgress(value=0,detail = "Performing E step")
-        st = E_step(brts = input_values$brts,pars = pars,nsim = input$ss,model = input$model,method = input$importance_sampler,no_cores = input$cores,maxnumspec = input$maxspec,parallel=TRUE)
-        E_time = get.time(time)
         
+        setProgress(value=0,detail = "Performing E step")
+        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$ss,model = input$model,method = input$importance_sampler,no_cores = input$cores,maxnumspec = input$maxspec)
+
         time = proc.time()
         setProgress(value=0.5,detail = "Performing M step")
         M = M_step(st = st,init_par = pars,model = input$model,proportion_of_subset=input$proportion_of_subset)
@@ -251,7 +250,7 @@ server <- shinyServer(function(input,output,session) {
         se = st$fhat.se
        # if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
         
-        mcem = list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=M$loglik_proportion,effective_sample_size=M$effective_sample_size,hessian_inverse=hessian_inverse,E_time=E_time,M_time=M_time)
+        mcem = list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=M$loglik_proportion,effective_sample_size=M$effective_sample_size,hessian_inverse=hessian_inverse,E_time=st$Etime,M_time=M_time)
 
       })
       

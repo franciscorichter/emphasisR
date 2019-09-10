@@ -331,13 +331,10 @@ augment.tree <- function(observed.branching.times,pars,model='dd',initspec=1,see
   mu = pars[3]
   kprima = -pars[1]/pars[2]
   #max_num_spec = floor(kprima)
-  
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
-  
   #number of species
   N = initspec
   cbt = 0 
-  
   while(cbt < sum(wt)){
     lambda = speciation_rate(pars,N,model)
     s = N*lambda
@@ -366,33 +363,43 @@ augment.tree <- function(observed.branching.times,pars,model='dd',initspec=1,see
   return(df)
 }
 
-log_sampling_prob_emphasis <- function(tree,pars,model=NULL,initspec){
-  tree = emphasis::df2tree(df=tree,pars,model=model,initspec=initspec)
-  wt=tree$wt
-  to=tree$to
-  n=tree$n
-  s=tree$s
-  r=tree$r
-  t_ext=tree$t_ext
-  top_aug=head(tree$treeaug,-1)
+nh_tree_augmentation <- function(observed.branching.times,pars,model="dd",initspec = 1){
+  
+  b = max(observed.branching.times)
   mu = pars[3]
-  if(mu!=0){
-    sa = s[is.finite(t_ext)]
-    text = t_ext[is.finite(t_ext)]
-    logg = sum(-s * (wt-(exp(-r*mu)/mu) *  (exp(wt*mu)-1)  ))+sum(is.finite(t_ext))*log(mu)-sum(mu*text)+sum(log(sa))+log.factor.samp.prob_emph(top_aug)
-  }else{
-    logg = 0
+  missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
+  N = initspec # current number of species
+  cbt = 0 # current branching time
+  while(cbt < b){
+    lambda = speciation_rate(pars,N,model)
+    next_speciation_time = cbt+rnhpp(s=N*lambda,mu=mu,r=b-cbt)
+    all_bt = c(observed.branching.times,missing_branches$speciation_time,missing_branches$extinction_time)
+    next_bt = min(all_bt[all_bt>cbt])
+    if(next_speciation_time < next_bt){ # add new species
+      extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
+      missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
+      cbt = next_speciation_time
+      N = N+1
+    }else{
+      cbt = next_bt
+      if(next_bt %in% missing_branches$extinction_time){
+        N = N-1
+      }else{
+        N = N+1
+      }
+    }
   }
-  return(logg)
+  df = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),
+                  bte = c(missing_branches$extinction_time, rep(Inf,length(observed.branching.times)+nrow(missing_branches))),
+                  to = c(rep(1,nrow(missing_branches)),rep(2,length(observed.branching.times)),rep(0,nrow(missing_branches))))
+  df = df[order(df$brts),]
+  df$t.ext = df$bte-df$brts
+  df$r = max(df$brts)-c(0,df$brts[-nrow(df)])
+  return(df)
+  
 }
 
-log.factor.samp.prob_emph <- function(to){
-  top = head(to,-1)
-  number.observed = c(1,1+cumsum(top==2))
-  number.missing = c(0,cumsum(top==1)-cumsum(top==0))
-  factor = -sum(log((2*number.observed+number.missing)[to==1]))
-  return(factor)
-}
+
 
 log_sampling_prob_nh <- function(df,pars,model="dd",initspec=1){
   b = max(df$brts)
@@ -433,10 +440,8 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",method="e
   ##
   if(method=="emphasis"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      df = emphasis::augment.tree(brts,pars = pars,model = model)
+      df = emphasis::nh_tree_augmentation(brts,pars = pars,model = model)
       if(!is.null(df)){
-        #something wrong with tree
-        tree = emphasis::df2tree(df,pars,model=model,initspec=1)
         logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
         logf.joint = -emphasis:::nllik.tree(pars=pars,tree=df,model=model,initspec = 1)
         dim = nrow(df)
