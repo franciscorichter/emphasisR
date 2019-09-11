@@ -1,7 +1,7 @@
 ### EMPHASIS functions
 
 # negative logLikelihood of a tree
-nllik.tree = function(pars,tree,model="dd",initspec=1,K=FALSE){
+nllik.tree = function(pars,tree,model="dd",initspec=1){
   nl = -loglik.tree(pars,tree,model,initspec)
   return(nl)
 }
@@ -44,7 +44,7 @@ loglik.tree.dd <- function(pars,tree,model,initspec=1){
   mu = max(0,pars[3])
   wt = diff(c(0,tree$brts))
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  lambda = lambda.dd(pars,n,GLM=TRUE)
+  lambda = lambda.dd(pars,n)
   sigma = (lambda + mu)*n
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   log.lik = (sum(-sigma*wt)+sum(log(rho)))
@@ -323,45 +323,6 @@ time_limit_dd <- function(obs_brts,missing_speciations,missing_extinctions,max_n
  return(b)
 }
 
-augment.tree <- function(observed.branching.times,pars,model='dd',initspec=1,seed=0){
-  if(seed>0) set.seed(seed)
-  #wt = - diff(c(observed.branching.times,0))
-  wt = diff(c(0,sort(observed.branching.times)))
-  observed.branching.times = cumsum(wt)
-  mu = pars[3]
-  kprima = -pars[1]/pars[2]
-  #max_num_spec = floor(kprima)
-  missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
-  #number of species
-  N = initspec
-  cbt = 0 
-  while(cbt < sum(wt)){
-    lambda = speciation_rate(pars,N,model)
-    s = N*lambda
-    #b = time_limit_dd(obs_brts=observed.branching.times,missing_speciations=missing_branches$speciation_time,missing_extinctions=missing_branches$extinction_time,max_num_spec=max_num_spec)
-    b = sum(wt)-cbt
-    next_speciation_time = rnhpp(s=s,mu=mu,r=b)
-    next_bt = min(observed.branching.times[observed.branching.times>cbt],missing_branches$speciation_time[missing_branches$speciation_time>cbt],missing_branches$extinction_time[missing_branches$extinction_time>cbt])
-    if((cbt+next_speciation_time) < next_bt){ # add new species
-      extinction_time = (cbt+next_speciation_time) + truncdist::rtrunc(1,"exp",a = 0, b = (b-(next_speciation_time)),rate=mu)
-      missing_branches = rbind(missing_branches,data.frame(speciation_time=cbt+next_speciation_time,extinction_time=extinction_time))
-      cbt = cbt+next_speciation_time
-      N = N+1
-    }else{
-      cbt = min(observed.branching.times[observed.branching.times>cbt],missing_branches$speciation_time[missing_branches$speciation_time>cbt],missing_branches$extinction_time[missing_branches$extinction_time>cbt],sum(wt))
-      if(ifelse(length(missing_branches$extinction_time[missing_branches$extinction_time>cbt])==0,FALSE,min(missing_branches$extinction_time[missing_branches$extinction_time>cbt])==cbt)){
-        N = N-1
-      }else{
-        N = N+1
-      }
-    }
-  }
-  df = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),bte = c(missing_branches$extinction_time, rep(Inf,length(wt)+nrow(missing_branches))),to = c(rep(1,nrow(missing_branches)),rep(2,length(wt)),rep(0,nrow(missing_branches))))
-  df = df[order(df$brts),]
-  df$t.ext = df$bte-df$brts
-  df$r = max(df$brts)-c(0,df$brts[-nrow(df)])
-  return(df)
-}
 
 nh_tree_augmentation <- function(observed.branching.times,pars,model="dd",initspec = 1){
   
@@ -394,7 +355,6 @@ nh_tree_augmentation <- function(observed.branching.times,pars,model="dd",initsp
                   to = c(rep(1,nrow(missing_branches)),rep(2,length(observed.branching.times)),rep(0,nrow(missing_branches))))
   df = df[order(df$brts),]
   df$t.ext = df$bte-df$brts
-  df$r = max(df$brts)-c(0,df$brts[-nrow(df)])
   return(df)
   
 }
@@ -424,8 +384,9 @@ log_sampling_prob_nh <- function(df,pars,model="dd",initspec=1){
 
 
 ##################################
+###### E step 
 
-mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",method="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,initspec=1,single_dimension=NULL,limit_on_species=NULL){
+mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,initspec=1,limit_on_species=NULL){
   time=proc.time()
   if(seed>0) set.seed(seed)
   if(brts[1] != max(brts)){
@@ -438,25 +399,22 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",method="e
   cl <- makeCluster(no_cores)
   registerDoParallel(cl)
   ##
-  if(method=="emphasis"){
+  if(importance_sampler=="emphasis"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
       df = emphasis::nh_tree_augmentation(brts,pars = pars,model = model)
       if(!is.null(df)){
         logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
         logf.joint = -emphasis:::nllik.tree(pars=pars,tree=df,model=model,initspec = 1)
-        dim = nrow(df)
-        num.miss = sum(df$to==0)
-        tree.info = list(logf.joint=logf.joint,logg.samp=logg.samp,dim=dim,tree=df)
+        tree.info = list(logf.joint=logf.joint,logg.samp=logg.samp,dim=nrow(df),tree=df)
       }else{
         tree.info = list(logf.joint=0,logg.samp=0,tree=0,dim=0,num.miss=0)
       }
       return(tree.info)
     }
   }
-  if(method=="uniform"){
+  if(importance_sampler=="uniform"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      df = emphasis:::sample.uniform(brts,maxnumspec=maxnumspec,single_dimension = single_dimension)
-      if(!is.null(single_dimension)) maxnumspec = 0
+      df = emphasis:::sample.uniform(brts,maxnumspec=maxnumspec)
       log.samp.unif.prob = emphasis:::log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
       df$t_exp = rep(Inf,nrow(df)) 
       missing_speciations = NULL
@@ -484,6 +442,23 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",method="e
   fhat = mean(weights)
   trees = lapply(trees, function(list) list$tree)
   time = get.time(time)
-  E = list(weights=weights,logweights=logweights,fhat=fhat,logf=logf,logg=logg,trees=trees,dim=dim,Etime=time)
+  E = list(weights=weights,logweights=logweights,fhat=fhat,logf=logf,logg=logg,trees=trees,dim=dim,E_time=time)
   return(E)
 }
+
+
+
+##############################
+####### M-step 
+
+Q_approx = function(pars,st,model="dd",initspec=1){
+  get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
+  l = sapply(st$trees, get_llik)
+  ### this is a filter for trees with likelihood zero
+  lik_zero= is.infinite(l)
+  ###
+  w = st$weights/(sum(st$weights))
+  Q = sum(l[!lik_zero]*w[!lik_zero])
+  return(Q)
+}
+

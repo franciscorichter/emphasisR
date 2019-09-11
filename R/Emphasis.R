@@ -1,18 +1,6 @@
 
 
 
-Q_approx = function(pars,st,model="dd",initspec=1){
-  get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
-  l = sapply(st$trees, get_llik)
-  w = st$weights/(sum(st$weights))
-  Q = sum(l*w)
-  return(Q)
-}
-
-Q_SAEM = function(sample,previous_Q,gamma){
-  
-}
-
 M_step <-function(st,init_par = NULL,model="dd",proportion_of_subset=1){
   time0 = proc.time()
   weights = st$weights/sum(st$weights)

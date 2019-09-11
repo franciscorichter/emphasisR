@@ -56,7 +56,7 @@ ui <- fluidPage(
                              numericInput("par3", "Initial mu_0:", 0.05),
                              
                              h3("Settings"),
-                          selectInput("method", "Choose EM method:",
+                             selectInput("method", "Choose EM method:",
                                                         list("MCEM" = "MCEM",
                                                              "MHMC-EM" = "MHMC-EM",
                                                              "SAEM" = "SAEM")),
@@ -71,7 +71,7 @@ ui <- fluidPage(
                                               "GDDX" = "gddx",
                                               "GDPX" = "gpdx"
                                               )),                
-                             numericInput("ss", "Monte-Carlo sample size:", 1000),
+                             numericInput("sample_size", "Monte-Carlo sample size:", 1000),
                              numericInput("proportion_of_subset", "Proportion of best trees to take:", 0.99),
                              numericInput("maxspec", "Maximum number of missing species:", 30),
                              checkboxInput("save", "Save Current MCEM state", FALSE),
@@ -237,8 +237,8 @@ server <- shinyServer(function(input,output,session) {
         
         
         setProgress(value=0,detail = "Performing E step")
-        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$ss,model = input$model,method = input$importance_sampler,no_cores = input$cores,maxnumspec = input$maxspec)
-
+        #save(input2,file="input10Sept.RData")
+        st = mc_sample_independent_trees(brts = as.numeric(unlist(strsplit(input$brts,","))),pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores,maxnumspec = input$maxspec)
         time = proc.time()
         setProgress(value=0.5,detail = "Performing M step")
         M = M_step(st = st,init_par = pars,model = input$model,proportion_of_subset=input$proportion_of_subset)
@@ -250,14 +250,10 @@ server <- shinyServer(function(input,output,session) {
         se = st$fhat.se
        # if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
         
-        mcem = list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=M$loglik_proportion,effective_sample_size=M$effective_sample_size,hessian_inverse=hessian_inverse,E_time=st$Etime,M_time=M_time)
+        mcem = list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=M$loglik_proportion,effective_sample_size=M$effective_sample_size,hessian_inverse=hessian_inverse,E_time=st$E_time,M_time=M_time)
 
       })
       
-      #if(length(input_values$brts_d)<800){
-       # if(input$model=="dd") ftrue = DDD::dd_loglik(pars1 = pars, pars2 = c(250,1,0,1,0,1),brts = input_values$brts_d,missnumspec = 0)
-      #  if(input$model=="cr") ftrue = Nee_likelihood(lambda=pars[1],mu=pars[2],brts = input_values$brts_d,cond = 0)
-     # }
       MCEM_last = data.frame(par1=pars[1],
                              par2=pars[2],
                              par3=pars[3],
@@ -283,7 +279,7 @@ server <- shinyServer(function(input,output,session) {
       
       rv$weights = mcem$st$weights
       rv$logweights = mcem$st$logweights
-      rv$dim = sapply(mcem$st$trees,FUN = function(list) sum((list$to==0)))
+      rv$dim = mcem$st$dim
       
       ###
       ta = table(rv$dim)
@@ -293,7 +289,7 @@ server <- shinyServer(function(input,output,session) {
       for(i in 1:length(dims)){
         weights[i] = sum(mcem$st$weights[rv$dim == dims[i]])
       }
-      rv$weights_by_dims=weights/input$ss
+      rv$weights_by_dims=weights/input$sample_size
       rv$dims=dims
       ###
       rv$logf = mcem$st$logf

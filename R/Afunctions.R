@@ -1,38 +1,6 @@
 # Alternative function for testing
 
-#negative logLikelihood of a tree
-nllik.tree2 = function(pars,tree){
-  b = c(pars[1],(pars[1]-pars[2])/pars[3],pars[2])
-  ldt = tree$wt[length(tree$wt)]
-  dt = tree$wt[1:(length(tree$wt)-1)]
-  E = tree$E
-  if(is.null(tree$n)){
-    n = c(2,2+cumsum(E)+cumsum(E-1))
-    tree$n = n
-  }
-  lastn = tree$n[length(tree$n)]
-  n = tree$n[1:(length(tree$n)-1)]
-  sigma = n*(b[1]-b[2]*n + b[3]) #n-dimentional
-  lastsigma = lastn*(b[1]-b[2]*lastn + b[3])
-  rho = pmax(b[1]*E-b[2]*n*E+b[3]*(1-E),0)
-  l = -(sum(-sigma*dt+log(rho))-lastsigma*ldt)
-  if(min(b)<0){l = Inf}
-  return(l)
-}
 
-# negative logLikelihood of a set of trees
-Q.approx2 = function(pars, st){
-  m = length(st$rec)
-  l = vector(mode = 'numeric',length = m)
-  w = vector(mode = 'numeric',length = m)
-  for(i in 1:m){
-    s = st$rec[[i]]
-    w[i] = st$w[i]
-    l[i] = nllik.tree(pars,tree=s)
-  }
-  L = sum(l*w)
-  return(L)
-}
 
 proper_weighting <- function(E){
   ta = table(E$dim)
