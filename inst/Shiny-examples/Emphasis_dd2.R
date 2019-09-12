@@ -1,3 +1,5 @@
+library(emphasis)
+
 if (file.exists("first.R")) file.remove("first.R")
 
 n_cores = detectCores()
@@ -59,7 +61,6 @@ ui <- fluidPage(
                                                              "MHMC-EM" = "MHMC-EM",
                                                              "SAEM" = "SAEM")),
                              selectInput("importance_sampler", "Choose Data augmentation sampler:",
-                             selectInput("method", "Choose Data augmentation sampler:",
                                          list("uniform" = "uniform",
                                               "emphasis" = "emphasis")),
                              selectInput("model", "Choose diversification model:",
@@ -234,12 +235,6 @@ server <- shinyServer(function(input,output,session) {
 
       withProgress(message = paste("Performing MCEM iteration", rv$em.iteration), value = 0, {
         
-
-        time = proc.time()
-        setProgress(value=0,detail = "Performing E step")
-        st = E_step(brts = input_values$brts,pars = pars,nsim = input$ss,model = input$model,method = input$method,no_cores = input$cores,maxnumspec = input$maxspec,parallel=TRUE)
-        E_time = get.time(time)
-
         
         setProgress(value=0,detail = "Performing E step")
         #save(input2,file="input10Sept.RData")
@@ -459,6 +454,6 @@ server <- shinyServer(function(input,output,session) {
     }
   })
 }
-
+)
 
 shinyApp(ui, server)
