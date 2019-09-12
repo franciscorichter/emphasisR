@@ -386,6 +386,7 @@ log_sampling_prob_nh <- function(df,pars,model="dd",initspec=1){
 ##################################
 ###### E step 
 
+
 mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,initspec=1,limit_on_species=NULL){
   time=proc.time()
   if(seed>0) set.seed(seed)
@@ -442,7 +443,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
   fhat = mean(weights)
   trees = lapply(trees, function(list) list$tree)
   time = get.time(time)
-  E = list(weights=weights,logweights=logweights,fhat=fhat,logf=logf,logg=logg,trees=trees,dim=dim,E_time=time)
+  E = list(weights=weights,logweights=logweights,fhat=fhat,logf=logf,fhat.se=1,logg=logg,trees=trees,dim=dim,E_time=time)
   return(E)
 }
 
@@ -454,11 +455,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
 Q_approx = function(pars,st,model="dd",initspec=1){
   get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
   l = sapply(st$trees, get_llik)
-  ### this is a filter for trees with likelihood zero
-  lik_zero= is.infinite(l)
-  ###
   w = st$weights/(sum(st$weights))
-  Q = sum(l[!lik_zero]*w[!lik_zero])
+  Q = sum(l*w)
   return(Q)
 }
-
