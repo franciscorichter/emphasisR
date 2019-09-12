@@ -308,9 +308,9 @@ server <- shinyServer(function(input,output,session) {
       }  
       
       if(nrow(rv$MCEM)>9){
-        em.matrix = data.frame(lambda=rv$MCEM$par1,mu=rv$MCEM$par2,K=rv$MCEM$par3,it=1:length(rv$MCEM$par3))
-        gamLambda = gam(lambda ~ s(it), data=em.matrix)
-        gamMu = gam(mu ~ s(it), data=em.matrix)
+       # em.matrix = data.frame(lambda=rv$MCEM$par1,mu=rv$MCEM$par2,K=rv$MCEM$par3,it=1:length(rv$MCEM$par3))
+        #gamLambda = gam(lambda ~ s(it), data=em.matrix)
+       # gamMu = gam(mu ~ s(it), data=em.matrix)
      #  if(input$model=="dd") gamK = gam(K ~ s(it), data=em.matrix)
        # rv$MCEM$sdl[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv1/rv$MCEM$mc.samplesize+gamLambda$sig2)
       #  rv$MCEM$sdm[nrow(rv$MCEM)] = sqrt(-rv$MCEM$hessian.inv2/rv$MCEM$mc.samplesize+gamMu$sig2)
@@ -411,16 +411,6 @@ server <- shinyServer(function(input,output,session) {
       #stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1))
     }
   })
-  
-  # output$rellik_hist <- renderPlot({
-  #   if(nrow(rv$MCEM)>12){ 
-  #     breaks <- pretty(range(rv$MCEM$rel.lik), n = nclass.FD(rv$MCEM$rel.lik), min.n = 1)
-  #     bwidth <- breaks[2]-breaks[1]
-  #     rv$mcem_it$rellik = rv$rellik
-  #     gl = ggplot(rv$MCEM[input$charts:nrow(rv$MCEM),]) + geom_histogram(aes(rel.lik),binwidth=bwidth)#,binwidth = (max(rellik)-max(rellik))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
-  #     gl  + theme_emphasis + ggtitle(label = "Relative likelihood")
-  #   }
-  # })
   
   output$timeconsumption <- renderPlot({
     if(nrow(rv$MCEM)>2){ 
