@@ -48,6 +48,7 @@ loglik.tree.dd <- function(pars,tree,model,initspec=1){
   sigma = (lambda + mu)*n
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   log.lik = (sum(-sigma*wt)+sum(log(rho)))
+  if(pars[2]>0 | pars[1]<0 | pars[3]<0) log.lik = -Inf
   return(log.lik)
 }
 
