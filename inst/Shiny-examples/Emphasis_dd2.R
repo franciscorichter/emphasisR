@@ -47,7 +47,7 @@ ui <- fluidPage(
                              #  actionButton("goTree","Load Tree"),
                              h3("Initial parameters"),
                              numericInput("par1", "Initial lambda_0:", 2),
-                             numericInput("par2", "Initial lambda_1:", -0.3),
+                             numericInput("par2", "Initial lambda_1:", 0.03),
                              numericInput("par3", "Initial mu_0:", 0.05),
                              
                              h3("Settings"),
@@ -66,13 +66,10 @@ ui <- fluidPage(
                              numericInput("ss", "Monte-Carlo sample size:", 10),
                              numericInput("proportion_of_subset", "Proportion of best trees to take:", 1),
                              numericInput("maxspec", "Maximum number of missing species:", 30),
-                             checkboxInput("save", "Save Current MCEM state", FALSE),
-                             textInput("file", "Directory where you want to save:", "~/Google Drive/scripts for jobs and data/Experiments/MCEM/MCEM.RData"),
-                           #  h3("Options"),
-                             #         checkboxInput("ddd", "Compare with DDD", FALSE),
+                             h3("Options"),
                         #     conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
                              #checkboxInput("log", "show estimated lkelihood on log scale", FALSE),
-                          #   checkboxInput("log_w", "show weights on log scale", FALSE),
+                             checkboxInput("log_w", "show weights on log scale", FALSE),
                              numericInput("charts", "See charts from iteration:", 1),
                        
                         #actionButton("resetbutt","Reset"),
@@ -80,7 +77,11 @@ ui <- fluidPage(
                              numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2),
                        h3("Controls"),
                        actionButton("gogobutt","Go"),
-                       actionButton("stopbutt","Stop")
+                       actionButton("stopbutt","Stop"),
+                       h3("Save"),
+                       checkboxInput("save", "Save Current MCEM state", FALSE),
+                       textInput("file", "Directory where you want to save:", "~/Google Drive/scripts for jobs and data/Experiments/MCEM/MCEM.RData")
+                       
                 ),
                 mainPanel(
                   tabsetPanel(type = "tabs",
@@ -256,8 +257,9 @@ server <- shinyServer(function(input,output,session) {
         setProgress(value=0.5,detail = "Performing M step")
         M = M_step(st = st,init_par = pars,model = input$model,proportion_of_subset=input$proportion_of_subset)
         M_time = get.time(time)
-        
-        pars = M$po$par
+        if(!is.na(M$po$value)){
+          pars = M$po$par
+        }
         hessian_inverse = try(diag(solve(M$po$hessian)))
         fhat = st$fhat
         se = st$fhat.se
