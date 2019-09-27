@@ -1,13 +1,3 @@
-
-lambda.dd <- function(pars,n,GLM=TRUE){
-  if(GLM){
-    lambdas =  pmax(0, pars[1] + pars[2]*n)
-  }else{
-    lambdas = pmax(0, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
-  }
-  return(lambdas)
-}
-
 lambda.edd <- function(pars,n,GLM=FALSE){
   lambdas =  exp(pars[1] + pars[2]*n)
   return(lambdas)

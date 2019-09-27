@@ -48,7 +48,7 @@ loglik.tree.dd <- function(pars,tree,model,initspec=1){
   sigma = (lambda + mu)*n
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   log.lik = (sum(-sigma*wt)+sum(log(rho)))
-  if(pars[2]>0 | pars[1]<0 | pars[3]<0) log.lik = -Inf
+  if(min(pars)<0) log.lik = -Inf
   return(log.lik)
 }
 
@@ -141,6 +141,8 @@ loglik.tree.epd <- function(pars,tree,model,initspec=1){
   return(log.lik)
 }
 
+
+
 loglik.tree.gpdx <- function(pars,tree,model,initspec=1){
   to = tree$to
   to = head(to,-1)
@@ -167,7 +169,7 @@ loglik.tree.gpdx <- function(pars,tree,model,initspec=1){
     }
   }
   pd = pd_obs + pd_miss
-  lambda = pmax(0,pars[1]*((pd+1)^(-pars[3])))
+  lambda = pmax(0,pars[1]*((pd+1)^(-pars[2])))
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   sigma_over_tree = NULL
   for(i in 1:length(wt)){
@@ -184,18 +186,14 @@ speciation_rate <- function(pars,N,model){
   if(model == "dd1.3"){
     lambda = lambda.dd.1.3(pars,N)
   }
-  if(model=="cr"){
-    lambda = lambda.cr(pars,N)
+  if(model == "edd"){
+    lambda = lambda.edd(pars,N)
   }
   return(lambda)
 }
 
-lambda.dd <- function(pars,n,GLM=TRUE){
-  if(GLM){
-    lambdas =  pmax(0, pars[1] + pars[2]*n)
-  }else{
-    lambdas = pmax(0, (pars[1]-(pars[1]-pars[2])*(n/pars[3])))
-  }
+lambda.dd <- function(pars,n){
+  lambdas =  pmax(0, pars[1] - pars[2]*n)
   return(lambdas)
 }
 
@@ -205,7 +203,7 @@ lambda.edd <- function(pars,n,GLM=FALSE){
 }
 
 lambda.gddx <- function(pars,n,GLM=FALSE){
-  lambdas =  pmax(pars[1]*(n^(-pars[3])),0)
+  lambdas =  pmax(pars[1]*(n^(-pars[2])),0)
   return(lambdas)
 }
 
@@ -220,7 +218,7 @@ lambda.epd_t <- function(w_time,pars,pd,n,wt){
 }
 
 ###############################################################
-# Uniform data augmentation importance sampler (Bart version) #
+# Uniform data augmentation importance sampler#
 ###############################################################
 
 lprobto <- function(to,p=0.5){
@@ -395,7 +393,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
     stop("please add brts on descending order")
   }
   wt = -diff(c(brts,0))
-  brts = cumsum(wt)
+  brts = cumsum(wt)  # Do I need this>>
   if(is.null(pars3)) pars3=pars
   #### parallel set-up
   cl <- makeCluster(no_cores)
@@ -406,7 +404,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
       df = emphasis::nh_tree_augmentation(brts,pars = pars,model = model)
       if(!is.null(df)){
         logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
-        logf.joint = -emphasis:::nllik.tree(pars=pars,tree=df,model=model,initspec = 1)
+        logf.joint = emphasis:::loglik.tree(pars=pars,tree=df,model=model,initspec = 1)
         tree.info = list(logf.joint=logf.joint,logg.samp=logg.samp,dim=nrow(df),tree=df)
       }else{
         tree.info = list(logf.joint=0,logg.samp=0,tree=0,dim=0,num.miss=0)
@@ -431,7 +429,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
         }
       }
       ##################
-      logf.joint = -emphasis:::nllik.tree(pars=pars,tree=df,model=model,initspec = 1)
+      logf.joint = emphasis:::loglik.tree(pars=pars,tree=df,model=model,initspec = 1)
       return(list(logf.joint=logf.joint,logg.samp=log.samp.unif.prob,dim=nrow(df),tree=df))
     }
   }
