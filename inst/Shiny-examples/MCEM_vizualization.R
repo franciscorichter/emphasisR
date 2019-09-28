@@ -75,7 +75,7 @@ server <- function(input, output) {
     for(i in 1:nrow(inFile)){
       load(inFile[[i, 'datapath']])
       if(exists("MCEM_temp")){
-        DF = data.frame(iteration=MCEM_temp$em.iteration,par1=MCEM_temp$par1,par2=MCEM_temp$par2,par3=MCEM_temp$par3,E_time=MCEM_temp$E_time,Mtime=MCEM_temp$M_time,efective_sample_size=MCEM_temp$effective.size,h1=1/MCEM_temp$hessian.inv1,h2=1/MCEM_temp$hessian.inv2,h3=1/MCEM_temp$hessian.inv3)
+        DF = data.frame(iteration=MCEM_temp$em.iteration,par1=MCEM_temp$par1,par2=MCEM_temp$par2,par3=MCEM_temp$par3,E_time=MCEM_temp$E_time,Mtime=MCEM_temp$M_time,efective_sample_size=MCEM_temp$effective.size,h1=1/as.numeric(MCEM_temp$hessian.inv1),h2=1/as.numeric(MCEM_temp$hessian.inv2),h3=1/as.numeric(MCEM_temp$hessian.inv3))
         rm(MCEM_temp)
       }
       if("pars3" %in% names(DF)){

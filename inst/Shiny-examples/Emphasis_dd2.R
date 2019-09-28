@@ -313,7 +313,6 @@ server <- shinyServer(function(input,output,session) {
       
       save(pars,previous_pars,file="first.R")
       MCEM_temp = rv$MCEM
-      print(rv$MCEM)
       
       if(input$save){
         withProgress(message = 'Saving current state', value = 0, {
