@@ -1,18 +1,5 @@
 # log-likelihood of full tree
 
-test.llik.full.tree <- function(pars,brts,brts_exts){
-  tree = brts2tree(brts,brts_exts)
-  ll1 = -nllik.tree(tree=tree,pars=pars,topology = F,model = "cr",initspec = 1)
-  ll2 = loglik_full_tree(brts = brts,brts_exts = brts_exts,la = pars[1],mu = pars[2],age = brts[1])
-  if(all.equal(ll1,ll2)){
-    print(paste("test full.lik passed"))
-  }
-  else{
-    print(ll1)
-    print(ll2)
-    warning("criteria of llik not satisfied")
-  }
-}
 
 
 brts2tree <- function(brts,brts_exts){

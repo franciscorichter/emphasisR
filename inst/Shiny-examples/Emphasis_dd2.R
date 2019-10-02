@@ -1,12 +1,12 @@
 if (file.exists("first.R")) file.remove("first.R")
-
+data("branching_times_7phylogenies")
 n_cores = detectCores()
 rv = NULL #Do I need this?
 theme_emphasis =  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                         panel.background = element_blank(), axis.line = element_line(colour = "black"))  #
 
 MCEM = data.frame(par1=NULL,par2=NULL,par3=NULL,fhat=NULL,fhat.se=NULL,E_time=NULL,M_time=NULL,mc.samplesize=NULL,effective.size=NULL,hessian.inv=NULL)
-
+#pars = c(0,0,0)
 #3C0C62  purple
 #D8FCFC  lightblue 
 ##008000 green 
@@ -43,7 +43,7 @@ ui <- fluidPage(
                                          )       
                              ),
                              # uiOutput("open_end"),
-                       #      textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1"),
+                             textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1"),
                              #  actionButton("goTree","Load Tree"),
                              h3("Initial parameters"),
                              numericInput("par1", "Initial lambda_0:", 2),
@@ -142,8 +142,8 @@ ui <- fluidPage(
                               tabPanel("Analysis",
                                        
                                        fluidRow(
-                                         dataTableOutput("iterations_data"),
-                                         paste(c("current parameters: ",pars)),
+                                         #dataTableOutput("iterations_data"),
+                                     #    paste(c("current parameters: ",pars)),
                                         
                                          column(5,
                                     #    
@@ -225,12 +225,6 @@ server <- shinyServer(function(input,output,session) {
       brts = brts_d <- as.numeric(unlist(strsplit(input$vec1,",")))
     }else{ 
       brts = brts_d <- as.numeric(unlist(strsplit(input$brts,",")))
-    }
-    # load known mle for comparison
-    
-    # correct for descending branching times
-    if(max(brts)==brts[1]){
-      wt = -diff(c(brts,0))
     }
     # load reactive input values
     input_values$brts = brts

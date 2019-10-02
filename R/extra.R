@@ -393,13 +393,6 @@ sim.tree <- function(pars,CT,seed=1,model="dd"){
 
 
 
-mle.tree <- function(tree,init_par= c(1,0.5,100),topology=TRUE,model="dd",truncdim=FALSE){
-  if(model=="cr") init_par = c(init_par[1],init_par[2])
-  po = subplex(par = init_par, fn = nllik.tree, topology=topology, truncdim=truncdim, tree = tree,model=model,hessian = TRUE)
-  return(po)
-}
-
-
 prune.tree <- function(tree){
   brts = sum(tree$wt)-c(0,cumsum(tree$wt))
   brts = c(brts[1],brts[-length(brts)])

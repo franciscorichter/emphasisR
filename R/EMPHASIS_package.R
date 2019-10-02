@@ -189,6 +189,9 @@ speciation_rate <- function(pars,N,model){
   if(model == "edd"){
     lambda = lambda.edd(pars,N)
   }
+  if(model == "edd"){
+    lambda = lambda.edd(pars,N)
+  }
   return(lambda)
 }
 
@@ -309,10 +312,14 @@ rnhpp <- function(s,mu,r){  # random non-homogenous exponential (NHPP)
   return(rv)
 }
 
+
+###  DD models 
 IntInv <- function(r,mu,s,u){
   t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
   return(t)
 }
+
+### PD models
 
 time_limit_dd <- function(obs_brts,missing_speciations,missing_extinctions,max_num_spec){
  df = data.frame(bt = c(obs_brts,missing_speciations,missing_extinctions),to = c(rep(1,length(obs_brts)+length(missing_speciations)),rep(-1,length(missing_extinctions)))) 

@@ -7,7 +7,7 @@
 #'
 #' @docType data
 #'
-#' @usage data(emphasis)
+#' @usage data(branching_times_7phylogenies)
 #'
 #' @format An object of class `"cross"`; see [qtl::read.cross()].
 #'
@@ -19,15 +19,15 @@
 #' response. Genetics 195:1077-1086
 #' ([PubMed](https://www.ncbi.nlm.nih.gov/pubmed/23979570))
 #'
-#' @source Mouse Phenome Database, <https://phenome.jax.org/projects/Moore1b>
+#' @source Rampal
 #'
 #' @examples
-#' data(emphasis)
-#' times <- attr(grav, "time")
-#' phe <- grav$pheno
-#' \donttest{
-#' iplotCurves(phe, times, phe[,c(61,121)], phe[,c(121,181)],
-#'             chartOpts=list(curves_xlab="Time (hours)", curves_ylab="Root tip angle (degrees)",
-#'                            scat1_xlab="Angle at 2 hrs", scat1_ylab="Angle at 4 hrs",
-#'                            scat2_xlab="Angle at 4 hrs", scat2_ylab="Angle at 6 hrs"))}
-"grav"
+#' data(branching_times_7phylogenies)
+#' 
+#' brts_anolis
+#' 
+#' 
+#'             
+#'             
+#'                
+"branching_times_7phylogenies"
