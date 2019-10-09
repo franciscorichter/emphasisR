@@ -101,9 +101,31 @@ loglik.tree.pd <- function(pars,tree,model,initspec=1){
 }
 
 lambda.pd_t <- function(time_m,pars,tree){
-  lambda = max(0,pars[1] + pars[2] * phylodiversity_t(time_m = time_m,tree = tree))
+  lambda = max(0,pars[1] - pars[2] * phylodiversity_t(time_m = time_m,tree = tree))
   return(lambda)
 }
+
+
+phylodiversity_t <- function(time_m,tree){
+  cutting = suppressWarnings(which(tree$brts < time_m))
+  if(length(cutting)>0){
+    tree = tree[cutting,]
+    extinctions = tree$t_ext[tree$t_ext < time_m]
+    tree = tree[!(tree$brts %in% extinctions),]
+    tree = tree[!(tree$t_ext %in% extinctions),]
+    if(nrow(tree)>0){
+      n = 1:nrow(tree)
+      wt = diff(c(0,tree$brts))
+      pd = sum(n*wt) + (length(n)+1)*(time_m-tree$brts[nrow(tree)])
+    }else{
+      pd = time_m 
+    }
+  }else{
+    pd = time_m
+  }
+  return(pd)
+}
+
 
 loglik.tree.epd <- function(pars,tree,model,initspec=1){
   to = tree$to
@@ -179,7 +201,15 @@ loglik.tree.gpdx <- function(pars,tree,model,initspec=1){
   return(log.lik)
 }
 
-speciation_rate <- function(pars,N,model){
+speciation_rate <- function(x,tree,pars,model){
+  if(str_detect(model,"dd")){
+    b = max(tree$brts)
+    to = top = head(tree$to,-1)
+    to[to==2] = 1
+    initspec = 1
+    n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+    N = n[max(which(c(0,tree$brts) <= x))]
+  }
   if(model == "dd"){  # diversity-dependence model
     lambda = lambda.dd(pars,N)
   }
@@ -192,7 +222,37 @@ speciation_rate <- function(pars,N,model){
   if(model == "edd"){
     lambda = lambda.edd(pars,N)
   }
+  if(model == "pd"){
+    lambda = lambda.pd_t(time_m=x,pars=pars,tree=tree)
+  }
   return(lambda)
+}
+
+sum_speciation_rate <- function(x,tree,pars,model){
+
+  b = max(tree$brts)
+  to = top = head(tree$to,-1)
+  to[to==2] = 1
+  initspec = 1
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  N = n[max(which(c(0,tree$brts) <= x))]
+
+  if(model == "dd"){  # diversity-dependence model
+    lambda = lambda.dd(pars,N)
+  }
+  if(model == "dd1.3"){
+    lambda = lambda.dd.1.3(pars,N)
+  }
+  if(model == "edd"){
+    lambda = lambda.edd(pars,N)
+  }
+  if(model == "edd"){
+    lambda = lambda.edd(pars,N)
+  }
+  if(model == "pd"){
+    lambda = lambda.pd_t(time_m=x,pars=pars,tree=tree)
+  }
+  return(N*lambda)
 }
 
 lambda.dd <- function(pars,n){
@@ -303,18 +363,56 @@ log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
 
 #################################
 ## emphasis sampler
-rnhpp <- function(s,mu,r){  # random non-homogenous exponential (NHPP)
+rnhpp <- function(time0,time_max,tree,model,pars){  # random non-homogenous exponential (NHPP)
   ex = rexp(1)
-  rv = IntInv(r=r,mu=mu,s=s,u=ex)
-  if(is.na(rv)){
+  rv = IntInv(ex = ex,time0 = time0,time_max = time_max,tree = tree,model = model,pars = pars)
+  return(rv)
+}
+
+#DD
+rnhpp_dd <- function(r,mu,s,cbt,next_bt){  # random non-homogenous exponential (NHPP)
+  ex = rexp(1)
+  rv = cbt+IntInv_dd(r = r,mu = mu,s = s,u = ex)
+  if(is.na(rv) | rv>next_bt){
     rv = Inf
   }
   return(rv)
 }
 
+intensity <- function(x, tree, model, time0, pars){
+  max_time_for_continuity = min(tree$brts[tree$brts>time0])
+  if(x > max_time_for_continuity){
+    stop("max_time_for_continuity_reached")
+  }
+  if(x==time0){
+    val = 0
+  }else{
+    nh_rate <- function(wt){
+      sum_speciation_rate(x=wt,tree = tree,pars = pars,model = model)*(1-exp(-(max(tree$brts)-wt)*pars[3]))
+    }
+    val = pracma:::quad(f = Vectorize(nh_rate),xa = time0,xb = x)
+  }
+  return(val)
+}
+
+inverse = function (f, lower = 0, upper = 100,...) {
+  function (y) uniroot((function (x) f(x,...) - y), lower = lower, upper = upper)[1]
+}
+
+IntInv <- function(ex,time0,time_max,tree,model,pars){
+  if(sign(intensity(x = time0,tree = tree,model = model,time0 = time0,pars = pars)-ex)==sign(intensity(x = time_max, time0 = time0,tree=tree,model=model,pars = pars)-ex)){
+    value = Inf
+  }else{
+    IntInv_inner = inverse(intensity,time0,time_max,tree=tree,model=model,time0=time0,pars=pars)
+    inverse = IntInv_inner(ex)
+    value = inverse$root
+  }
+  return(value)
+}
+
 
 ###  DD models 
-IntInv <- function(r,mu,s,u){
+IntInv_dd <- function(r,mu,s,u){
   t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
   return(t)
 }
@@ -335,13 +433,50 @@ nh_tree_augmentation <- function(observed.branching.times,pars,model="dd",initsp
   b = max(observed.branching.times)
   mu = pars[3]
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
+  cbt = 0 # current branching time
+  if(b == observed.branching.times[1]){
+    wt = -diff(c(observed.branching.times,0))
+    brts = cumsum(wt)  # Do I need this>>
+    observed.branching.times= brts
+  }
+  while(cbt < b){
+    tree = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),
+                      t_ext = c(missing_branches$extinction_time, rep(Inf,length(observed.branching.times)+nrow(missing_branches))),
+                      to = c(rep(1,nrow(missing_branches)),rep(2,length(observed.branching.times)),rep(0,nrow(missing_branches))))
+    tree = tree[order(tree$brts),]
+    next_bt = min(tree$brts[tree$brts>cbt])
+    next_speciation_time = rnhpp(time0 = cbt,time_max = next_bt,tree = tree,model = model,pars = pars)
+    
+    if(next_speciation_time < next_bt){ # add new species
+      extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
+      missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
+      cbt = next_speciation_time
+    }else{
+      cbt = next_bt
+    }
+  }
+  df = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),
+                  bte = c(missing_branches$extinction_time, rep(Inf,length(observed.branching.times)+nrow(missing_branches))),
+                  to = c(rep(1,nrow(missing_branches)),rep(2,length(observed.branching.times)),rep(0,nrow(missing_branches))))
+  df = df[order(df$brts),]
+  df$t.ext = df$bte-df$brts
+  return(df)
+  
+}
+
+nh_tree_augmentation_dd <- function(observed.branching.times,pars,model="dd",initspec = 1){
+  
+  b = max(observed.branching.times)
+  brts = sort(brts)
+  mu = pars[3]
+  missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
   N = initspec # current number of species
   cbt = 0 # current branching time
   while(cbt < b){
-    lambda = speciation_rate(pars,N,model)
-    next_speciation_time = cbt+rnhpp(s=N*lambda,mu=mu,r=b-cbt)
+    lambda = lambda.dd(pars,N)
     all_bt = c(observed.branching.times,missing_branches$speciation_time,missing_branches$extinction_time)
     next_bt = min(all_bt[all_bt>cbt])
+    next_speciation_time = rnhpp_dd(s=N*lambda,mu=mu,r=b-cbt,cbt=cbt,next_bt=next_bt)
     if(next_speciation_time < next_bt){ # add new species
       extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
       missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
@@ -365,9 +500,31 @@ nh_tree_augmentation <- function(observed.branching.times,pars,model="dd",initsp
   
 }
 
-
-
 log_sampling_prob_nh <- function(df,pars,model="dd",initspec=1){
+  if(is.null(df$t_ext)) df$t_ext  = df$bte
+  b = max(df$brts)
+  to = top = head(df$to,-1)
+  to[to==2] = 1
+  N = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  brts_i = df$brts
+  brts_im1 = c(0,df$brts[-nrow(df)])
+  missing_speciations = (df$to == 1)
+  nb = N[missing_speciations]
+  No = c(1,1+cumsum(top==2))[missing_speciations]
+  Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
+  lambda_b = sapply(df$brts[df$to==1]-0.000001,speciation_rate,tree = df,pars = pars,model = model)
+  text = df$t_ext[df$to==1]-df$brts[df$to==1]
+  mu = pars[3]
+  inte=vector(mode = "numeric",length = length(brts_i))
+  for(i in 1:length(brts_i)){
+    inte[i] = intensity(x=brts_i[i],tree = df,model = model,time0 = brts_im1[i],pars = pars)
+  }
+  logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
+  return(logg)
+}
+
+
+log_sampling_prob_nh_dd <- function(df,pars,model="dd",initspec=1){
   b = max(df$brts)
   to = top = head(df$to,-1)
   to[to==2] = 1
@@ -384,7 +541,6 @@ log_sampling_prob_nh <- function(df,pars,model="dd",initspec=1){
   text = df$t.ext[missing_speciations]
   mu = pars[3]
   logg = sum(-n * lambda * (brts_i-brts_im1-(exp(-b*mu)/mu) *  (exp(brts_i*mu)-exp(brts_im1*mu))  ))+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
-
   return(logg)
 }
 
@@ -399,8 +555,6 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
   if(brts[1] != max(brts)){
     stop("please add brts on descending order")
   }
-  wt = -diff(c(brts,0))
-  brts = cumsum(wt)  # Do I need this>>
   if(is.null(pars3)) pars3=pars
   #### parallel set-up
   cl <- makeCluster(no_cores)
@@ -408,7 +562,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
   ##
   if(importance_sampler=="emphasis"){
     trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-      df = emphasis::nh_tree_augmentation(brts,pars = pars,model = model)
+      df = emphasis::nh_tree_augmentation(observed.branching.times = brts,pars = pars,model = model)
       if(!is.null(df)){
         logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
         logf.joint = emphasis:::loglik.tree(pars=pars,tree=df,model=model,initspec = 1)

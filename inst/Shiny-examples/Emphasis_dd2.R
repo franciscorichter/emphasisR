@@ -42,7 +42,6 @@ ui <- fluidPage(
                                            #   "Birds" = paste(as.character(brts_birds), collapse=", "))
                                          )       
                              ),
-                             # uiOutput("open_end"),
                              textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1"),
                              #  actionButton("goTree","Load Tree"),
                              h3("Initial parameters"),
@@ -214,9 +213,6 @@ server <- shinyServer(function(input,output,session) {
                        logf=NULL,
                        logg=NULL)
   input_values <- reactiveValues(brts=NULL,init_pars=NULL,brts_d=NULL)
-  
-  
-  
   autoInvalidate <- reactiveTimer(intervalMs=1000,session)
   
   observe({

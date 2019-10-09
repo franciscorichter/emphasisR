@@ -1,31 +1,8 @@
 # more utilities
 
 
-# phylogenetic diversity 
 
-phylodiversity_t <- function(time_m,tree){
-  cutting = which(tree$brts < rep(time_m,length=nrow(tree)))
-  if(length(cutting)>0){
-    tree = tree[cutting,]
-    speciation_of_extinct = tree$t_ext[tree$to==0]
-    if(length(speciation_of_extinct)>0){
-      tree = tree[tree$to != 0,]
-      for(i in 1:length(speciation_of_extinct)){
-        tree = tree[tree$brts != speciation_of_extinct[i],]
-      }
-    }
-    if(nrow(tree)>0){
-      n = 1:nrow(tree)
-      wt = diff(c(0,tree$brts))
-      pd = sum(n*wt) + (length(n)+1)*(time_m-tree$brts[nrow(tree)])
-    }else{
-      pd = time_m 
-    }
-  }else{
-    pd = time_m
-  }
-  return(pd)
-}
+
 
 # Pilot study
 pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3,60),l1=20,model="dd"){

@@ -180,11 +180,6 @@ rnhe <- function(lambda,mu,r,extinct=TRUE){  # random non-homogenous exponential
   return(rv)
 }
 
-IntInv <- function(r,mu,s,u){
-  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
-  return(t)
-}
-
 
 augment.tree <- function(brts,pars,model='dd',initspec=1,seed=0,limit_on_species=NULL){
   if(seed>0) set.seed(seed)
