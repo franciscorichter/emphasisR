@@ -56,7 +56,7 @@ ui <- fluidPage(
                              numericInput("maxspec", "Maximum number of missing species:", 30),
                              h3("Options"),
                              checkboxInput("parallel", "Parallel", TRUE),
-                             numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2),
+                             numericInput("cores",paste("Your computer holds",detectCores(),"cores, how many of them you want to use?"),2),
                              h3("Controls"),
                              actionButton("gogobutt","Go"),
                              actionButton("stopbutt","Stop"),

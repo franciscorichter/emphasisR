@@ -50,10 +50,14 @@ ui <- fluidPage(
                              numericInput("par3", "Initial mu_0:", 0.05),
                              
                              h3("Settings"),
-                             selectInput("method", "Choose Data augmentation sampler:",
+                             selectInput("importance_sampler", "Choose Data augmentation sampler:",
                                          list("emphasis" = "emphasis",
                                               "uniform" = "uniform"
                                               )),
+                             selectInput("method", "Choose NHPP method:",
+                                         list("inverse" = "inverse",
+                                              "thinning" = "thinning"
+                                         )),
                              selectInput("model", "Choose diversification model:",
                                          list("Diversity dependence" = "dd",
                                               "Exponential diversity dependence" = "edd",
@@ -62,7 +66,7 @@ ui <- fluidPage(
                                               "GDDX" = "gddx",
                                               "GDPX" = "gpdx"
                                          )),                
-                             numericInput("ss", "Monte-Carlo sample size:", 10),
+                             numericInput("sample_size", "Monte-Carlo sample size:", 10),
                              numericInput("proportion_of_subset", "Proportion of best trees to take:", 1),
                              numericInput("maxspec", "Maximum number of missing species:", 30),
                              h3("Options"),
@@ -92,8 +96,7 @@ ui <- fluidPage(
                                        "This UI version of the emphasis framework allows interactive and user friendly usage for Emphasis analysis.\n",
                                        "If you are familiar with the emphasis approach you just need a short description of the functionalities of this app and we are good to go.\n",
                                      #  "As a simple example we suggest to type the tree 4,3.9,3.8,1,0.5.",
-                                       h3("Controls"),
-                                       "To initialize and stop the MCEM routine.",
+                                       
                                        h3("Data"),
                                        "Load your phylogenetic tree. At the moment (for current models) data consists on a vector with branching times starting from stem age in decreasing order.",
                                        "It is also possible to use one of the 7 data examples",
@@ -126,14 +129,14 @@ ui <- fluidPage(
                                        "Several options are available for analysis",
                                        #  h4("Compare with DDD"),
                                        #   "For the given examples (except birds\' tree) a solution is given by DDD package, useful for comparison.",
-                                       h4("Check confidence intervals"),
-                                       "Confidence intervals for the parameters on the MCEM process can be calculated. That is considering a combination of the MC error and the EM variance. For reliable calculations of the second one we suggest to click this button after iteration 10.",
-                                       h4("log of estimated likelihood"),
-                                       "To observe the estimated loglikelihood",
+                                       #  h4("log of estimated likelihood"),
+                                       #"To observe the estimated loglikelihood",
                                        h4("log of weights"),
                                        "To observe the weights on logarithm scale",
-                                       h4("Iteration to show on plot"),
-                                       "To observe the plots on more detail from last iterations",
+                                       #h4("Iteration to show on plot"),
+                                      # "To observe the plots on more detail from last iterations",
+                                     h3("Controls"),
+                                     "To initialize and stop the MCEM routine.",
                                        h4("Number of processors"),
                                        "Number of cores to be used on parallel. We suggest 2 for small samples and increase it as the sample size increases. Ready to go to the analysis tab?"
                               ),
@@ -165,7 +168,7 @@ ui <- fluidPage(
                                          column(5,
                                                 h3("Information"),
                                                 plotOutput("timeconsumption"),
-                                                textOutput("txtOutput2"),
+                                              #  textOutput("txtOutput2"),
                                                 textOutput("txtOutput3")
                                          )
                                        )),
@@ -236,26 +239,27 @@ server <- shinyServer(function(input,output,session) {
       if(file.exists("first.R")) load("first.R")
       rv$em.iteration = rv$em.iteration + 1
       
-      withProgress(message = paste("Performing MEM: iteration ", rv$em.iteration), value = 0, {
+      withProgress(message = paste("Performing MCEM: iteration ", rv$em.iteration), value = 0, {
         
         time = proc.time()
         setProgress(value=0,detail = "Performing E step")
-        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$ss,model = input$model, importance_sampler = input$method,no_cores = input$cores,maxnumspec = input$maxspec)
+        # st = mc_augmentation_thinning(brts=input_values$brts,pars = pars,model = input$model,importance_sampler = input$method,sample_size = input$sample_size,parallel = FALSE,no_cores = input$cores)
+        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores,maxnumspec = input$maxspec,method=input$method)
         E_time = get.time(time)
         
         time = proc.time()
         setProgress(value=0.5,detail = "Performing M step")
         M = M_step(st = st,init_par = pars,model = input$model,proportion_of_subset=input$proportion_of_subset)
         M_time = get.time(time)
-        if(!is.na(M$po$value)){
+        # if(!is.na(M$po$value)){
           pars = M$po$par
-        }
-        hessian_inverse = try(diag(solve(M$po$hessian)))
+        # }
+        # hessian_inverse = try(diag(solve(M$po$hessian)))
         fhat = st$fhat
-        se = st$fhat.se
+        # se = st$fhat.se
         # if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
         
-        mcem = list(pars=pars,fhat=fhat,se=se,st=st,loglik.proportion=M$loglik_proportion,effective_sample_size=M$effective_sample_size,hessian_inverse=hessian_inverse,E_time=E_time,M_time=M_time)
+        mcem = list(pars=pars,fhat=fhat,st=st,effective_sample_size=M$effective_sample_size,E_time=E_time,M_time=M_time)
         
       })
       
@@ -264,15 +268,15 @@ server <- shinyServer(function(input,output,session) {
                              par2=pars[2],
                              par3=pars[3],
                              fhat=mcem$fhat,
-                             fhat.se=mcem$se,
+                           #  fhat.se=mcem$se,
                              E_time=mcem$E_time,
                              M_time=mcem$M_time,
-                             mc.samplesize=input$ss,
+                             mc.samplesize=input$sample_size,
                              cores = input$cores,
                              effective.size=mcem$effective_sample_size,
-                             hessian.inv1 = mcem$hessian_inverse[1],
-                             hessian.inv2 = mcem$hessian_inverse[2],
-                             hessian.inv3 = mcem$hessian_inverse[3],
+                           #  hessian.inv1 = mcem$hessian_inverse[1],
+                          #   hessian.inv2 = mcem$hessian_inverse[2],
+                          #   hessian.inv3 = mcem$hessian_inverse[3],
                              sdl = NaN,
                              sdm = NaN,
                              sdk = NaN,
@@ -283,7 +287,7 @@ server <- shinyServer(function(input,output,session) {
       
       rv$weights = mcem$st$weights
       rv$logweights = mcem$st$logweights
-      rv$dim = sapply(mcem$st$trees,FUN = function(list) sum((list$to==0)))
+      rv$dim = sapply(mcem$st$trees,FUN = function(list) nrow(list))
       
       ###
       ta = table(rv$dim)
@@ -293,7 +297,7 @@ server <- shinyServer(function(input,output,session) {
       for(i in 1:length(dims)){
         weights[i] = sum(mcem$st$weights[rv$dim == dims[i]])
       }
-      rv$weights_by_dims=weights/input$ss
+      rv$weights_by_dims=weights/input$sample_size
       rv$dims=dims
       ###
       rv$logf = mcem$st$logf
@@ -307,7 +311,7 @@ server <- shinyServer(function(input,output,session) {
       if(input$save){
         withProgress(message = 'Saving current state', value = 0, {
           save(MCEM_temp,file=input$file)
-          incProgress(1/10, detail = paste("Saving Data", 2))
+          incProgress(3/10, detail = paste("Saving Data", 2))
         })
       }  
       
@@ -333,23 +337,7 @@ server <- shinyServer(function(input,output,session) {
     rv$MCEM
   }))
   
-  output$txtOutput2 = renderText({
-    if(is.null(rv$LastTime)){
-      "Initializing process"
-    }else{
-      timescale = " sec"
-      time_s = rv$MCEM$E_time[nrow(rv$MCEM)]+rv$MCEM$M_time[nrow(rv$MCEM)]
-      if(time_s>60 & time_s < 3600){
-        time_s = time_s/60
-        timescale = " min"
-      }
-      if(time_s > 3600){
-        time_s = time_s/3600
-        timescale = " hour"
-      } 
-      paste0("Last iteration took: ", time_s, timescale)
-    }
-  })
+
   
   output$txtOutput3 = renderText({
     paste0("Proportion of likelihood: ", rv$MCEM$effective.size[nrow(rv$MCEM)] )
@@ -359,10 +347,10 @@ server <- shinyServer(function(input,output,session) {
 
   output$lambda <- renderPlot({
     
-    if(nrow(rv$MCEM)>5){ 
-   #   lambda.est = rv$MCEM$par1[nrow(rv$MCEM)]
+    if(nrow(rv$MCEM)>2){ 
+      lambda.est = rv$MCEM$par1[nrow(rv$MCEM)]
       MCEM = rv$MCEM[input$charts:nrow(rv$MCEM),]
-      plot.lambda = ggplot(MCEM) + geom_line(aes(em.iteration,par1))# + ggtitle(label=paste("Last estimation:  ", lambda.est)) + ylab(expression(lambda0)) + xlab("EM iteration")
+      plot.lambda = ggplot(MCEM) + geom_line(aes(em.iteration,par1)) + ggtitle(label=paste("Last estimation:  ", lambda.est)) + ylab("parameter 1") + xlab("EM iteration")
     #  if(input$CI & nrow(rv$MCEM)>12) plot.lambda = plot.lambda + geom_errorbar(aes(x=em.iteration, y=par1, ymin = par1-1.96*sdl, ymax = par1 + 1.96*sdl), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
@@ -373,10 +361,10 @@ server <- shinyServer(function(input,output,session) {
   })
   
   output$mu <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
+    if(nrow(rv$MCEM)>2){ 
       mu.est = rv$MCEM$par2[length(rv$MCEM$par2)]
       MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
-      plot.mu = ggplot(MCEM) + geom_line(aes(em.iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est)) + ylab(expression(lambda1)) + xlab("EM iteration")
+      plot.mu = ggplot(MCEM) + geom_line(aes(em.iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est)) + ylab("Parameter 2") + xlab("EM iteration")
     #  if(input$CI & nrow(rv$MCEM)>12) plot.mu = plot.mu + geom_errorbar(aes(x=em.iteration, y=par2, ymin = par2-1.96*sdm, ymax = par2 + 1.96*sdm), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
@@ -387,10 +375,10 @@ server <- shinyServer(function(input,output,session) {
   })
   
   output$K <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
+    if(nrow(rv$MCEM)>2){ 
       K.est = mean(rv$MCEM$par3[input$charts:length(rv$MCEM$par3)])
       MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
-      K.plot = ggplot(MCEM) + geom_line(aes(em.iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est)) + ylab(expression(mu)) + xlab("EM iteration")
+      K.plot = ggplot(MCEM) + geom_line(aes(em.iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est)) + ylab("Parameter 3") + xlab("EM iteration")
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
         K.plot = K.plot + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
@@ -436,7 +424,7 @@ server <- shinyServer(function(input,output,session) {
       if(sum(change_down)>0){
         time_consumption_plot = time_consumption_plot + geom_vline(xintercept = change_down, colour="green",linetype="dotted")
       }
-      time_consumption_plot
+      time_consumption_plot + ggtitle("Time consumption per MCEM iteration") + theme_emphasis 
     }
   })
   
@@ -448,7 +436,7 @@ server <- shinyServer(function(input,output,session) {
       }else{
         weights_by_dimension = ggplot(DF) + geom_line(aes(x=dims,y=weights))
       }
-      weights_by_dimension
+      weights_by_dimension + theme_emphasis 
     }
   })
   
@@ -462,7 +450,7 @@ server <- shinyServer(function(input,output,session) {
   output$fvsg <- renderPlot({
     if(nrow(rv$MCEM)>2){
       datita = data.frame(logf=rv$logf,logg=rv$logg,dim=rv$dim)
-      ggplot(datita) + geom_point(aes(x=logf,y=logg,colour=dim))
+      ggplot(datita) + geom_point(aes(x=logf,y=logg,colour=dim)) + theme_emphasis
     }
   })
 }

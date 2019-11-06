@@ -1,85 +1,71 @@
 # more utilities
 
 
-
-
-
-# Pilot study
-pilot.study <- function(brts,epsilon,m1=10,printprocess=FALSE,init_par=c(1.2,0.3,60),l1=20,model="dd"){
-  # pilot study suggested by Chan et. al
-  pars = init_par
-  M = matrix(ncol = 3,nrow = l1)
-  H = matrix(ncol = 3,nrow = l1)
-  DD = NULL
-  LL = NULL
-  for(i in 1:l1){
-    S = sim.sct(brts,pars,m=m1,print = F,model =  model)
-    mle =  mle.st(S = S, model=model)
-    #    L = obs.lik.approx(pars = pars,st = S)
-    lL = log(mean(S$w))
-    if(model=="dd.1.3"){pars2[2]=1.3}
-    DDD <- DDD:::dd_loglik(pars1 = pars, pars2 = pars2,
-                           brts = brts, missnumspec = 0)
-    pars = mle$par
-    H[i,] = try(diag(solve(mle$hessian))/m1)
-    M[i,] = pars
-    
-    DD = c(DD,DDD)
-    LL = c(LL,lL)
-    save(DD,LL,M,file = "DyL.RData")
-    print(paste('l:',lL,'DDDlogLik:',DDD,'pars:',pars[1],pars[2],pars[3]))
-  }
-  l = 10
-  PM = M[1:(l1-10),]
-  PH = H[1:(l1-10),]
-  M = M[(l1-9):l1,]
-  H = H[(l1-9):l1,]
-  Q = vector(mode="numeric",length = (l1-10))
-  MLE = list()
-  for(i in 1:10){
-    Delta = vector(mode="numeric",length = l)
-    Me = matrix(ncol = 3,nrow = l)
-    if(printprocess) print(paste('iteration',i))
-    for(j in 1:l){
-      S = sim.sct(brts,pars=M[i,],m=m1,print = F,model=model)
-      mle = mle.st(S = S,model=model)
-      pars = mle$par
-      Me[j,] = pars
-      Delta[j] = rel.llik(S1 = S,p0 = M[i,], p1 = pars,model=model)
+number_of_species <- function(tree,tm=NULL){
+  initspec = 1
+  to = head(tree$to,-1)
+  to[to==2] = 1
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  if(is.null(tm)){
+    N=n
+  }else{
+    if(tm==max(tree$brts)){
+      N = n[max(which(c(0,tree$brts) < tm))]
+    }else{
+      N = n[max(which(c(0,tree$brts) <= tm))]
     }
-    MLE[[i]] = Me
-    mD = mean(Delta)
-    Q[i] = sum((Delta-mD)^2)
   }
-  s2 = sum(Q)/((l-1)*(l1-10+1))
-  s1 = sqrt(s2)
-  m = m1*s1/epsilon
-  m = floor(m) + 1
-  return(list(m=m,p=M[10,],s1=s1,M=M,H=H,MLE=MLE,PM=PM,PH=PH))
+  return(N)
 }
 
-# stochastic function
 
-mc.llik <- function(pars,brts,m){
-  S = sim.sct(brts,pars,m,print=FALSE)
-  aplli = log(mean(S$w))
-  return(aplli)
-}
-
-# subset of trees
-sub.st <- function(S,ntrees=10){
-  qu = quantile(S$w,1-ntrees/length(S$w))
-  whi = which(S$w>qu)
-  length(whi)
-  newtrees = vector(mode="list",length=length(whi))
-  i=1
-  for(j in whi){
-    newtrees[[i]] = S$trees[[j]]
-    i = i+1
+phylodiversity_t <- function(time_m,tree){
+  #if(initial_point){
+  cutting = suppressWarnings(which(tree$brts < time_m))
+  #}else{
+  #  cutting = suppressWarnings(which(tree$brts <= time_m))
+  # }
+  if(length(cutting)>0){
+    tree = tree[cutting,]
+    #if(initial_point){
+    #  extinctions = tree$t_ext[suppressWarnings(which(tree$t_ext < time_m))]
+    #}else{
+    extinctions = tree$t_ext[suppressWarnings(which(tree$t_ext <= time_m))]
+    #}
+    tree = tree[!(tree$brts %in% extinctions),]
+    tree = tree[!(tree$t_ext %in% extinctions),]
+    if(nrow(tree)>0){
+      n = 1:nrow(tree)
+      wt = diff(c(0,tree$brts))
+      pd = sum(n*wt) + (length(n)+1)*(time_m-tree$brts[nrow(tree)])
+    }else{
+      pd = time_m 
+    }
+  }else{
+    pd = time_m
   }
-  newS = list(w=S$w[whi],dim=S$dim[whi],nl=S$nl[whi],trees=newtrees,g=S$g[whi],fsm=S$fsm[whi],fe=S$fe[whi])
-  return(newS)
+  return(pd)
 }
+
+phylodiversity <- function(tm,tree){
+  # cut the tree
+  tree = tree[tree$brts<tm,]
+  if(nrow(tree)==0){
+    pd= tm
+  }else{
+    # remove extinctions
+    extinctions = tree$brts[tree$to==0]
+    if(length(extinctions)>0){
+      tree = tree[tree$to != 0 ,]
+      tree = tree[!(tree$t_ext %in% extinctions),]
+    }
+    # sum branches length
+    pd = sum( diff(c(0,tree$brts)) * 1:nrow(tree) ) + (nrow(tree)+1) * (tm - tree$brts[length(tree$brts)])
+  }
+  
+  return(pd)
+}
+
 
 
 
@@ -144,59 +130,6 @@ sl = paste(letters[1],letters,":0",sep="")
 for (i in 2:26){
   ll = paste(letters[i],letters,":0",sep="")
   sl = c(sl,ll)
-}
-
-#post processing
-post.pro <-function(file,extrafile=NULL){
-  load(file)
-  MLE = p$MLE
-  M = mcem$PARS
-  it = NULL
-  lambda = NULL
-  mu = NULL
-  K = NULL
-  for( i in 1:10){
-    MM = MLE[[i]]
-    it = c(it,rep(i+1,10))
-    lambda = c(lambda,MM[,1])
-    mu = c(mu,MM[,2])
-    K = c(K,MM[,3])
-  };
-  col = rep('grey',length(lambda))
-  SDl = rep(NaN,length(lambda))
-  SDm = rep(NaN,length(mu))
-  SDk = rep(NaN,length(K))
-  it = c(it,1:dim(M)[1])
-  lambda = c(lambda,M[,2])
-  mu = c(mu,M[,3])
-  K = c(K,M[,4])
-  col = c(col,rep('blue',dim(M)[1]))
-  MCEMc = data.frame(it=it,lambda=lambda,mu=mu,K=K,col=col)
-  gamLambda = gam(lambda ~ s(it), data=MCEMc)
-  gamMu = gam(mu ~ s(it), data=MCEMc)
-  gamK = gam(K ~ s(it), data=MCEMc)
-  ex = dim(MCEMc)[1] - dim(mcem$H)[1] - 100
-  hessL = c(rep(NaN,ex),mcem$H[,1])
-  SDl = c(SDl,sqrt(hessL+gamLambda$sig2))
-  hessM = c(rep(NaN,ex),mcem$H[,2])
-  SDm = c(SDm,sqrt(hessM+gamMu$sig2))
-  hessK = c(rep(NaN,ex),mcem$H[,3])
-  SDk = c(SDk,sqrt(hessK+gamK$sig2))
-  MCEMc$SDl = SDl
-  MCEMc$SDm = SDm
-  MCEMc$SDk = SDk
-  MCEM = rbind(MCEMc,data.frame(it=(-9:0),lambda=p$PM[,1],mu=p$PM[,2],K=p$PM[,3],col=rep('blue',10),SDl=rep(NaN,10),SDm=rep(NaN,10),SDk=rep(NaN,10)))
-  gl=ggplot(MCEM) + geom_point(aes(it,lambda),colour=MCEM$col) + geom_errorbar(aes(x=it, y=lambda, ymin = lambda-1.96*SDl, ymax = lambda + 1.96*SDl), colour='darkgreen') + geom_hline(yintercept = pars$lambda) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(lambda[0]))
-  gm=ggplot(MCEM) + geom_point(aes(it,mu),colour=MCEM$col) + geom_errorbar(aes(x=it, y=mu, ymin = mu-1.96*SDm, ymax = mu + 1.96*SDm), colour='darkgreen') + geom_hline(yintercept = pars$mu)+ ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(mu[0]))
-  gk=ggplot(MCEM) + geom_point(aes(it,K),colour=MCEM$col) + geom_errorbar(aes(x=it, y=K, ymin = K-1.96*SDk, ymax = K + 1.96*SDk), colour='darkgreen') + geom_hline(yintercept = pars$K) + ggtitle(d.name)+theme(axis.text=element_text(size=18),axis.title=element_text(size=16))+labs(x='EM iteration',y=expression(K))
-  gLLmcem = ggplot(data=d)+geom_line(aes(x=it,y=llik))+geom_hline(yintercept = pars$loglik)
-  gLLmcem2 = ggplot(df, aes(lambda, mu))+ geom_contour(aes(z = llik,color=..level..),bins=100) +geom_point(data=mcem$PARS,aes(x=lambda,y=mu,size=it))+  ggtitle(d.name)
-  if(!is.null(extrafile)){
-    load(extrafile)
-    gLLmcem2 = gLLmcem2 + geom_point(data=mcem$PARS,aes(x=lambda,y=mu,size=it),col='red')
-    gLLmcem = gLLmcem + geom_line(data=d,aes(x=it,y=llik),col='red')
-  }
-  return(list(gl=gl,gm=gm,gk=gk, gLLmcem=gLLmcem, gLLmcem3d=gLLmcem2))
 }
 
 # time calculation
@@ -276,71 +209,6 @@ get.topologies <- function(M){
 
 
 
-norma.const <- function(lambda,mu,CT,n){
-  lg = NULL
-  lf = NULL
-  for(i in 1:n){
-    df = sim.tree.g(lambda,mu,CT)
-    lg[i] = g_samp_missobs(df,c(lambda,mu))
-    to = df$to[-nrow(df)]
-    to[to==2] = 1
-    lf[i] = -nllik.tree(pars=c(lambda,mu,Inf),tree=list(wt=diff(c(0,df$bt)),to=to))
-  }
-  const.approx = sum(exp(lf-lg))/n
-  return(const.approx)
-}
-
-
-sim.tree.g <- function(lambda,mu,CT){
-  Ne = rpois(1,(lambda+mu)*CT)
-  Np = rpois(1,(lambda-mu)*CT)
-  brts = runif(Np,min=0,max=CT)
-  ms = runif(Ne,min=0,max=CT)
-  me = runif(Ne,min=ms,max=CT)
-  to = c(rep(1,Ne),rep(0,Ne))
-  df = data.frame(bt = c(ms,me),to=to)
-  df = rbind(df,data.frame(bt=c(brts,CT),to=c(rep(2,length(brts)),2)))
-  df = df[order(df$bt),]
-  return(df)
-}
-
-g_samp_missobs <- function(df,pars){
-  last = nrow(df)
-  ct = df[last,1]
-  Ne = sum(df$to==0)
-  Np = sum(df$to==2) - 1
-  subdf_e = df[df$to==1,]
-  subdf_p = df[df$to==2,]
-  Ts = ct-subdf_e$bt
-  to = df$to[-last]
-  rto = to
-  to[to==2] = 1
-  n = c(2,2+cumsum(to)+cumsum(to-1))
-  nm = n[c(rto,2)==1]
-  log_dens_miss = dpois(Ne,lambda =(pars[1]+pars[2])*ct,log=TRUE)-Ne*log(ct)-sum(log(Ts))-sum(log(nm))+lgamma(Ne+1)
-  ne = n[c(rto,0)==2]
-  log_dens_obs = dpois(Np,lambda = (pars[1]-pars[2])*ct,log=TRUE)-Np*log(ct)-sum(log(ne))+lgamma(Np+1)
-  log_dens = log_dens_miss+log_dens_obs
-  return(log_dens)
-}
-
-
-we_cal <- function(tree){ # weights calculation
-  list2env(setNames(tree, c("wt","to","n","s","r","pars","t_ext")), .GlobalEnv)
-  mu = pars[2]
-  if(mu!=0){
-    if(length(t_ext) != length(to)) to = c(to,2)
-    ev = (to==1 & is.infinite(t_ext))
-    nobs = c(2,2+cumsum(ev))
-    nobs = nobs[-length(nobs)]
-    index = (!is.finite(t_ext) & to == 1)
-    logg = sum(-s*(exp(-r*mu)/mu)*(exp(wt*mu)-1))+sum(log(s[index]/n[index]))-sum(mu*nobs*wt)
-  }else{
-    logg = 0
-  }
-  return(logg)
-}
-
 sim.tree <- function(pars,CT,seed=1,model="dd"){
   set.seed(seed)
   mu = pars[2]
@@ -368,8 +236,6 @@ sim.tree <- function(pars,CT,seed=1,model="dd"){
   return(tree)
 }
 
-
-
 prune.tree <- function(tree){
   brts = sum(tree$wt)-c(0,cumsum(tree$wt))
   brts = c(brts[1],brts[-length(brts)])
@@ -377,43 +243,39 @@ prune.tree <- function(tree){
   return(nbrts)
 }
 
-sim.tree.g <- function(lambda,mu,CT,seed){
-  set.seed(seed)
-  Ne = rpois(1,mu*CT) # number of extinct species
-  Np = rpois(1,(mu+lambda)*CT) # number of present species
-  brts = runif(Np,min=0,max=CT) # branching times of speciation of present species
-  ms = runif(Ne,min=0,max=CT) # branching times of speciation of extinct species
-  me = runif(Ne,min=ms,max=CT) # branching times of extinctions
-  # return matrix with branching times and topology
-  to = c(rep(1,Ne),rep(0,Ne))
-  df = data.frame(bt = c(ms,me),to=to)
-  df = rbind(df,data.frame(bt=c(brts,CT),to=c(rep(2,length(brts)),2)))
-  df = df[order(df$bt),]
-  return(df)
-}
-
-no.na <- function(vector){
-  vector[!is.na(vector)]
-}
-
-pars2 = c(2.5e+02,1.0e+00, 0.0e+00, 1.0e+00, 0.0e+00, 1.0e+00)
-
-# relative likelihood
-rel.llik <- function(S1,p0,p1,model="dd"){
-  m = length(S1)
-  f1 = vector(mode='numeric',length = m)
-  f2 = vector(mode='numeric',length = m)
-  d = vector(mode='numeric',length = m)
-  #S1 = S1$[S1$w>0]
-  for(i in 1:m){
-    s = S1[[i]]
-    f1[i] = nllik.tree(pars=p1,tree=s,model=model)
-    f2[i] = nllik.tree(pars=p0,tree=s,model=model)
-    #d[i] = length(s$tree$wt)
-    if(is.na(f1[i])) print(s)
+nh_tree_augmentation_dd <- function(observed.branching.times,pars,model="dd",initspec = 1){
+  
+  b = max(observed.branching.times)
+  brts = sort(brts)
+  mu = pars[3]
+  missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
+  N = initspec # current number of species
+  cbt = 0 # current branching time
+  while(cbt < b){
+    lambda = lambda.dd(pars,N)
+    all_bt = c(observed.branching.times,missing_branches$speciation_time,missing_branches$extinction_time)
+    next_bt = min(all_bt[all_bt>cbt])
+    next_speciation_time = rnhpp_dd(s=N*lambda,mu=mu,r=b-cbt,cbt=cbt,next_bt=next_bt)
+    if(next_speciation_time < next_bt){ # add new species
+      extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
+      missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
+      cbt = next_speciation_time
+      N = N+1
+    }else{
+      cbt = next_bt
+      if(next_bt %in% missing_branches$extinction_time){
+        N = N-1
+      }else{
+        N = N+1
+      }
+    }
   }
-  Delta = -log(sum(f1/f2)/m)
-  return(Delta)
+  df = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),
+                  bte = c(missing_branches$extinction_time, rep(Inf,length(observed.branching.times)+nrow(missing_branches))),
+                  to = c(rep(1,nrow(missing_branches)),rep(2,length(observed.branching.times)),rep(0,nrow(missing_branches))))
+  df = df[order(df$brts),]
+  df$t.ext = df$bte-df$brts
+  return(df)
+  
 }
-
 
