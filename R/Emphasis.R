@@ -15,14 +15,6 @@
 #}
 
 
-M_step <-function(st,init_par = NULL,model="dd",proportion_of_subset=1){
-  time0 = proc.time()
-  weights = st$weights/sum(st$weights)
-  effective_sample_size = length(weights>0)
-  po = subplex(par = init_par, fn = Q_approx,st = st,model=model,hessian = FALSE)
-  M_time = get.time(time0)
-  return(list(po=po,M_time=M_time,effective_sample_size=effective_sample_size))
-}
 
 
 

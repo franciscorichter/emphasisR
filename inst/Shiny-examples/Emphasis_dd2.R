@@ -251,9 +251,9 @@ server <- shinyServer(function(input,output,session) {
         setProgress(value=0.5,detail = "Performing M step")
         M = M_step(st = st,init_par = pars,model = input$model,proportion_of_subset=input$proportion_of_subset)
         M_time = get.time(time)
-        # if(!is.na(M$po$value)){
+         if(!is.na(M$po$value)){
           pars = M$po$par
-        # }
+         }
         # hessian_inverse = try(diag(solve(M$po$hessian)))
         fhat = st$fhat
         # se = st$fhat.se
