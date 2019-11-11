@@ -15,10 +15,9 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
         df = emphasis::tree_augmentation_inverse(observed.branching.times = brts,pars = pars,model = model)
         if(!is.null(df)){
           logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
-          logf.joint = emphasis:::loglik.tree(pars=pars,tree=df,model=model,initspec = 1)
-          tree.info = list(logf.joint=logf.joint,logg.samp=logg.samp,dim=nrow(df),tree=df)
+          tree.info = list(logg.samp=logg.samp,dim=nrow(df),tree=df)
         }else{
-          tree.info = list(logf.joint=0,logg.samp=0,tree=0,dim=0,num.miss=0)
+          tree.info = list(logg.samp=0,tree=0,dim=0,num.miss=0)
         }
         return(tree.info)
       }
@@ -40,20 +39,21 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
           }
         }
       ##################
-        logf.joint = emphasis:::loglik.tree(pars=pars,tree=df,model=model,initspec = 1)
-        return(list(logf.joint=logf.joint,logg.samp=log.samp.unif.prob,dim=nrow(df),tree=df))
+    #    logf.joint = emphasis:::loglik.tree(pars=pars,tree=df,model=model,initspec = 1)
+        return(list(logg.samp=log.samp.unif.prob,dim=nrow(df),tree=df))
       }
     }
     stopCluster(cl)
-    logf = sapply(trees,function(list) list$logf.joint)
+    log_lik_tree <- loglik.tree(model)
+    tree = lapply(trees, function(list) list$tree)
+    logf = sapply(tree,log_lik_tree, pars=pars)
     logg = sapply(trees,function(list) list$logg.samp)
     dim = sapply(trees,function(list) list$dim)
     logweights = logf-logg
     weights = exp(logweights)
     fhat = mean(weights)
-    trees = lapply(trees, function(list) list$tree)
     time = get.time(time)
-    E = list(weights=weights,logweights=logweights,fhat=fhat,logf=logf,fhat.se=1,logg=logg,trees=trees,dim=dim,E_time=time)
+    E = list(weights=weights,logweights=logweights,fhat=fhat,logf=logf,fhat.se=1,logg=logg,trees=tree,dim=dim,E_time=time)
   }
   return(E)
 }

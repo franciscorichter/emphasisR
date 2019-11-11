@@ -1,43 +1,32 @@
 ### EMPHASIS functions
 
-# negative logLikelihood of a tree
-nllik.tree = function(pars,tree,model="dd",initspec=1){
-  nl = -loglik.tree(pars,tree,model,initspec)
-  return(nl)
-}
-
-loglik.tree <- function(pars,tree,model,initspec=1){
+loglik.tree <- function(model){
+  if(model == "rpd"){
+    log.lik = loglik.tree.rpd
+  }
   if(model == "dd"){
-    log.lik = loglik.tree.dd(pars,tree,model,initspec)
+    log.lik = loglik.tree.dd
   }
   if(model == "edd"){
-    log.lik = loglik.tree.edd(pars,tree,model,initspec)
+    log.lik = loglik.tree.edd
   }
   if(model == "pd"){ 
-    log.lik = loglik.tree.pd(pars,tree,initspec)
+    log.lik = loglik.tree.pd
   }
   if(model == "epd"){ 
-    log.lik = loglik.tree.epd(pars,tree,model,initspec)
+    log.lik = loglik.tree.epd
   }
   if(model == "gddx"){ 
-    if(min(pars)<0){
-      log.lik = -Inf
-    }else{
-      log.lik = loglik.tree.gddx(pars,tree,model,initspec)
-    }
+    log.lik = loglik.tree.gddx
   }
   if(model == "gpdx"){ 
-    if(min(pars)<0){
-      log.lik = -Inf
-    }else{
-      log.lik = loglik.tree.gpdx(pars,tree,model,initspec)
-    }
+      log.lik = loglik.tree.gpdx
   }
   return(log.lik)
 }
 
 speciation_rate <- function(x,tree,pars,model){
-  if(str_detect(model,"dd")){
+  if(stringr:::str_detect(model,"dd")){
     b = max(tree$brts)
     to = top = head(tree$to,-1)
     to[to==2] = 1
@@ -266,24 +255,27 @@ time_limit_dd <- function(obs_brts,missing_speciations,missing_extinctions,max_n
 ##############################
 ####### M-step 
 
-M_step <-function(st,init_par = NULL,model="dd",proportion_of_subset=1){
+M_step <-function(st,init_par = NULL,model="dd",exclude_proportion_trees = 0){
+  
   time0 = proc.time()
-  weights = st$weights/sum(st$weights)
-  effective_sample_size = sum(weights>0)
-  po = subplex(par = init_par, fn = Q_approx,st = st,model=model,hessian = FALSE)
+  
+  w = st$weights/max(st$weights)
+  contributing_trees = (w > exclude_proportion_trees)
+  ######################
+  sub_trees = st$trees[contributing_trees]
+  effective_sample_size = sum(contributing_trees)
+  sub_st = list(trees = sub_trees, weights = st$weights[w])
+  loglik = loglik.tree(model)
+  po = subplex(par = init_par, fn = Q_approx,st = sub_st,loglik=loglik,hessian = TRUE)
+  #######################
+
   M_time = get.time(time0)
   return(list(po=po,M_time=M_time,effective_sample_size=effective_sample_size))
 }
 
-Q_approx = function(pars,st,model="dd",initspec=1){
-  get_llik <- function(tree) nllik.tree(pars=pars,tree=tree,initspec = initspec,model=model)
-  l = sapply(st$trees, get_llik)
-  w = st$weights/(sum(st$weights))
-  impossible_trees = which(w==0)
-  if(length(impossible_trees)>0){
-    l = l[-impossible_trees]
-    w = w[-impossible_trees]
-  }
-  Q = sum(l*w)
+Q_approx = function(pars,st,loglik){
+  l = sapply(st$trees, loglik, pars=pars)
+  w = st$weights
+  Q = -sum(l*w)
   return(Q)
 }

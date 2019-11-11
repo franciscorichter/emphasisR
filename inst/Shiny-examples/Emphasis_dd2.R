@@ -249,7 +249,8 @@ server <- shinyServer(function(input,output,session) {
         
         time = proc.time()
         setProgress(value=0.5,detail = "Performing M step")
-        M = M_step(st = st,init_par = pars,model = input$model,proportion_of_subset=input$proportion_of_subset)
+        M = M_step(st = st,init_par = pars,model = input$model,exclude_proportion_trees = 0)
+        
         M_time = get.time(time)
          if(!is.na(M$po$value)){
           pars = M$po$par

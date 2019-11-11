@@ -20,12 +20,13 @@ loglik.tree.pd_numerical <- function(pars,tree,initspec=1){
 }
 
 
-loglik.tree.dd <- function(pars,tree,model,initspec=1){
+loglik.tree.dd <- function(pars,tree){
   to = tree$to
   to = head(to,-1)
   to[to==2] = 1
   mu = max(0,pars[3])
   wt = diff(c(0,tree$brts))
+  initspec=1
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   lambda = lambda.dd(pars,n)
   sigma = (lambda + mu)*n
@@ -158,6 +159,27 @@ loglik.tree.gpdx <- function(pars,tree,initspec=1){
 
 
 loglik.tree.rpd <- function(tree,pars){
+  # parameters
+  lambda_0 = pars[1]
+  mu = pars[3]
+  beta = pars[3]
+  a = parrs[4]
+  b = pars[5]
+  ###
+  n = number_of_species(tree)
+  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity_t(x,tree)))
+  wt = diff(c(0,tree$brts))
+  # rho
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  lambda = pmax(0,pars[1]*((pd+1)^(-pars[2])))
+  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  # sigma 
+  sigma = n*((lambda_0+mu)*wt-((lambda_*beta*(n^a))/(n*(b+1)))*((Pt+n*wt)^(b+1)-Pt^(b+1)))
   
+  loglik = sum(-sigma)+sum(rho)
+  return(loglik)
+
 }
 
