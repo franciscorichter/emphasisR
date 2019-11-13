@@ -1,4 +1,72 @@
+loglik.tree <- function(model){
+  log.lik = get(paste0("loglik.tree.", model))
+  return(log.lik)
+}
+
 # likelihood functions 
+
+loglik.tree.dd <- function(pars,tree){
+  
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
+  
+  lambda = lambda.dd(tm = c(0,tree$brts[-nrow(tree)]),tree = tree,pars = pars)
+  
+  if(any((lambda[-length(lambda)] == 0) & (tree$to[-length(lambda)] != 0)) | (min(pars)<0)){
+    log.lik = -Inf
+  }else{
+  sigma = (lambda + mu)*sapply(c(0,tree$brts[-nrow(tree)]), n_from_time,tree = tree)
+  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  log.lik = (sum(-sigma*wt)+sum(log(rho)))
+  }
+
+  return(log.lik)
+}
+
+loglik.tree.rpd <- function(pars,tree){
+  # parameters
+  lambda_0 = pars[1]
+  mu = pars[3]
+  beta = pars[3]
+  a = parrs[4]
+  b = pars[5]
+  ###
+  n = number_of_species(tree)
+  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity_t(x,tree)))
+  wt = diff(c(0,tree$brts))
+  # rho
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  lambda = pmax(0,pars[1]*((pd+1)^(-pars[2])))
+  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  # sigma 
+  sigma = n*((lambda_0+mu)*wt-((lambda_*beta*(n^a))/(n*(b+1)))*((Pt+n*wt)^(b+1)-Pt^(b+1)))
+  
+  loglik = sum(-sigma)+sum(rho)
+  return(loglik)
+  
+}
+
+loglik.tree.pd <- function(pars,tree,initspec=1){
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity_t(x,tree)))
+  alpha1 = pars[2]*n
+  brts_i = tree$brts
+  brts_im1 = c(0,tree$brts[-nrow(tree)])
+  alpha0 = pars[1] - pars[2]*(Pt-n*brts_im1)
+  sigma_over_tree = ((alpha0+mu)*wt - (alpha1/2)*(brts_i^2-brts_im1^2))*n
+  lambda = sapply(tree$brts, function(x) lambda.pd_t(x,pars=pars,tree=tree))
+  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  log.lik = -sum(sigma_over_tree) + sum(log(rho))
+  return(log.lik)
+}
+###
 
 loglik.tree.pd_numerical <- function(pars,tree,initspec=1){
   to = tree$to
@@ -20,7 +88,7 @@ loglik.tree.pd_numerical <- function(pars,tree,initspec=1){
 }
 
 
-loglik.tree.dd <- function(pars,tree){
+loglik.tree.dd_old <- function(pars,tree){
   to = tree$to
   to = head(to,-1)
   to[to==2] = 1
@@ -64,25 +132,6 @@ loglik.tree.gddx <- function(pars,tree,model,initspec=1){
   return(log.lik)
 }
 
-loglik.tree.pd <- function(pars,tree,initspec=1){
-  to = tree$to
-  to = head(to,-1)
-  to[to==2] = 1
-  mu = max(0,pars[3])
-  wt = diff(c(0,tree$brts))
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity_t(x,tree)))
-  alpha1 = pars[2]*n
-  brts_i = tree$brts
-  brts_im1 = c(0,tree$brts[-nrow(tree)])
-  alpha0 = pars[1] - pars[2]*(Pt-n*brts_im1)
-  sigma_over_tree = ((alpha0+mu)*wt - (alpha1/2)*(brts_i^2-brts_im1^2))*n
-  lambda = sapply(tree$brts, function(x) lambda.pd_t(x,pars=pars,tree=tree))
-  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-  log.lik = -sum(sigma_over_tree) + sum(log(rho))
-  return(log.lik)
-}
-
 loglik.tree.epd <- function(pars,tree,initspec=1){
   to = tree$to
   to = head(to,-1)
@@ -119,8 +168,6 @@ loglik.tree.epd <- function(pars,tree,initspec=1){
   return(log.lik)
 }
 
-
-
 loglik.tree.gpdx <- function(pars,tree,initspec=1){
   to = tree$to
   to = head(to,-1)
@@ -156,30 +203,3 @@ loglik.tree.gpdx <- function(pars,tree,initspec=1){
   log.lik = -sum(sigma_over_tree) + sum(log(rho))
   return(log.lik)
 }
-
-
-loglik.tree.rpd <- function(tree,pars){
-  # parameters
-  lambda_0 = pars[1]
-  mu = pars[3]
-  beta = pars[3]
-  a = parrs[4]
-  b = pars[5]
-  ###
-  n = number_of_species(tree)
-  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity_t(x,tree)))
-  wt = diff(c(0,tree$brts))
-  # rho
-  to = tree$to
-  to = head(to,-1)
-  to[to==2] = 1
-  lambda = pmax(0,pars[1]*((pd+1)^(-pars[2])))
-  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-  # sigma 
-  sigma = n*((lambda_0+mu)*wt-((lambda_*beta*(n^a))/(n*(b+1)))*((Pt+n*wt)^(b+1)-Pt^(b+1)))
-  
-  loglik = sum(-sigma)+sum(rho)
-  return(loglik)
-
-}
-

@@ -1,85 +1,5 @@
 ### EMPHASIS functions
 
-loglik.tree <- function(model){
-  if(model == "rpd"){
-    log.lik = loglik.tree.rpd
-  }
-  if(model == "dd"){
-    log.lik = loglik.tree.dd
-  }
-  if(model == "edd"){
-    log.lik = loglik.tree.edd
-  }
-  if(model == "pd"){ 
-    log.lik = loglik.tree.pd
-  }
-  if(model == "epd"){ 
-    log.lik = loglik.tree.epd
-  }
-  if(model == "gddx"){ 
-    log.lik = loglik.tree.gddx
-  }
-  if(model == "gpdx"){ 
-      log.lik = loglik.tree.gpdx
-  }
-  return(log.lik)
-}
-
-speciation_rate <- function(x,tree,pars,model){
-  if(stringr:::str_detect(model,"dd")){
-    b = max(tree$brts)
-    to = top = head(tree$to,-1)
-    to[to==2] = 1
-    initspec = 1
-    n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-    N = n[max(which(c(0,tree$brts) <= x))]
-  }
-  if(model == "dd"){  # diversity-dependence model
-    lambda = lambda.dd(pars,N)
-  }
-  if(model == "dd1.3"){
-    lambda = lambda.dd.1.3(pars,N)
-  }
-  if(model == "edd"){
-    lambda = lambda.edd(pars,N)
-  }
-  if(model == "edd"){
-    lambda = lambda.edd(pars,N)
-  }
-  if(model == "pd"){
-    lambda = lambda.pd_t(time_m=x,pars=pars,tree=tree)
-  }
-  if(model == "rpd"){
-    lambda = lambda.rpd(time_m=x,pars=pars,tree=tree)
-  }
-  return(lambda)
-}
-
-sum_speciation_rate <- function(x,tree,pars,model,initial_point=TRUE){
-  b = max(tree$brts)
-  to = top = head(tree$to,-1)
-  to[to==2] = 1
-  initspec = 1
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  N = n[max(which(c(0,tree$brts) <= x))]
-
-  if(model == "dd"){  # diversity-dependence model
-    lambda = lambda.dd(pars,N)
-  }
-  if(model == "dd1.3"){
-    lambda = lambda.dd.1.3(pars,N)
-  }
-  if(model == "edd"){
-    lambda = lambda.edd(pars,N)
-  }
-  if(model == "edd"){
-    lambda = lambda.edd(pars,N)
-  }
-  if(model == "pd"){ ## ??????????????
-    lambda = lambda.pd_t(time_m=x,pars=pars,tree=tree)
-  }
-  return(N*lambda)
-}
 
 
 
@@ -265,7 +185,7 @@ M_step <-function(st,init_par = NULL,model="dd",exclude_proportion_trees = 0){
   sub_trees = st$trees[contributing_trees]
   effective_sample_size = sum(contributing_trees)
   sub_st = list(trees = sub_trees, weights = st$weights[contributing_trees])
-  loglik = loglik.tree(model)
+  loglik = get(paste0("loglik.tree.", model))
   po = subplex(par = init_par, fn = Q_approx,st = sub_st,loglik=loglik,hessian = TRUE)
   #######################
 
@@ -279,3 +199,37 @@ Q_approx = function(pars,st,loglik){
   Q = -sum(l*w)
   return(Q)
 }
+
+
+## parallel M step 
+
+#library("optimParallel")
+
+M_step_parallel <-function(st,init_par = NULL,model="dd",exclude_proportion_trees = 0,no_cores=2){
+  
+  time0 = proc.time()
+  
+  w = st$weights/max(st$weights)
+  contributing_trees = (w > exclude_proportion_trees)
+  ######################
+  sub_trees = st$trees[contributing_trees]
+  effective_sample_size = sum(contributing_trees)
+  sub_st = list(trees = sub_trees, weights = st$weights[contributing_trees])
+  loglik = get(paste0("loglik.tree.", model))
+  
+  cl <- makeCluster(5)     # set the number of processor cores
+  setDefaultCluster(cl=cl) # set 'cl' as default cluster
+  
+  optimParallel(par=init_par, fn=Q_approx, st = sub_st,loglik=loglik,
+                method = "L-BFGS-B", lower=c(0, 0, 0))
+  
+  setDefaultCluster(cl=NULL); stopCluster(cl)
+  #######################
+  
+  M_time = get.time(time0)
+  return(list(po=po,M_time=M_time,effective_sample_size=effective_sample_size))
+}
+
+
+
+

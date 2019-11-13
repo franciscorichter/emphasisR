@@ -1,3 +1,4 @@
+
 mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,initspec=1,method="inverse"){
   
   brts = cumsum(-diff(c(brts,0)))
@@ -135,7 +136,7 @@ augment_tree_thinning <- function(obs_brts,pars,model="dd"){
 
 #inverse method
 
-tree_augmentation_inverse <- function(observed.branching.times,pars,model="dd",initspec = 1){
+tree_augmentation_inverse <- function(observed.branching.times,pars,model="dd"){
   #observed.branching.times = cumsum(-diff(c(brts_vangidae,0)))
   b = max(observed.branching.times)
   mu = pars[3]
