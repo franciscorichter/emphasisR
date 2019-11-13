@@ -1,4 +1,7 @@
 mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,initspec=1,method="inverse"){
+  
+  brts = cumsum(-diff(c(brts,0)))
+  
   time=proc.time()
   if(seed>0) set.seed(seed)
   
@@ -17,7 +20,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
           logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
           tree.info = list(logg.samp=logg.samp,dim=nrow(df),tree=df)
         }else{
-          tree.info = list(logg.samp=0,tree=0,dim=0,num.miss=0)
+          tree.info = list(logg.samp=0,tree=0,dim=0)
         }
         return(tree.info)
       }
@@ -39,7 +42,6 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
           }
         }
       ##################
-    #    logf.joint = emphasis:::loglik.tree(pars=pars,tree=df,model=model,initspec = 1)
         return(list(logg.samp=log.samp.unif.prob,dim=nrow(df),tree=df))
       }
     }
@@ -134,7 +136,7 @@ augment_tree_thinning <- function(obs_brts,pars,model="dd"){
 #inverse method
 
 tree_augmentation_inverse <- function(observed.branching.times,pars,model="dd",initspec = 1){
-  
+  #observed.branching.times = cumsum(-diff(c(brts_vangidae,0)))
   b = max(observed.branching.times)
   mu = pars[3]
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)

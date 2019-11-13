@@ -1,5 +1,60 @@
-# Speciations rates 
+speciation_rate <- function(x,tree,pars,model){
+  if(stringr:::str_detect(model,"dd")){
+    b = max(tree$brts)
+    to = top = head(tree$to,-1)
+    to[to==2] = 1
+    initspec = 1
+    n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+    N = n[max(which(c(0,tree$brts) <= x))]
+  }
+  if(model == "dd"){  # diversity-dependence model
+    lambda = lambda.dd(pars,N)
+  }
+  if(model == "dd1.3"){
+    lambda = lambda.dd.1.3(pars,N)
+  }
+  if(model == "edd"){
+    lambda = lambda.edd(pars,N)
+  }
+  if(model == "edd"){
+    lambda = lambda.edd(pars,N)
+  }
+  if(model == "pd"){
+    lambda = lambda.pd_t(time_m=x,pars=pars,tree=tree)
+  }
+  if(model == "rpd"){
+    lambda = lambda.rpd(time_m=x,pars=pars,tree=tree)
+  }
+  return(lambda)
+}
 
+sum_speciation_rate <- function(x,tree,pars,model,initial_point=TRUE){
+  b = max(tree$brts)
+  to = top = head(tree$to,-1)
+  to[to==2] = 1
+  initspec = 1
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  N = n[max(which(c(0,tree$brts) <= x))]
+  
+  if(model == "dd"){  # diversity-dependence model
+    lambda = lambda.dd(pars,N)
+  }
+  if(model == "dd1.3"){
+    lambda = lambda.dd.1.3(pars,N)
+  }
+  if(model == "edd"){
+    lambda = lambda.edd(pars,N)
+  }
+  if(model == "edd"){
+    lambda = lambda.edd(pars,N)
+  }
+  if(model == "pd"){ ## ??????????????
+    lambda = lambda.pd_t(time_m=x,pars=pars,tree=tree)
+  }
+  return(N*lambda)
+}
+
+# Speciations rates 
 
 lambda.rpd <- function(time_m,tree,pars){
   pd = phylodiversity_t(time_m,tree)

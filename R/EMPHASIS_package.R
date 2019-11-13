@@ -264,7 +264,7 @@ M_step <-function(st,init_par = NULL,model="dd",exclude_proportion_trees = 0){
   ######################
   sub_trees = st$trees[contributing_trees]
   effective_sample_size = sum(contributing_trees)
-  sub_st = list(trees = sub_trees, weights = st$weights[w])
+  sub_st = list(trees = sub_trees, weights = st$weights[contributing_trees])
   loglik = loglik.tree(model)
   po = subplex(par = init_par, fn = Q_approx,st = sub_st,loglik=loglik,hessian = TRUE)
   #######################
