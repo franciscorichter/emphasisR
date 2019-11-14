@@ -2,7 +2,7 @@ devtools::install_github("franciscorichter/emphasis")
 library(emphasis)
 ## input 1. Simple tree, Ok initial parameters
 pars = c(0.2,0.001,0.02)
-input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="dd",importance_sampler="emphasis",cores=2,maxnumspec=40,method="inverse")
+input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="dd",importance_sampler="emphasis",cores=2,maxnumspec=40,method="thinning")
 ## input 2. Big tree. 
 pars = c(0.05,0.00001,0.01)
 input = list(brts=brts_cetacea,pars=pars,sample_size=10,model="dd",importance_sampler="emphasis",cores=2,maxnumspec=40,method="inverse")

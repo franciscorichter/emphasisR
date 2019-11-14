@@ -191,15 +191,15 @@ server <- shinyServer(function(input,output,session) {
                        em.iteration=0,
                        logf=NULL,
                        logg=NULL)
-  input_values <- reactiveValues(brts=NULL,init_pars=NULL,brts_d=NULL)
+  input_values <- reactiveValues(brts=NULL,init_pars=NULL)
   autoInvalidate <- reactiveTimer(intervalMs=1000,session)
   
   observe({
     # load branching times
     if(input$brts[1]==0){
-      brts = brts_d <- as.numeric(unlist(strsplit(input$vec1,",")))
+      brts =  as.numeric(unlist(strsplit(input$vec1,",")))
     }else{ 
-      brts = brts_d <- as.numeric(unlist(strsplit(input$brts,",")))
+      brts =  as.numeric(unlist(strsplit(input$brts,",")))
     }
     # load reactive input values
     input_values$brts = brts
@@ -221,11 +221,12 @@ server <- shinyServer(function(input,output,session) {
         setProgress(value=0,detail = "Performing E step")
         # st = mc_augmentation_thinning(brts=input_values$brts,pars = pars,model = input$model,importance_sampler = input$method,sample_size = input$sample_size,parallel = FALSE,no_cores = input$cores)
         st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores,maxnumspec = input$maxspec,method=input$method)
+        
         E_time = get.time(time)
         
         time = proc.time()
         setProgress(value=0.5,detail = "Performing M step")
-        M = M_step(st = st,init_par = pars,model = input$model,exclude_proportion_trees = 0)
+        M = M_step(st = st,init_par = pars,model = input$model)
         
         M_time = get.time(time)
          if(!is.na(M$po$value)){

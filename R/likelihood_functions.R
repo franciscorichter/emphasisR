@@ -5,7 +5,7 @@ loglik.tree <- function(model){
 
 # likelihood functions 
 
-loglik.tree.dd <- function(pars,tree){
+loglik.tree.dd2 <- function(pars,tree){
   to = tree$to
   to = head(to,-1)
   to[to==2] = 1
@@ -14,6 +14,22 @@ loglik.tree.dd <- function(pars,tree){
   
   lambda = lambda.dd(tm = c(0,tree$brts[-nrow(tree)]),tree = tree,pars = pars)
   sigma = (lambda + mu)*number_of_species(tree)
+  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  log.lik = (sum(-sigma*wt)+sum(log(rho)))
+  if(min(pars)<0) log.lik = -Inf
+  return(log.lik)
+}
+
+loglik.tree.dd <- function(pars,tree){
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
+  initspec=1
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  lambda = lambda.dd.n(pars,n)
+  sigma = (lambda + mu)*n
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   log.lik = (sum(-sigma*wt)+sum(log(rho)))
   if(min(pars)<0) log.lik = -Inf

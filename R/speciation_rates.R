@@ -7,8 +7,13 @@ speciation_rate <- function(tm,tree,pars,model){
 # Speciations rates 
 
 lambda.dd <- function(tm,tree,pars){
-  N = sapply(tm, number_of_species,tree=tree)
+  N = sapply(tm, n_from_time,tree=tree)
   lambdas =  pmax(0, pars[1] - pars[2]*N)
+  return(lambdas)
+}
+
+lambda.dd.n <- function(pars,n){
+  lambdas =  pmax(0, pars[1] - pars[2]*n)
   return(lambdas)
 }
 
