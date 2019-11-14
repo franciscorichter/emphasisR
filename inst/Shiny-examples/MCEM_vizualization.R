@@ -75,7 +75,7 @@ server <- function(input, output) {
     for(i in 1:nrow(inFile)){
       load(inFile[[i, 'datapath']])
       if(exists("MCEM_temp")){
-        DF = data.frame(iteration=MCEM_temp$em.iteration,par1=MCEM_temp$par1,par2=MCEM_temp$par2,par3=MCEM_temp$par3,E_time=MCEM_temp$E_time,Mtime=MCEM_temp$M_time,efective_sample_size=MCEM_temp$effective.size,h1=1/as.numeric(MCEM_temp$hessian.inv1),h2=1/as.numeric(MCEM_temp$hessian.inv2),h3=1/as.numeric(MCEM_temp$hessian.inv3))
+        DF = data.frame(iteration=MCEM_temp$em.iteration,par1=MCEM_temp$par1,par2=MCEM_temp$par2,par3=MCEM_temp$par3,E_time=MCEM_temp$E_time,M_time=MCEM_temp$M_time,efective_sample_size=MCEM_temp$effective.size)
         rm(MCEM_temp)
       }
       if("pars3" %in% names(DF)){
@@ -120,13 +120,7 @@ server <- function(input, output) {
   data_to_table <- function(df,replicant,init_plot=input$burning,end_point=input$filter){
     df = df[df$rep==replicant,]
     df = df[init_plot:end_point,]
-    gampar1 = gam(par1 ~ s(iteration), data=df)
-    standard_error_par1 = sqrt(1/df$h1+gampar1$sig2/nrow(df))
-    gampar2 = gam(par2 ~ s(iteration), data=df)
-    standard_error_par2 = sqrt(1/df$h2+gampar2$sig2/nrow(df))
-    gampar3 = gam(par3 ~ s(iteration), data=df)
-    standard_error_par3 = sqrt(1/df$h3+gampar3$sig2/nrow(df))
-    summ = data.frame(MSS = mean(df$efective_sample_size),replicant=replicant,par1=mean(df$par1),SD1=mean(standard_error_par1),par2=mean(df$par2),SD2=mean(standard_error_par2),par3=mean(df$par3),SD3=mean(standard_error_par3))
+    summ = data.frame(MSS = mean(df$efective_sample_size),replicant=replicant,par1=median(df$par1),par2=median(df$par2),par3=median(df$par3),E_time = median(df$E_time), M_time = median(df$M_time))
     return(summ)
   }
   
@@ -162,12 +156,12 @@ server <- function(input, output) {
       plot_par_est = ggplot(df,aes(colour=rep))+geom_path(aes_string(x=input$par1,y=input$par2))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
     }
     if(input$typePlot=="Points"){
-      plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes_string(x=input$par1,y=input$par2,alpha=(1:nrow(df))/(2*nrow(df))))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
+      plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes_string(x=input$par1,y=input$par2,alpha=(1:nrow(df))/(2*nrow(df)),size=input$effective_sampling))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
     }
     if(input$logY){
       plot_par_est = plot_par_est + scale_y_log10() 
     }
-    plot_par_est
+    plot_par_est + theme_bw()
   })
   
   

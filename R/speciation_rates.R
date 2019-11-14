@@ -7,7 +7,7 @@ speciation_rate <- function(tm,tree,pars,model){
 # Speciations rates 
 
 lambda.dd <- function(tm,tree,pars){
-  N = sapply(tm, n_from_time,tree=tree)
+  N = sapply(tm, number_of_species,tree=tree)
   lambdas =  pmax(0, pars[1] - pars[2]*N)
   return(lambdas)
 }
@@ -30,23 +30,39 @@ n_from_time <- function(tm,tree){
   to[to==2] = 1
   initspec = 1
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  n[max(which(c(0,tree$brts) <= tm))]
+  if(tm==max(tree$brts)){
+    N = n[max(which(c(0,tree$brts) < tm))]
+  }else{
+    N = n[max(which(c(0,tree$brts) <= tm))]
+  }
 } 
+
+number_of_species <- function(tree,tm=NULL){
+  initspec = 1
+  to = head(tree$to,-1)
+  to[to==2] = 1
+  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  
+  
+  if(is.null(tm)){
+    N=n
+  }else{
+    if(tm==max(tree$brts)){
+      N = n[max(which(c(0,tree$brts) < tm))]
+    }else{
+      N = n[max(which(c(0,tree$brts) <= tm))]
+    }
+  }
+  return(N)
+}
+
 
 ######
 
-lambda.pd_t <- function(time_m,pars,tree){
-  lambda = max(0,pars[1] - pars[2] * phylodiversity_t(time_m = time_m,tree = tree))
-  return(lambda)
-}
 
-sum_speciation_rate <- function(x,tree,pars,model,initial_point=TRUE){
+sum_speciation_rate <- function(x,tree,pars,model){
   b = max(tree$brts)
-  to = top = head(tree$to,-1)
-  to[to==2] = 1
-  initspec = 1
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  N = n[max(which(c(0,tree$brts) <= x))]
+  N = number_of_species(tree,x)
   
   speciation_r = get(paste0("lambda.", model))
   lambda = speciation_r(x,tree,pars)

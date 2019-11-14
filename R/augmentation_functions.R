@@ -1,13 +1,11 @@
 
-mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,initspec=1,method="inverse"){
-  
-  brts = cumsum(-diff(c(brts,0)))
+mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,method="inverse"){
   
   time=proc.time()
   if(seed>0) set.seed(seed)
   
   if(method == "thinning"){
-    E = mc_sample_independent_trees(brts = brts,pars = pars,nsim = nsim, model = model, importance_sampler = importance_sampler,no_cores = no_cores,pars3 = pars3,maxnumspec = maxnumspec,seed = seed,initspec = initspec)
+    E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = TRUE,no_cores = no_cores)
   }else{
   
     #### parallel set-up
@@ -16,9 +14,9 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
     ##
     if(importance_sampler=="emphasis"){
       trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-        df = emphasis::tree_augmentation_inverse(observed.branching.times = brts,pars = pars,model = model)
+        df = emphasis::tree_augmentation_inverse(brts = brts,pars = pars,model = model)
         if(!is.null(df)){
-          logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
+          logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model)
           tree.info = list(logg.samp=logg.samp,dim=nrow(df),tree=df)
         }else{
           tree.info = list(logg.samp=0,tree=0,dim=0)
@@ -47,8 +45,9 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
       }
     }
     stopCluster(cl)
-    log_lik_tree <- loglik.tree(model)
+    
     tree = lapply(trees, function(list) list$tree)
+    log_lik_tree <- loglik.tree(model)
     logf = sapply(tree,log_lik_tree, pars=pars)
     logg = sapply(trees,function(list) list$logg.samp)
     dim = sapply(trees,function(list) list$dim)
@@ -61,54 +60,45 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
   return(E)
 }
 
-mc_augmentation <- function(brts,pars,model,importance_sampler,sample_size){
-  time = proc.time()
-  st =  lapply(1:sample_size,function(i,...){tree_augmentation(...)},obs_brts = brts,pars = pars,model=model,importance_sampler=importance_sampler)
-  weights = sapply(st,function(list) list$weight)
-  trees = lapply(st,function(list) list$tree)
-  dim = sapply(st,function(list) nrow(list$tree))
-  logf =    sapply(st,function(list) list$logf)
-  logg =    sapply(st,function(list) list$logg)
-  E_time = get.time(time)
-  En = list(weights=weights,trees=trees,fhat=mean(weights),logf=logf,logg=logg,dim=dim,E_time=E_time)
-  return(En)
-}
 
 mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_size,parallel=FALSE,no_cores=2){
   time = proc.time()
   if(!parallel){
-    st =  lapply(1:sample_size,function(i,...){augment_tree_thinning(...)},obs_brts = brts,pars = pars,model=model)
+    st =  lapply(1:sample_size,function(i,...){augment_tree_thinning(...)},brts = brts,pars = pars,model=model)
   }else{
-    st = mclapply(1:sample_size,function(i,...){augment_tree_thinning(...)},obs_brts = brts,pars = pars,model=model,mc.cores = no_cores)
+    st = mclapply(1:sample_size,function(i,...){augment_tree_thinning(...)},brts = brts,pars = pars,model=model,mc.cores = no_cores)
   }
-  weights = sapply(st,function(list) list$weight)
+
   trees = lapply(st,function(list) list$tree)
   dim = sapply(st,function(list) nrow(list$tree))
-  logf =    sapply(st,function(list) list$logf)
+  log_lik_tree <- loglik.tree(model)
+  logf = sapply(trees,log_lik_tree, pars=pars)
   logg =    sapply(st,function(list) list$logg)
+  log_weights = logf-logg
+  w=exp(log_weights)
   E_time = get.time(time)
-  En = list(weights=weights,trees=trees,fhat=mean(weights),logf=logf,logg=logg,dim=dim,E_time=E_time)
+  En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
   return(En)
 }
 
 
 ## thinning method
 
-augment_tree_thinning <- function(obs_brts,pars,model="dd"){
+augment_tree_thinning <- function(brts,pars,model="dd"){
   mu = pars[3]
-  b = max(obs_brts)
+  b = max(brts)
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
   cbt=0
   
   while(cbt < b){
     
-    tree = data.frame(brts = c(missing_branches$speciation_time,obs_brts,missing_branches$extinction_time),
-                      t_ext = c(missing_branches$extinction_time, rep(Inf,length(obs_brts)+nrow(missing_branches))),
-                      to = c(rep(1,nrow(missing_branches)),rep(2,length(obs_brts)),rep(0,nrow(missing_branches))))
+    tree = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
+                      t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
+                      to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
     tree = tree[order(tree$brts),]
     
-    lambda_max = sum_speciation_rate(cbt,tree,pars,model)*(1-exp(-mu*(b-cbt)))
     next_bt = min(tree$brts[tree$brts>cbt])
+    lambda_max = max(sum_speciation_rate(cbt,tree,pars,model),sum_speciation_rate(next_bt,tree,pars,model))*(1-exp(-mu*(b-cbt)))
     u1 = runif(1)
     next_speciation_time = cbt-log(x = u1)/lambda_max
     if(next_speciation_time < next_bt){
@@ -117,35 +107,34 @@ augment_tree_thinning <- function(obs_brts,pars,model="dd"){
       if(u2<pt){
         extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
         missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
+        # choose species to speciate, and add it to tree. 
       }
     }
     cbt = min(next_speciation_time,next_bt)
   }
-  tree = data.frame(brts = c(missing_branches$speciation_time,obs_brts,missing_branches$extinction_time),
-                    t_ext = c(missing_branches$extinction_time, rep(Inf,length(obs_brts)+nrow(missing_branches))),
-                    to = c(rep(1,nrow(missing_branches)),rep(2,length(obs_brts)),rep(0,nrow(missing_branches))))
+  tree = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
+                    t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
+                    to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
   tree = tree[order(tree$brts),]
   
   logg = log_sampling_prob_nh(df = tree,pars = pars,model = model)
-  logf = loglik.tree(pars=pars,tree=tree,model=model)
-  logweight = logf-logg
-  weight = exp(logweight)
-  return(list(tree=tree,weight=weight,logf=logf,logg=logg))
+
+  return(list(tree=tree,logg=logg))
 }
 
 
 #inverse method
 
-tree_augmentation_inverse <- function(observed.branching.times,pars,model="dd"){
-  #observed.branching.times = cumsum(-diff(c(brts_vangidae,0)))
-  b = max(observed.branching.times)
+tree_augmentation_inverse <- function(brts,pars,model="dd"){
+  brts = cumsum(-diff(c(brts,0)))
+  b = max(brts)
   mu = pars[3]
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
   cbt = 0 # current branching time
   while(cbt < b){
-    tree = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),
-                      t_ext = c(missing_branches$extinction_time, rep(Inf,length(observed.branching.times)+nrow(missing_branches))),
-                      to = c(rep(1,nrow(missing_branches)),rep(2,length(observed.branching.times)),rep(0,nrow(missing_branches))))
+    tree = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
+                      t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
+                      to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
     tree = tree[order(tree$brts),]
     next_bt = min(tree$brts[tree$brts>cbt])
     next_speciation_time = rnhpp(time0 = cbt,time_max = next_bt,tree = tree,model = model,pars = pars)
@@ -158,14 +147,68 @@ tree_augmentation_inverse <- function(observed.branching.times,pars,model="dd"){
       cbt = next_bt
     }
   }
-  df = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),
-                  t_ext = c(missing_branches$extinction_time, rep(Inf,length(observed.branching.times)+nrow(missing_branches))),
-                  to = c(rep(1,nrow(missing_branches)),rep(2,length(observed.branching.times)),rep(0,nrow(missing_branches))))
+  df = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
+                  t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
+                  to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
   df = df[order(df$brts),]
   df$t.ext = df$t_ext-df$brts
   return(df)
   
 }
+
+##
+rnhpp <- function(time0,time_max,tree,model,pars){  # random non-homogenous exponential (NHPP)
+  ex = rexp(1)
+  rv = IntInv(ex = ex,time0 = time0,time_max = time_max,tree = tree,model = model,pars = pars)
+  return(rv)
+}
+
+#DD  inverse method
+rnhpp_dd <- function(r,mu,s,cbt,next_bt){  # random non-homogenous exponential (NHPP)
+  ex = rexp(1)
+  rv = cbt+IntInv_dd(r = r,mu = mu,s = s,u = ex)
+  if(is.na(rv) | rv>next_bt){
+    rv = Inf
+  }
+  return(rv)
+}
+
+IntInv_dd <- function(r,mu,s,u){
+  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
+  return(t)
+}
+
+intensity <- function(x, tree, model, time0, pars){
+  max_time_for_continuity = min(tree$brts[tree$brts>time0])
+  if(x==time0){
+    val = 0
+  }else{
+    nh_rate <- function(wt){
+      sum_speciation_rate(x=wt,tree = tree,pars = pars,model = model)*(1-exp(-(max(tree$brts)-wt)*pars[3]))
+    }
+    if(x != time0) x <- x-0.00000000001
+    val = pracma:::quad(f = Vectorize(nh_rate),xa = time0,xb = x)
+  }
+  return(val)
+}
+
+inverse = function (f, lower = 0, upper = 100,...) {
+  function (y) uniroot((function (x) f(x,...) - y), lower = lower, upper = upper)[1]
+}
+
+IntInv <- function(ex,time0,time_max,tree,model,pars){
+  if(sign(intensity(x = time0,tree = tree,model = model,time0 = time0,pars = pars)-ex)==sign(intensity(x = time_max, time0 = time0,tree=tree,model=model,pars = pars)-ex)){
+    value = Inf
+  }else{
+    IntInv_inner = inverse(intensity,time0,time_max,tree=tree,model=model,time0=time0,pars=pars)
+    inverse = IntInv_inner(ex)
+    value = inverse$root
+  }
+  return(value)
+}
+
+
+
 
 tree_augmentation <- function(obs_brts,pars,model,importance_sampler,maxnumspec=NULL,general=TRUE){
   initspec=1

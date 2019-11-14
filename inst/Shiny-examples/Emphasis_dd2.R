@@ -127,16 +127,10 @@ ui <- fluidPage(
                                        "The current data augmentation algorithm requires a limit on the number of missing species, you can check if that limit makes sense by checking the weights plot. If the weights are spread all over the plot you probably need to increase the maximum number of species allowed to sample in the whole space. If the last meaningful weight is far to the left to your limit then you probably want to decrease this quantity for the sake of efficiency.",
                                        h3("Options"),
                                        "Several options are available for analysis",
-                                       #  h4("Compare with DDD"),
-                                       #   "For the given examples (except birds\' tree) a solution is given by DDD package, useful for comparison.",
-                                       #  h4("log of estimated likelihood"),
-                                       #"To observe the estimated loglikelihood",
                                        h4("log of weights"),
                                        "To observe the weights on logarithm scale",
-                                       #h4("Iteration to show on plot"),
-                                      # "To observe the plots on more detail from last iterations",
-                                     h3("Controls"),
-                                     "To initialize and stop the MCEM routine.",
+                                       h3("Controls"),
+                                       "To initialize and stop the MCEM routine.",
                                        h4("Number of processors"),
                                        "Number of cores to be used on parallel. We suggest 2 for small samples and increase it as the sample size increases. Ready to go to the analysis tab?"
                               ),
@@ -144,9 +138,6 @@ ui <- fluidPage(
                               tabPanel("Analysis",
                                        
                                        fluidRow(
-                                         #dataTableOutput("iterations_data"),
-                                     #    paste(c("current parameters: ",pars)),
-                                        
                                          column(5,
                                     #    
                                                 h3("Parameters"),
@@ -154,12 +145,6 @@ ui <- fluidPage(
                                                 plotOutput("mu"),
                                                 plotOutput("K")),
                                          
-                                  #       column(5,
-                                   #             h3("Diagnostics"),
-                                   #             plotOutput("fhat"),
-                                   #             plotOutput("diff_fhat_hist")#,
-                                   #             # plotOutput("rellik_hist")
-                                   #      ),
                                          column(5,
                                                 h3("Weights"),
                                                 plotOutput("weights_by_dimension"),  #weight_vs_dimension
@@ -191,16 +176,7 @@ ui <- fluidPage(
 
 
 server <- shinyServer(function(input,output,session) {
-  
-  # output$open_end <- renderUI({
-  #   if (!(input$brts[1] == 0)){
-  #     return(NULL)
-  #   }else {
-  #     textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1")
-  #   }
-  #  })
-  
-  
+
   
   rv <- reactiveValues(MCEM=MCEM,
                        run=F,

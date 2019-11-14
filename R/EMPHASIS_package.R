@@ -107,58 +107,6 @@ log.samp.prob <- function(to,maxnumspec,ct,initspec=1,conf,p){
 
 #################################
 ## emphasis sampler
-rnhpp <- function(time0,time_max,tree,model,pars){  # random non-homogenous exponential (NHPP)
-  ex = rexp(1)
-  rv = IntInv(ex = ex,time0 = time0,time_max = time_max,tree = tree,model = model,pars = pars)
-  return(rv)
-}
-
-#DD  inverse method
-rnhpp_dd <- function(r,mu,s,cbt,next_bt){  # random non-homogenous exponential (NHPP)
-  ex = rexp(1)
-  rv = cbt+IntInv_dd(r = r,mu = mu,s = s,u = ex)
-  if(is.na(rv) | rv>next_bt){
-    rv = Inf
-  }
-  return(rv)
-}
-
-IntInv_dd <- function(r,mu,s,u){
-  t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
-  return(t)
-}
-
-intensity <- function(x, tree, model, time0, pars){
-  max_time_for_continuity = min(tree$brts[tree$brts>time0])
-  if(x > max_time_for_continuity){
-    stop("max_time_for_continuity_reached")
-  }
-  if(x==time0){
-    val = 0
-  }else{
-    nh_rate <- function(wt){
-      sum_speciation_rate(x=wt,tree = tree,pars = pars,model = model)*(1-exp(-(max(tree$brts)-wt)*pars[3]))
-    }
-    if(x != time0) x <- x-0.00000000001
-    val = pracma:::quad(f = Vectorize(nh_rate),xa = time0,xb = x)
-  }
-  return(val)
-}
-
-inverse = function (f, lower = 0, upper = 100,...) {
-  function (y) uniroot((function (x) f(x,...) - y), lower = lower, upper = upper)[1]
-}
-
-IntInv <- function(ex,time0,time_max,tree,model,pars){
-  if(sign(intensity(x = time0,tree = tree,model = model,time0 = time0,pars = pars)-ex)==sign(intensity(x = time_max, time0 = time0,tree=tree,model=model,pars = pars)-ex)){
-    value = Inf
-  }else{
-    IntInv_inner = inverse(intensity,time0,time_max,tree=tree,model=model,time0=time0,pars=pars)
-    inverse = IntInv_inner(ex)
-    value = inverse$root
-  }
-  return(value)
-}
 
 
 ### PD models

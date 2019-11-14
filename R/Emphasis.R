@@ -14,11 +14,6 @@
 #  return(list(po=po,loglik_proportion=loglik_proportion,effective_sample_size=effective_sample_size,M_time=M_time))
 #}
 
-
-
-
-
-
 ###########################
 
 ###  simulation of extinct species

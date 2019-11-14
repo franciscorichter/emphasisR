@@ -1,11 +1,12 @@
 # more utilities
 
-
 number_of_species <- function(tree,tm=NULL){
   initspec = 1
   to = head(tree$to,-1)
   to[to==2] = 1
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  
+  
   if(is.null(tm)){
     N=n
   }else{
@@ -18,52 +19,12 @@ number_of_species <- function(tree,tm=NULL){
   return(N)
 }
 
-
-phylodiversity_t <- function(time_m,tree){
-  #if(initial_point){
-  cutting = suppressWarnings(which(tree$brts < time_m))
-  #}else{
-  #  cutting = suppressWarnings(which(tree$brts <= time_m))
-  # }
-  if(length(cutting)>0){
-    tree = tree[cutting,]
-    #if(initial_point){
-    #  extinctions = tree$t_ext[suppressWarnings(which(tree$t_ext < time_m))]
-    #}else{
-    extinctions = tree$t_ext[suppressWarnings(which(tree$t_ext <= time_m))]
-    #}
-    tree = tree[!(tree$brts %in% extinctions),]
-    tree = tree[!(tree$t_ext %in% extinctions),]
-    if(nrow(tree)>0){
-      n = 1:nrow(tree)
-      wt = diff(c(0,tree$brts))
-      pd = sum(n*wt) + (length(n)+1)*(time_m-tree$brts[nrow(tree)])
-    }else{
-      pd = time_m 
-    }
-  }else{
-    pd = time_m
-  }
-  return(pd)
-}
-
 phylodiversity <- function(tm,tree){
-  # cut the tree
-  tree = tree[tree$brts<tm,]
-  if(nrow(tree)==0){
-    pd= tm
-  }else{
-    # remove extinctions
-    extinctions = tree$brts[tree$to==0]
-    if(length(extinctions)>0){
-      tree = tree[tree$to != 0 ,]
-      tree = tree[!(tree$t_ext %in% extinctions),]
-    }
-    # sum branches length
-    pd = sum( diff(c(0,tree$brts)) * 1:nrow(tree) ) + (nrow(tree)+1) * (tm - tree$brts[length(tree$brts)])
-  }
-  
-  return(pd)
+  i1<-tree$brts<=tm 
+  i2<-tree$to==0&i1
+  i3<-tree$t_ext%in%tree$brts[i2]
+  dt<-diff(c(0,tree$brts[i1&!i2&!i3],tm))
+  return(sum(dt*(1:length(dt))))
 }
 
 

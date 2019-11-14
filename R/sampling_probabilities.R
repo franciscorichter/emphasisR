@@ -1,10 +1,11 @@
 # augmentaion (sampling) probability 
 
-log_sampling_prob_nh <- function(df,pars,model="dd",initspec=1){
+log_sampling_prob_nh <- function(df,pars,model="dd"){
   if(is.null(df$t_ext)) df$t_ext  = df$bte
   b = max(df$brts)
   to = top = head(df$to,-1)
   to[to==2] = 1
+  initspec=1
   N = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   brts_i = df$brts
   brts_im1 = c(0,df$brts[-nrow(df)])
