@@ -23,7 +23,23 @@ lambda.pd <- function(tm,tree,pars){
   return(lambda)
 }
 
-lambda.rpd <- function(time_m,tree,pars){
+lambda.rpd <- function(tm,tree,pars){
+  # parameters
+  lambda_0 = pars[1]
+  alpha    = pars[2]
+  beta     = pars[4]
+  gamma    = pars[5]
+  ###
+  a = (2*exp(alpha))/(1+exp(alpha)) - 1
+  b = (2*exp(beta))/(1+exp(beta)) - 1
+  ###
+  pd = sapply(tm,phylodiversity,tree=tree)
+  N = sapply(tm, n_from_time,tree=tree)
+  lambda = max(0, lambda_0 - gamma * N^a * pd^b)
+  return(lambda)
+}
+
+lambda.rpd_old <- function(tm,tree,pars){
   pd = sapply(tm,phylodiversity,tree=tree)
   N = sapply(tm, n_from_time,tree=tree)
   lambda = max(0,pars[1]*(1-((N^pars[2])*(pd^pars[3]))/pars[4]))

@@ -87,22 +87,50 @@ loglik.tree.pd <- function(pars,tree){
 loglik.tree.rpd <- function(pars,tree){
   # parameters
   lambda_0 = pars[1]
+  mu_0     = pars[3]
+  alpha    = pars[2]
+  beta     = pars[4]
+  gamma    = pars[5]
+  ###
+  n = number_of_species(tree)
+  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
+  wt = diff(c(0,tree$brts))
+  a = (2*exp(alpha))/(1+exp(alpha)) - 1
+  b = (2*exp(beta))/(1+exp(beta)) - 1
+  # rho
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  lambda = lambda.rpd(tree$brts,tree,pars)
+  rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
+  # sigma 
+  sigma = n*( (lambda_0+mu_0)*wt - gamma*(n^(a-1))*((Pt+n*wt)^(b+1)-Pt^(b+1))/(b+1) )
+  if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
+  loglik = sum(-sigma)+sum(rho)
+  return(loglik)
+  
+}
+
+
+loglik.tree.rpd_old <- function(pars,tree){
+  # parameters
+  lambda_0 = pars[1]
   mu = pars[3]
-  beta = pars[3]
-  a = parrs[4]
+  beta = pars[2]
+  a = pars[4]
   b = pars[5]
   ###
   n = number_of_species(tree)
-  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity_t(x,tree)))
+  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
   wt = diff(c(0,tree$brts))
   # rho
   to = tree$to
   to = head(to,-1)
   to[to==2] = 1
-  lambda = pmax(0,pars[1]*((pd+1)^(-pars[2])))
+  lambda = lambda.rpd(tree$brts,tree,pars)
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   # sigma 
-  sigma = n*((lambda_0+mu)*wt-((lambda_*beta*(n^a))/(n*(b+1)))*((Pt+n*wt)^(b+1)-Pt^(b+1)))
+  sigma = n*((lambda_0+mu)*wt-((lambda*beta*(n^a))/(n*(b+1)))*((Pt+n*wt)^(b+1)-Pt^(b+1)))
   
   loglik = sum(-sigma)+sum(rho)
   return(loglik)

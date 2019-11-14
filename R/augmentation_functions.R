@@ -5,7 +5,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
   if(seed>0) set.seed(seed)
   
   if(method == "thinning"){
-    E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = TRUE,no_cores = no_cores)
+    E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = F,no_cores = no_cores)
   }else{
   
     #### parallel set-up
@@ -85,7 +85,11 @@ mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_s
 ## thinning method
 
 augment_tree_thinning <- function(brts,pars,model="dd"){
-  mu = pars[3]
+  if(model == "rpd"){
+    mu = pars[2]
+  }else{
+    mu = pars[3]
+  }
   b = max(brts)
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
   cbt=0
@@ -218,13 +222,13 @@ tree_augmentation <- function(obs_brts,pars,model,importance_sampler,maxnumspec=
   }
   if(importance_sampler == "emphasis"){
     if(general){
-      df = tree_augmentation_inverse(observed.branching.times = obs_brts,pars = pars,model = model)
+      df = tree_augmentation_inverse(brts = obs_brts,pars = pars,model = model)
     }else{
       if(model=="dd"){
-        df = nh_tree_augmentation_dd(observed.branching.times = obs_brts,pars = pars)
+        df = nh_tree_augmentation_dd(brts = obs_brts,pars = pars)
       }
       if(model == "pd"){
-        df = nh_tree_augmentation_pd(observed.branching.times = obs_brts,pars = pars)
+        df = nh_tree_augmentation_pd(brts = obs_brts,pars = pars)
       }
     }
     logg = log_sampling_prob_nh(df = df,pars = pars,model = model,initspec = initspec)
