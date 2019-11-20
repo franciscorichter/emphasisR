@@ -27,11 +27,11 @@ loglik.tree.dd <- function(pars,tree){
   mu = max(0,pars[3])
   wt = diff(c(0,tree$brts))
   initspec=1
-  n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  n = tree$n
   lambda = lambda.dd.n(pars,n)
   sigma = (lambda + mu)*n
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-  log.lik = (sum(-sigma*wt)+sum(log(rho)))
+  log.lik = sum(-sigma*wt)+sum(log(rho))
   if(min(pars)<0) log.lik = -Inf
   return(log.lik)
 }
@@ -47,13 +47,9 @@ loglik.tree.dd_new <- function(pars,tree){
   
   lambda = lambda.dd(tm = c(0,tree$brts[-nrow(tree)]),tree = tree,pars = pars)
   
- # if(any((lambda[-length(lambda)] == 0) & (tree$to[-length(lambda)] != 0)) | (min(pars)<0)){
-#    log.lik = -Inf
-#  }else{
   sigma = (lambda + mu)*sapply(c(0,tree$brts[-nrow(tree)]), number_of_species,tree = tree)
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   log.lik = (sum(-sigma*wt)+sum(log(rho)))
- # }
 
   return(log.lik)
 }
@@ -67,49 +63,139 @@ loglik.tree.pd <- function(pars,tree){
   mu = max(0,pars[3])
   wt = diff(c(0,tree$brts))
   
-  n = number_of_species(tree)
+  n = tree$n
   brts = tree$brts[-length(tree$brts)]
-  Pt = c(0,sapply(brts, function(x) phylodiversity(x,tree)))
+  Pt = c(0,tree$pd)
   alpha1 = pars[2]*n
   brts_i = tree$brts
   brts_im1 = c(0,brts)
   alpha0 = pars[1] - pars[2]*(Pt-n*brts_im1)
   sigma_over_tree = ((alpha0+mu)*wt - (alpha1/2)*(brts_i^2-brts_im1^2))*n
-  
-  lambda = sapply(brts, lambda.pd, pars=pars,tree=tree)
+  lambda = pmax(0,pars[1] - pars[2] * Pt)
   rho = pmax(lambda * to + mu * (1-to),0)
   
   log.lik = -sum(sigma_over_tree) + sum(log(rho))
   return(log.lik)
 }
 
+transform_exp <- function(alpha){
+  (2*exp(alpha))/(1+exp(alpha)) - 1
+}
+
+transform_tan <- function(alpha){
+  atan(alpha)
+}
+
+
+
 
 loglik.tree.rpd <- function(pars,tree){
   # parameters
   lambda_0 = pars[1]
-  mu_0     = pars[3]
-  alpha    = pars[2]
-  beta     = pars[4]
-  gamma    = pars[5]
-  ###
-  n = number_of_species(tree)
-  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
+  gamma = pars[2]
+  mu_0 = pars[3]
+  alpha = pars[4]
+  beta = pars[5]
+  
+  N = tree$n
+  P = c(0,tree$pd[-nrow(tree)])
   wt = diff(c(0,tree$brts))
-  a = (2*exp(alpha))/(1+exp(alpha)) - 1
-  b = (2*exp(beta))/(1+exp(beta)) - 1
+  a = transform_tan(alpha)
+  b = transform_tan(beta)
+  if(b==-1){
+    P = P+1
+  }
   # rho
   to = tree$to
   to = head(to,-1)
   to[to==2] = 1
-  lambda = lambda.rpd(tree$brts,tree,pars)
+  #lambda = sapply(c(0,tree$brts[-nrow(tree)]), lambda.rpd,tree=tree,pars=pars)
+  lambda = pmax(0, lambda_0 - gamma * N^a * (P)^b)
+  rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
+  # sigma 
+  sigma = N*( (lambda_0+mu_0)*wt - gamma*(N^(a-1))*((P+N*wt)^(b+1)-P^(b+1))/(b+1) )
+  if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
+  loglik = sum(-sigma)+sum(log(rho))
+  return(loglik)
+  
+}
+
+loglik.tree.rpd4 <- function(pars,tree){
+  # parameters
+  lambda_0 = pars[1]
+  gamma = pars[2]
+  mu_0 = pars[3]
+  N = tree$n
+  Pi = tree$pd+1
+  Pim1 = c(0,Pi[-nrow(tree)])+1
+  wt = diff(c(0,tree$brts))
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  lambda = pmax(0, lambda_0 - gamma * N/Pi)
+  rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
+  sigma = N*( (lambda_0+mu_0)*wt - gamma*(   log(Pim1+N*wt)-log(Pim1)  )  )
+  if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
+  loglik = sum(-sigma)+sum(log(rho))
+  return(loglik)
+  
+}
+
+loglik.tree.rpd2 <- function(pars,tree){
+  # parameters
+  lambda_0 = pars[1]
+  gamma = 1
+  mu_0 = pars[2]
+  alpha = pars[3]
+  beta = pars[4]
+  ###
+  n = number_of_species(tree)
+  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
+  wt = diff(c(0,tree$brts))
+  a = transform_tan(alpha)
+  b = transform_tan(beta)
+  # rho
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  lambda = sapply(c(0,tree$brts), lambda.rpd2,tree=tree,pars=pars)
   rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
   # sigma 
   sigma = n*( (lambda_0+mu_0)*wt - gamma*(n^(a-1))*((Pt+n*wt)^(b+1)-Pt^(b+1))/(b+1) )
   if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
-  loglik = sum(-sigma)+sum(rho)
+  loglik = sum(-sigma)+sum(log(rho))
   return(loglik)
   
 }
+
+## work in progress
+loglik.tree.erpd <- function(pars,tree){
+  # parameters
+  lambda_0 = pars[1]
+  gamma = 1
+  mu_0 = pars[2]
+  alpha = pars[3]
+  beta = pars[4]
+  ###
+  n = number_of_species(tree)
+  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
+  wt = diff(c(0,tree$brts))
+  a = transform_tan(alpha)
+  b = transform_tan(beta)
+  # rho
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  lambda = sapply(tree$brts, lambda.rpd2,tree=tree,pars=pars)
+  rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
+  # sigma 
+  sigma = n*( (lambda_0+mu_0)*wt - gamma*(n^(a-1))*((Pt+n*wt)^(b+1)-Pt^(b+1))/(b+1) )
+  if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
+  loglik = sum(-sigma)+sum(log(rho))
+  return(loglik)
+  
+}
+
 
 
 loglik.tree.rpd_old <- function(pars,tree){
@@ -159,6 +245,37 @@ loglik.tree.pd_numerical <- function(pars,tree,initspec=1){
   return(log.lik)
 }
 
+loglik.tree.rpd_taylor <- function(pars,tree,prev_pars){
+  # parameters
+  lambda_0 = pars[1]
+  gamma = pars[2]
+  mu_0 = pars[3]
+  alpha = pars[4]
+  beta = pars[5]
+  ###
+  n = number_of_species(tree)
+  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
+  wt = diff(c(0,tree$brts))
+  a = transform_tan(alpha)
+  b = transform_tan(beta)
+  # rho
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  lambda = sapply(tree$brts, lambda.rpd_taylor,tree=tree,pars=pars)
+  rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
+  # sigma 
+  pa = transform_tan(prev_pars[4])
+  pb = transform_tan(prev_pars[5])
+  gamma0 = prev_pars[2]
+  pgamma = gamma+((a-pa)*gamma0*pa)/n
+  
+  sigma = n*( (lambda_0+mu_0)*wt - pgamma*(n^(pa-1))*((Pt+n*wt)^(pb+1)-Pt^(pb+1))/(pb+1) + (b-pb)*gamma0*pb*(n^pa)*(1/n)*(1/(b+1))*((Pt+n*wt)^(pb+1)-Pt^(pb+1)) )
+  
+  if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
+  loglik = sum(-sigma)+sum(rho)
+  return(loglik)
+}
 
 
 

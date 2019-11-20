@@ -60,8 +60,9 @@ ui <- fluidPage(
                                          )),
                              selectInput("model", "Choose diversification model:",
                                          list("Diversity dependence" = "dd",
-                                              "Exponential diversity dependence" = "edd",
                                               "Phylodiversity dependence" = "pd",
+                                              "RPD4" = "rpd4",
+                                              "Exponential diversity dependence" = "edd",
                                               "Exponential Phylodiversity dependence" = "epd",
                                               "GDDX" = "gddx",
                                               "GDPX" = "gpdx"

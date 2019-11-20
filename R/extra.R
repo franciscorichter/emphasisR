@@ -41,9 +41,9 @@ phylo2tree <- function(tree){
   return(list(wt=t,to=E))
 }
 
-vectors2phylo <- function(list,initspec=1){
-  wt=list$wt
-  to=list$to
+tree2phylo <- function(tree,initspec=1){
+  wt=-diff(c(0,tree$brts))
+  to=tree$to
   to[to==2] = 1
   ct=sum(wt)
   newick = paste(sl[1],";",sep="")

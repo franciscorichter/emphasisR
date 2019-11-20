@@ -23,19 +23,102 @@ lambda.pd <- function(tm,tree,pars){
   return(lambda)
 }
 
+
 lambda.rpd <- function(tm,tree,pars){
-  # parameters
+  # parameters   pars = c(l1,ga,mu,al,be)
   lambda_0 = pars[1]
-  alpha    = pars[2]
-  beta     = pars[4]
-  gamma    = pars[5]
+  gamma = pars[2]
+  #mu = pars[3]
+  alpha = pars[4]
+  beta = pars[5]
   ###
-  a = (2*exp(alpha))/(1+exp(alpha)) - 1
-  b = (2*exp(beta))/(1+exp(beta)) - 1
+  a = atan(alpha)
+  b = atan(beta)
+  ###
+  pd = sapply(tm,phylodiversity,tree=tree)
+  N = sapply(tm, n_from_time,tree=tree)
+  lambda = max(0, lambda_0 - gamma * N^a * (pd+1)^b)
+  return(lambda)
+}
+
+lambda.rpd2 <- function(tm,tree,pars){
+  # parameters   pars = c(l1,ga,mu,al,be)
+  lambda_0 = pars[1]
+  gamma = 1
+  #mu = pars[2]
+  alpha = pars[3]
+  beta = pars[4]
+  ###
+  a = transform_tan(alpha)
+  b = transform_tan(beta)
   ###
   pd = sapply(tm,phylodiversity,tree=tree)
   N = sapply(tm, n_from_time,tree=tree)
   lambda = max(0, lambda_0 - gamma * N^a * pd^b)
+  return(lambda)
+}
+
+
+lambda.rpd3 <- function(tm,tree,pars){
+  
+  lambda_0 = pars[1]
+  gamma = pars[2]
+  
+  pd = sapply(tm,phylodiversity,tree=tree)
+  N = sapply(tm, n_from_time,tree=tree)
+  lambda = max(0, lambda_0 - gamma * (pd/N) )
+  return(lambda)
+}
+
+lambda.rpd4 <- function(tm,tree,pars){
+
+  lambda_0 = pars[1]
+  gamma = pars[2]
+
+  pd = sapply(tm,phylodiversity,tree=tree)
+  N = sapply(tm, n_from_time,tree=tree)
+  lambda = max(0, lambda_0 - gamma * (N/(pd+1)) )
+  return(lambda)
+}
+
+lambda.erpd <- function(tm,tree,pars){
+  # work in progress
+  lambda_0 = pars[1]
+  #gamma = pars[2]
+  #mu = pars[3]
+  alpha = pars[3]
+  beta = pars[4]
+  ###
+  a = transform_tan(alpha)
+  b = transform_tan(beta)
+  ###
+  pd = sapply(tm,phylodiversity,tree=tree)
+  N = sapply(tm, n_from_time,tree=tree)
+  lambda = max(0, lambda_0 - gamma * N^a * pd^b)
+  return(lambda)
+}
+
+lambda.rpd_taylor <- function(tm,tree,pars,previous_pars){
+  # parameters   pars = c(l1,ga,mu,al,be)
+  lambda_0 = pars[1]
+  gamma = pars[2]
+  #mu = pars[3]
+  alpha = pars[4]
+  beta = pars[5]
+  
+  palpha = previous_pars[4]
+  pbeta = previous_pars[5]
+  pgamma = previous_pars[2]
+  ###
+  a = transform_tan(alpha)
+  b = transform_tan(beta)
+  
+  pa = transform_tan(alpha)
+  pb = transform_tan(beta)
+  ###
+  pd = sapply(tm,phylodiversity,tree=tree)
+  N = sapply(tm, n_from_time,tree=tree)
+  lambda = max(0, lambda_0 - gamma * N^pa * pd^pb - (a-pa)*pgamma*pa*N^(pa-1)*pd^pb - (b-pb)*pgamma*pb*N^(pa)*pd^(pb-1))
   return(lambda)
 }
 

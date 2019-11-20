@@ -1,4 +1,5 @@
 
+
 mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,method="inverse"){
   
   time=proc.time()
@@ -7,55 +8,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
   if(method == "thinning"){
     E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = F,no_cores = no_cores)
   }else{
-  
-    #### parallel set-up
-    cl <- makeCluster(no_cores)
-    registerDoParallel(cl)
-    ##
-    if(importance_sampler=="emphasis"){
-      trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-        df = emphasis::tree_augmentation_inverse(brts = brts,pars = pars,model = model)
-        if(!is.null(df)){
-          logg.samp = emphasis:::log_sampling_prob_nh(df = df,pars = pars,model = model)
-          tree.info = list(logg.samp=logg.samp,dim=nrow(df),tree=df)
-        }else{
-          tree.info = list(logg.samp=0,tree=0,dim=0)
-        }
-        return(tree.info)
-      }
-    }
-    if(importance_sampler=="uniform"){
-      trees <- foreach(i = 1:nsim, combine = list) %dopar% {
-        df = emphasis:::sample.uniform(brts,maxnumspec=maxnumspec)
-        log.samp.unif.prob = emphasis:::log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=1,p=0.5)
-        df$t_exp = rep(Inf,nrow(df)) 
-        missing_speciations = NULL
-        for(j in 1:nrow(df)){
-          if(df$to[j]==1){
-            missing_speciations = c(missing_speciations,df$brts[j])
-          }
-          if(df$to[j]==0){
-            sample_ext_time_index = sample(length(missing_speciations),1)
-            df$t_exp[j] = missing_speciations[sample_ext_time_index]
-            missing_speciations = missing_speciations[-sample_ext_time_index]
-          }
-        }
-      ##################
-        return(list(logg.samp=log.samp.unif.prob,dim=nrow(df),tree=df))
-      }
-    }
-    stopCluster(cl)
-    
-    tree = lapply(trees, function(list) list$tree)
-    log_lik_tree <- loglik.tree(model)
-    logf = sapply(tree,log_lik_tree, pars=pars)
-    logg = sapply(trees,function(list) list$logg.samp)
-    dim = sapply(trees,function(list) list$dim)
-    logweights = logf-logg
-    weights = exp(logweights)
-    fhat = mean(weights)
-    time = get.time(time)
-    E = list(weights=weights,logweights=logweights,fhat=fhat,logf=logf,fhat.se=1,logg=logg,trees=tree,dim=dim,E_time=time)
+    E = mc_augmentation_inverse(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = T,no_cores = no_cores)
   }
   return(E)
 }
@@ -71,24 +24,131 @@ mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_s
 
   trees = lapply(st,function(list) list$tree)
   dim = sapply(st,function(list) nrow(list$tree))
+  E_time = get.time(time)
+  
+  ## including traits
+  pd = sapply(trees, pd_at_brts)
+  n = sapply(trees, n_at_brts)
+  traits = list(n = n, pd = pd)
+  ####
   log_lik_tree <- loglik.tree(model)
   logf = sapply(trees,log_lik_tree, pars=pars)
   logg =    sapply(st,function(list) list$logg)
   log_weights = logf-logg
   w=exp(log_weights)
-  E_time = get.time(time)
-  En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
+  ####
+  
+  En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time,traits=traits)
   return(En)
 }
 
+mc_augmentation_inverse <-
+  function(brts,
+           pars,
+           model,
+           importance_sampler,
+           sample_size,
+           parallel = TRUE,
+           no_cores = 2) {
+    #### parallel set-up
+    cl <- makeCluster(no_cores)
+    registerDoParallel(cl)
+    ##
+    if (importance_sampler == "emphasis") {
+      trees <- foreach(i = 1:sample_size, combine = list) %dopar% {
+        df = emphasis::tree_augmentation_inverse(brts = brts,
+                                                 pars = pars,
+                                                 model = model)
+        df$pd = sapply(df$brts, function(x)
+          emphasis:::phylodiversity(x, df))
+        df$n = c(1,sapply(df$brts[-nrow(df)], function(x)
+          emphasis:::number_of_species(tree = df, tm = x)))
+        if (!is.null(df)) {
+          logg.samp = emphasis:::log_sampling_prob_nh(df = df,
+                                                      pars = pars,
+                                                      model = model)
+          tree.info = list(logg.samp = logg.samp,
+                           dim = nrow(df),
+                           tree = df)
+        } else{
+          tree.info = list(logg.samp = 0,
+                           tree = 0,
+                           dim = 0)
+        }
+        return(tree.info)
+      }
+    }
+    if (importance_sampler == "uniform") {
+      trees <- foreach(i = 1:sample_size, combine = list) %dopar% {
+        df = emphasis:::sample.uniform(brts, maxnumspec = maxnumspec)
+        log.samp.unif.prob = emphasis:::log.sampling.prob.uniform(df,
+                                                                  maxnumspec = maxnumspec,
+                                                                  initspec = 1,
+                                                                  p = 0.5)
+        df$t_exp = rep(Inf, nrow(df))
+        missing_speciations = NULL
+        for (j in 1:nrow(df)) {
+          if (df$to[j] == 1) {
+            missing_speciations = c(missing_speciations, df$brts[j])
+          }
+          if (df$to[j] == 0) {
+            sample_ext_time_index = sample(length(missing_speciations), 1)
+            df$t_exp[j] = missing_speciations[sample_ext_time_index]
+            missing_speciations = missing_speciations[-sample_ext_time_index]
+          }
+        }
+        ##################
+        return(list(
+          logg.samp = log.samp.unif.prob,
+          dim = nrow(df),
+          tree = df
+        ))
+      }
+    }
+    stopCluster(cl)
+    time = proc.time()
+    tree = lapply(trees, function(list)
+      list$tree)
+    log_lik_tree <- loglik.tree(model)
+    logf = sapply(tree, log_lik_tree, pars = pars)
+    logg = sapply(trees, function(list)
+      list$logg.samp)
+    dim = sapply(trees, function(list)
+      list$dim)
+    logweights = logf - logg
+    weights = exp(logweights)
+    fhat = mean(weights)
+    time = get.time(time)
+    E = list(
+      weights = weights,
+      logweights = logweights,
+      fhat = fhat,
+      logf = logf,
+      fhat.se = 1,
+      logg = logg,
+      trees = tree,
+      dim = dim,
+      E_time = time
+    )
+    return(E)
+  }
+
+
+
+n_at_brts <- function(tree){
+  sapply(tree$brts, function(x) number_of_species(tree))
+}
+
+pd_at_brts <- function(tree){
+  sapply(tree$brts, function(x) phylodiversity(x,tree))
+}
 
 ## thinning method
 
 augment_tree_thinning <- function(brts,pars,model="dd"){
-  if(model == "rpd"){
+  mu = pars[3]
+  if(model=="rpd2"){
     mu = pars[2]
-  }else{
-    mu = pars[3]
   }
   b = max(brts)
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
@@ -181,6 +241,7 @@ IntInv_dd <- function(r,mu,s,u){
   t = -W(-exp(-r*mu+mu*u/s-exp(-r*mu)))/mu+u/s-exp(-r*mu)/mu
   return(t)
 }
+
 
 intensity <- function(x, tree, model, time0, pars){
   max_time_for_continuity = min(tree$brts[tree$brts>time0])
