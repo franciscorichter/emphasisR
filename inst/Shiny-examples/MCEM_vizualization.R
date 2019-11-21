@@ -78,6 +78,9 @@ server <- function(input, output) {
         DF = data.frame(iteration=MCEM_temp$em.iteration,par1=MCEM_temp$par1,par2=MCEM_temp$par2,par3=MCEM_temp$par3,E_time=MCEM_temp$E_time,M_time=MCEM_temp$M_time,efective_sample_size=MCEM_temp$effective.size)
         rm(MCEM_temp)
       }
+      if(exists("MCEM")){
+        DF = data.frame(iteration=1:nrow(MCEM),par1=MCEM$par1,par2=MCEM$par2,par3=MCEM$par3,E_time=MCEM$E_time,M_time=MCEM$M_time,effective_sample_size=input$sample_size,log_fhat=MCEM$loglik_hat)
+      }
       if("pars3" %in% names(DF)){
         names(DF)[names(DF)=="pars3"] <- "par3"
       }
@@ -153,7 +156,7 @@ server <- function(input, output) {
     df = DF()
     df = df[input$obs:nrow(df),]
     if(input$typePlot=="Path"){
-      plot_par_est = ggplot(df,aes(colour=rep))+geom_path(aes_string(x=input$par1,y=input$par2))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
+      plot_par_est = ggplot(df,aes(colour=rep))+geom_path(aes_string(x=input$par1,y=input$par2))+geom_vline(xintercept = input$burning)+geom_vline(xintercept = input$filter)#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
     }
     if(input$typePlot=="Points"){
       plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes_string(x=input$par1,y=input$par2,alpha=(1:nrow(df))/(2*nrow(df)),size=input$effective_sampling))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
@@ -186,7 +189,7 @@ server <- function(input, output) {
   })
   
   output$fhat <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
+    if(nrow(rv$MCEM)>3){ 
       MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
       fhat.plot = ggplot(MCEM) + geom_line(aes(iteration,log(fhat))) # + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       #  if(input$ddd) fhat.plot = fhat.plot + geom_point(aes(em.iteration,ftrue))

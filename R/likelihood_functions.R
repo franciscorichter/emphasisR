@@ -65,13 +65,13 @@ loglik.tree.pd <- function(pars,tree){
   
   n = tree$n
   brts = tree$brts[-length(tree$brts)]
-  Pt = c(0,tree$pd)
+  Pt = c(0,tree$pd[-nrow(tree)])
   alpha1 = pars[2]*n
   brts_i = tree$brts
   brts_im1 = c(0,brts)
   alpha0 = pars[1] - pars[2]*(Pt-n*brts_im1)
   sigma_over_tree = ((alpha0+mu)*wt - (alpha1/2)*(brts_i^2-brts_im1^2))*n
-  lambda = pmax(0,pars[1] - pars[2] * Pt)
+  lambda = pmax(0,pars[1] - pars[2] * Pt[-1])
   rho = pmax(lambda * to + mu * (1-to),0)
   
   log.lik = -sum(sigma_over_tree) + sum(log(rho))
@@ -132,7 +132,7 @@ loglik.tree.rpd4 <- function(pars,tree){
   to = tree$to
   to = head(to,-1)
   to[to==2] = 1
-  lambda = pmax(0, lambda_0 - gamma * N/Pi)
+  lambda = lambda_0 - gamma * N/Pi
   rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
   sigma = N*( (lambda_0+mu_0)*wt - gamma*(   log(Pim1+N*wt)-log(Pim1)  )  )
   if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf

@@ -69,7 +69,7 @@ ui <- fluidPage(
                                          )),                
                              numericInput("sample_size", "Monte-Carlo sample size:", 10),
                              numericInput("proportion_of_subset", "Proportion of best trees to take:", 1),
-                             numericInput("maxspec", "Maximum number of missing species:", 30),
+                             #numericInput("maxspec", "Maximum number of missing species:", 30),
                              h3("Options"),
                         #     conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
                              #checkboxInput("log", "show estimated lkelihood on log scale", FALSE),
@@ -139,24 +139,26 @@ ui <- fluidPage(
                               tabPanel("Analysis",
                                        
                                        fluidRow(
-                                         column(5,
+                                      #   column(5,
                                     #    
-                                                h3("Parameters"),
+                                               # h3("Parameters"),
                                                 plotOutput("lambda"),
                                                 plotOutput("mu"),
-                                                plotOutput("K")),
+                                                plotOutput("K"),
+                                    #),
                                          
-                                         column(5,
-                                                h3("Weights"),
+                                        # column(5,
+                                            #    h3("Weights"),
                                                 plotOutput("weights_by_dimension"),  #weight_vs_dimension
-                                                plotOutput("fvsg")
-                                         ),
-                                         column(5,
-                                                h3("Information"),
+                                                plotOutput("fhat"),
+                                                plotOutput("fvsg"),
+                                   #      ),
+                                    #     column(5,
+                                           #     h3("Information"),
                                                 plotOutput("timeconsumption"),
                                               #  textOutput("txtOutput2"),
                                                 textOutput("txtOutput3")
-                                         )
+                                      #   )
                                        )),
                               
                               tabPanel("About",
@@ -221,7 +223,7 @@ server <- shinyServer(function(input,output,session) {
         time = proc.time()
         setProgress(value=0,detail = "Performing E step")
         # st = mc_augmentation_thinning(brts=input_values$brts,pars = pars,model = input$model,importance_sampler = input$method,sample_size = input$sample_size,parallel = FALSE,no_cores = input$cores)
-        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores,maxnumspec = input$maxspec,method=input$method)
+        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores,maxnumspec = 100,method=input$method)
         
         E_time = get.time(time)
         
@@ -355,7 +357,7 @@ server <- shinyServer(function(input,output,session) {
   
   output$K <- renderPlot({
     if(nrow(rv$MCEM)>2){ 
-      K.est = mean(rv$MCEM$par3[input$charts:length(rv$MCEM$par3)])
+      K.est = rv$MCEM$par3[length(rv$MCEM$par3)]
       MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
       K.plot = ggplot(MCEM) + geom_line(aes(em.iteration,par3)) + ggtitle(label=paste("Last estimation:  ",K.est)) + ylab("Parameter 3") + xlab("EM iteration")
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
@@ -367,16 +369,16 @@ server <- shinyServer(function(input,output,session) {
   })
   
   output$fhat <- renderPlot({
-    if(nrow(rv$MCEM)>5){ 
-      MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
+    if(nrow(rv$MCEM)>2){ 
+      MCEM = rv$MCEM[input$charts:nrow(rv$MCEM),]
       fhat.plot = ggplot(MCEM) + geom_line(aes(em.iteration,log(fhat))) # + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       #  if(input$ddd) fhat.plot = fhat.plot + geom_point(aes(em.iteration,ftrue))
-      if(input$CI) fhat.plot = fhat.plot + geom_line(aes(em.iteration,log(rv$MCEM$fhat+1.96*rv$MCEM$fhat.se)),col="red") + geom_line(aes(em.iteration,log(rv$MCEM$fhat-1.96*rv$MCEM$fhat.se)),col="red")#+ geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen')
+     # if(input$CI) fhat.plot = fhat.plot + geom_line(aes(em.iteration,log(rv$MCEM$fhat+1.96*rv$MCEM$fhat.se)),col="red") + geom_line(aes(em.iteration,log(rv$MCEM$fhat-1.96*rv$MCEM$fhat.se)),col="red")#+ geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen')
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
         fhat.plot = fhat.plot + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
       }
-      fhat.plot  + theme_emphasis + ggtitle(label = "Estimated log likelihood")
+      fhat.plot # + theme_emphasis + ggtitle(label = "Estimated log likelihood")
     }
   })
   
@@ -403,7 +405,7 @@ server <- shinyServer(function(input,output,session) {
       if(sum(change_down)>0){
         time_consumption_plot = time_consumption_plot + geom_vline(xintercept = change_down, colour="green",linetype="dotted")
       }
-      time_consumption_plot + ggtitle("Time consumption per MCEM iteration") + theme_emphasis 
+      time_consumption_plot + ggtitle(paste("Total Time :",sum(df$time))) + theme_emphasis 
     }
   })
   
