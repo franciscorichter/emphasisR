@@ -9,7 +9,7 @@ License: Creative Commons Public Licenses
 Encoding: UTF-8
 LazyData: true
 Depends:
-    subplex,
+ 
     ggplot2,
     truncdist,
     doParallel,
