@@ -16,6 +16,5 @@ Depends:
     mgcv,
     LambertW,
     shiny,
-    pracma,
     DT,
     stringr
