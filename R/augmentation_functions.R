@@ -4,7 +4,6 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
   
   time=proc.time()
   if(seed>0) set.seed(seed)
-  
   if(method == "thinning"){
     E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = F,no_cores = no_cores)
   }else{

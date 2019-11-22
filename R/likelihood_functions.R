@@ -87,8 +87,6 @@ transform_tan <- function(alpha){
 }
 
 
-
-
 loglik.tree.rpd <- function(pars,tree){
   # parameters
   lambda_0 = pars[1]
@@ -167,6 +165,30 @@ loglik.tree.rpd2 <- function(pars,tree){
   return(loglik)
   
 }
+
+loglik.tree.rpd3 <- function(pars,tree){
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
+  
+  n = tree$n
+  brts = tree$brts[-length(tree$brts)]
+  Pt = c(0,tree$pd[-nrow(tree)])
+
+  brts_i = tree$brts
+  brts_im1 = c(0,brts)
+
+  lambda = pmax(0,pars[1] - pars[2] * Pt/n)
+  rho = pmax(lambda * to + mu * (1-to),0)
+  
+  sigma_over_tree = (pars[1]+pars[3]-(pars[2]/n)*(Pt-brts_i*n))*wt - pars[2]*(brts_i^2-brts_im1^2)
+  
+  log.lik = -sum(sigma_over_tree) + sum(log(rho))
+}
+
 
 ## work in progress
 loglik.tree.erpd <- function(pars,tree){
