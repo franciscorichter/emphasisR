@@ -7,11 +7,11 @@ mu =  0.182003
 al = tan(1)
 be = 0
 pars = c(l0,ga*0.1,mu)*0.1
-input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd3",importance_sampler="emphasis",cores=2,method="inverse")
+input = list(brts=brts_dendroica,pars=pars,sample_size=300,model="rpd4",importance_sampler="emphasis",cores=2,method="thinning")
 
 ##  complete iterative framework 
 MCEM = data.frame(par1=NULL,par2=NULL,par3=NULL,loglik_hat=NULL,E_time=NULL,M_time=NULL)
-for(i in 1:10000){
+for(i in 77:10000){
   print(pars)
   st = mc_sample_independent_trees(brts = input$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores, method = input$method)
   print(paste("loglikelihood: ",log(st$fhat)))

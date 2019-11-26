@@ -15,5 +15,5 @@ devtools::install_github("franciscorichter/emphasis")
 ### Usage
 
 ```
-emphasis_dd()
+emphasis.app()
 ```

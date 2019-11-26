@@ -16,7 +16,7 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
 mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_size,parallel=FALSE,no_cores=2){
   time = proc.time()
   if(!parallel){
-    st =  lapply(1:sample_size,function(i,...){augment_tree_thinning(...)},brts = brts,pars = pars,model=model)
+    st =  lapply(1:sample_size,function(i){augment_tree_thinning(brts = brts,pars = pars,model=model)} )
   }else{
     st = mclapply(1:sample_size,function(i,...){augment_tree_thinning(...)},brts = brts,pars = pars,model=model,mc.cores = no_cores)
   }
@@ -25,19 +25,15 @@ mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_s
   dim = sapply(st,function(list) nrow(list$tree))
   E_time = get.time(time)
   
-  ## including traits
-  pd = sapply(trees, pd_at_brts)
-  n = sapply(trees, n_at_brts)
-  traits = list(n = n, pd = pd)
   ####
   log_lik_tree <- loglik.tree(model)
   logf = sapply(trees,log_lik_tree, pars=pars)
   logg =    sapply(st,function(list) list$logg)
   log_weights = logf-logg
-  w=exp(log_weights)
+  w = exp(log_weights)
   ####
   
-  En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time,traits=traits)
+  En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
   return(En)
 }
 
@@ -50,6 +46,7 @@ mc_augmentation_inverse <-
            parallel = TRUE,
            no_cores = 2) {
     #### parallel set-up
+    time = proc.time()
     cl <- makeCluster(no_cores)
     registerDoParallel(cl)
     ##
@@ -105,7 +102,6 @@ mc_augmentation_inverse <-
       }
     }
     stopCluster(cl)
-    time = proc.time()
     tree = lapply(trees, function(list)
       list$tree)
     log_lik_tree <- loglik.tree(model)
@@ -161,7 +157,7 @@ augment_tree_thinning <- function(brts,pars,model="dd"){
     tree = tree[order(tree$brts),]
     
     next_bt = min(tree$brts[tree$brts>cbt])
-    lambda_max = max(sum_speciation_rate(cbt,tree,pars,model),sum_speciation_rate(next_bt,tree,pars,model))*(1-exp(-mu*(b-cbt)))
+    lambda_max = max(sum_speciation_rate(cbt,tree,pars,model)*(1-exp(-mu*(b-cbt))),sum_speciation_rate(next_bt,tree,pars,model)*(1-exp(-mu*(b-next_bt))))
     u1 = runif(1)
     next_speciation_time = cbt-log(x = u1)/lambda_max
     if(next_speciation_time < next_bt){
