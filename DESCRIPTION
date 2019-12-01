@@ -7,7 +7,7 @@ Maintainer: F. Richter <f.richter@rug.nl>
 Description:  Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.
 License: Creative Commons Public Licenses
 Encoding: UTF-8
-#LazyData: true
+LazyData: false
 Depends:
     ape,
     subplex,
