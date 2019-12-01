@@ -1,5 +1,5 @@
 if (file.exists("first.R")) file.remove("first.R")
-data("branching_times_7phylogenies")
+#data("branching_times_7phylogenies")
 n_cores = detectCores()
 rv = NULL #Do I need this?
 theme_emphasis =  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
@@ -226,7 +226,7 @@ server <- shinyServer(function(input,output,session) {
         time = proc.time()
         setProgress(value=0,detail = "Performing E step")
         # st = mc_augmentation_thinning(brts=input_values$brts,pars = pars,model = input$model,importance_sampler = input$method,sample_size = input$sample_size,parallel = FALSE,no_cores = input$cores)
-        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores,maxnumspec = 100,method=input$method)
+        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores,maxnumspec = 100,method=input$method,parallel = input$parallel)
         
         E_time = get.time(time)
         
