@@ -182,7 +182,7 @@ loglik.tree.rpd3 <- function(pars,tree){
   brts_im1 = c(0,brts)
 
   lambda = pmax(0,pars[1] - pars[2] * Pt/n)
-  rho = pmax(lambda * to + mu * (1-to),0)
+  rho = pmax(lambda[-length(lambda)] * to + mu * (1-to),0)
   
   sigma_over_tree = (pars[1]+pars[3]-(pars[2]/n)*(Pt-brts_i*n))*wt - pars[2]*(brts_i^2-brts_im1^2)
   
