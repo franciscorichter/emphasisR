@@ -18,7 +18,7 @@ mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_s
   if(!parallel){
     st =  lapply(1:sample_size,function(i){augment_tree_thinning(brts = brts,pars = pars,model=model)} )
   }else{
-    st = mclapply(1:sample_size,function(i,...){augment_tree_thinning(...)},brts = brts,pars = pars,model=model,mc.cores = no_cores)
+    st = mclapply(1:sample_size,function(i){augment_tree_thinning(brts = brts,pars = pars,model=model)},mc.cores = no_cores)
   }
 
   trees = lapply(st,function(list) list$tree)
