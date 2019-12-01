@@ -62,10 +62,12 @@ ui <- fluidPage(
                                          list("Diversity dependence" = "dd",
                                               "Phylodiversity dependence" = "pd",
                                               "RPD4" = "rpd4",
+                                              "RPD" = "rpd",
+                                              "RPD2" = "rpd2",
+                                              "RPD3" = "rpd3",
+                                              "eRPD" = "erpd",
                                               "Exponential diversity dependence" = "edd",
-                                              "Exponential Phylodiversity dependence" = "epd",
-                                              "GDDX" = "gddx",
-                                              "GDPX" = "gpdx"
+                                              "Exponential Phylodiversity dependence" = "epd"
                                          )),                
                              numericInput("sample_size", "Monte-Carlo sample size:", 10),
                              numericInput("proportion_of_subset", "Proportion of best trees to take:", 1),
