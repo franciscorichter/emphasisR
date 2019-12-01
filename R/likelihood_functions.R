@@ -45,6 +45,29 @@ loglik.tree.pd <- function(pars,tree){
   return(log.lik)
 }
 
+loglik.tree.rpd2 <- function(pars,tree){
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
+  
+  n = tree$n
+  brts = tree$brts[-length(tree$brts)]
+  Pt = c(0,tree$pd[-nrow(tree)])
+  
+  brts_i = tree$brts
+  brts_im1 = c(0,brts)
+  
+  lambda = pmax(0,pars[1] - pars[2] * Pt[-1])
+  rho = pmax(lambda * to + mu * (1-to),0)
+  
+  sigma_over_tree = n*( (pars[1]+pars[3]-(pars[2])*(Pt-brts_im1*n))*wt - pars[2]*n*(brts_i^2-brts_im1^2)/2 )
+  
+  log.lik = -sum(sigma_over_tree) + sum(log(rho))
+  return(log.lik)
+}
 
 loglik.tree.rpd3 <- function(pars,tree){
   to = tree$to
@@ -61,12 +84,13 @@ loglik.tree.rpd3 <- function(pars,tree){
   brts_i = tree$brts
   brts_im1 = c(0,brts)
 
-  lambda = pmax(0,pars[1] - pars[2] * Pt/n)
-  rho = pmax(lambda[-length(lambda)] * to + mu * (1-to),0)
+  lambda = pmax(0,pars[1] - pars[2] * Pt[-1]/n)
+  rho = pmax(lambda * to + mu * (1-to),0)
   
-  sigma_over_tree = n*((pars[1]+pars[3]-(pars[2]/n)*(Pt-brts_im1*n))*wt - pars[2]*(brts_i^2-brts_im1^2))
+  sigma_over_tree = n*((pars[1]+pars[3]-(pars[2]/n)*(Pt-brts_im1*n))*wt - pars[2]*(brts_i^2-brts_im1^2)/2)
   
   log.lik = -sum(sigma_over_tree) + sum(log(rho))
+  return(log.lik)
 }
 
 
@@ -128,8 +152,8 @@ loglik.tree.rpd <- function(pars,tree){
   N = tree$n
   P = c(0,tree$pd[-nrow(tree)])
   wt = diff(c(0,tree$brts))
-  a = transform_tan(alpha)
-  b = transform_tan(beta)
+  a = atan(alpha)
+  b = atan(beta)
   if(b==-1){
     P = P+1
   }
@@ -193,8 +217,8 @@ loglik.tree.erpd <- function(pars,tree){
   n = number_of_species(tree)
   Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
   wt = diff(c(0,tree$brts))
-  a = transform_tan(alpha)
-  b = transform_tan(beta)
+  a = atan(alpha)
+  b = atan(beta)
   # rho
   to = tree$to
   to = head(to,-1)
@@ -269,8 +293,8 @@ loglik.tree.rpd_taylor <- function(pars,tree,prev_pars){
   n = number_of_species(tree)
   Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
   wt = diff(c(0,tree$brts))
-  a = transform_tan(alpha)
-  b = transform_tan(beta)
+  a = atan(alpha)
+  b = atan(beta)
   # rho
   to = tree$to
   to = head(to,-1)
@@ -278,8 +302,8 @@ loglik.tree.rpd_taylor <- function(pars,tree,prev_pars){
   lambda = sapply(tree$brts, lambda.rpd_taylor,tree=tree,pars=pars)
   rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
   # sigma 
-  pa = transform_tan(prev_pars[4])
-  pb = transform_tan(prev_pars[5])
+  pa = atan(prev_pars[4])
+  pb = atan(prev_pars[5])
   gamma0 = prev_pars[2]
   pgamma = gamma+((a-pa)*gamma0*pa)/n
   

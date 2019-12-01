@@ -42,19 +42,8 @@ lambda.rpd <- function(tm,tree,pars){
 }
 
 lambda.rpd2 <- function(tm,tree,pars){
-  # parameters   pars = c(l1,ga,mu,al,be)
-  lambda_0 = pars[1]
-  gamma = 1
-  #mu = pars[2]
-  alpha = pars[3]
-  beta = pars[4]
-  ###
-  a = transform_tan(alpha)
-  b = transform_tan(beta)
-  ###
-  pd = sapply(tm,phylodiversity,tree=tree)
-  N = sapply(tm, n_from_time,tree=tree)
-  lambda = max(0, lambda_0 - gamma * N^a * pd^b)
+  phylodiv <- sapply(tm,phylodiversity,tree=tree)
+  lambda = max(0,pars[1] - pars[2] * phylodiv)
   return(lambda)
 }
 
