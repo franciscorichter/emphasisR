@@ -82,7 +82,7 @@ ga = 0.1479505
 mu =  0.182003
 
 pars = c(l0,0.01,mu)*0.1
-input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd2",importance_sampler="emphasis",cores=2,method="thinning",aceleration_rate=1.1)
+input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd3",importance_sampler="emphasis",cores=2,method="thinning",aceleration_rate=1.1)
 #pars = c( -0.2505580,-0.9612669,0.5727150)
 
 ##  complete iterative framework 
