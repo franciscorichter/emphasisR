@@ -70,6 +70,19 @@ lambda.rpd3 <- function(tm,tree,pars){
   return(lambda)
 }
 
+lambda.rpd5 <- function(tm,tree,pars){
+  
+  lambda_0 = pars[1]
+  gamma = pars[2]
+  beta = pars[4]
+  
+  pd = sapply(tm,phylodiversity,tree=tree)
+  N = sapply(tm, n_from_time,tree=tree)
+  lambda = max(0, lambda_0 - gamma * (pd/N) - pars[4]*N)
+  return(lambda)
+}
+
+
 lambda.rpd4 <- function(tm,tree,pars){
 
   lambda_0 = pars[1]

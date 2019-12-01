@@ -5,21 +5,6 @@ loglik.tree <- function(model){
 
 # likelihood functions 
 
-loglik.tree.dd2 <- function(pars,tree){
-  to = tree$to
-  to = head(to,-1)
-  to[to==2] = 1
-  mu = max(0,pars[3])
-  wt = diff(c(0,tree$brts))
-  
-  lambda = lambda.dd(tm = c(0,tree$brts[-nrow(tree)]),tree = tree,pars = pars)
-  sigma = (lambda + mu)*number_of_species(tree)
-  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-  log.lik = (sum(-sigma*wt)+sum(log(rho)))
-  if(min(pars)<0) log.lik = -Inf
-  return(log.lik)
-}
-
 loglik.tree.dd <- function(pars,tree){
   to = tree$to
   to = head(to,-1)
@@ -33,24 +18,6 @@ loglik.tree.dd <- function(pars,tree){
   rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
   log.lik = sum(-sigma*wt)+sum(log(rho))
   if(min(pars)<0) log.lik = -Inf
-  return(log.lik)
-}
-
-loglik.tree.dd_new <- function(pars,tree){
-  
-  mu = max(0,pars[3])
-  wt = diff(c(0,tree$brts))
-  
-  to = tree$to
-  to = head(to,-1)
-  to[to==2] = 1
-  
-  lambda = lambda.dd(tm = c(0,tree$brts[-nrow(tree)]),tree = tree,pars = pars)
-  
-  sigma = (lambda + mu)*sapply(c(0,tree$brts[-nrow(tree)]), number_of_species,tree = tree)
-  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-  log.lik = (sum(-sigma*wt)+sum(log(rho)))
-
   return(log.lik)
 }
 
@@ -78,13 +45,75 @@ loglik.tree.pd <- function(pars,tree){
   return(log.lik)
 }
 
-transform_exp <- function(alpha){
-  (2*exp(alpha))/(1+exp(alpha)) - 1
+
+loglik.tree.rpd3 <- function(pars,tree){
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
+  
+  n = tree$n
+  brts = tree$brts[-length(tree$brts)]
+  Pt = c(0,tree$pd[-nrow(tree)])
+
+  brts_i = tree$brts
+  brts_im1 = c(0,brts)
+
+  lambda = pmax(0,pars[1] - pars[2] * Pt/n)
+  rho = pmax(lambda[-length(lambda)] * to + mu * (1-to),0)
+  
+  sigma_over_tree = (pars[1]+pars[3]-(pars[2]/n)*(Pt-brts_im1*n))*wt - pars[2]*(brts_i^2-brts_im1^2)
+  
+  log.lik = -sum(sigma_over_tree) + sum(log(rho))
 }
 
-transform_tan <- function(alpha){
-  atan(alpha)
+
+loglik.tree.rpd5 <- function(pars,tree){
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
+  
+  n = tree$n
+  brts = tree$brts[-length(tree$brts)]
+  Pt = c(0,tree$pd[-nrow(tree)])
+  
+  brts_i = tree$brts
+  brts_im1 = c(0,brts)
+  
+  lambda = pmax(0,pars[1] - pars[2] * Pt/n - pars[4]*n)
+  rho = pmax(lambda[-length(lambda)] * to + mu * (1-to),0)
+  
+  sigma_over_tree = (pars[1]+pars[3]-pars[4]*n-(pars[2]/n)*(Pt-brts_im1*n))*wt - pars[2]*(brts_i^2-brts_im1^2)
+  
+  log.lik = -sum(sigma_over_tree) + sum(log(rho))
 }
+
+loglik.tree.rpd4 <- function(pars,tree){
+  # parameters
+  lambda_0 = pars[1]
+  gamma = pars[2]
+  mu_0 = pars[3]
+  N = tree$n
+  Pi = tree$pd+1
+  Pim1 = c(0,Pi[-nrow(tree)])+1
+  wt = diff(c(0,tree$brts))
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
+  lambda = lambda_0 - gamma * N/Pi
+  rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
+  sigma = N*( (lambda_0+mu_0)*wt - gamma*(   log(Pim1+N*wt)-log(Pim1)  )  )
+  if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
+  loglik = sum(-sigma)+sum(log(rho))
+  return(loglik)
+  
+}
+
 
 
 loglik.tree.rpd <- function(pars,tree){
@@ -118,77 +147,38 @@ loglik.tree.rpd <- function(pars,tree){
   
 }
 
-loglik.tree.rpd4 <- function(pars,tree){
-  # parameters
-  lambda_0 = pars[1]
-  gamma = pars[2]
-  mu_0 = pars[3]
-  N = tree$n
-  Pi = tree$pd+1
-  Pim1 = c(0,Pi[-nrow(tree)])+1
-  wt = diff(c(0,tree$brts))
+loglik.tree.dd2 <- function(pars,tree){
   to = tree$to
   to = head(to,-1)
   to[to==2] = 1
-  lambda = lambda_0 - gamma * N/Pi
-  rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
-  sigma = N*( (lambda_0+mu_0)*wt - gamma*(   log(Pim1+N*wt)-log(Pim1)  )  )
-  if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
-  loglik = sum(-sigma)+sum(log(rho))
-  return(loglik)
+  mu = max(0,pars[3])
+  wt = diff(c(0,tree$brts))
   
+  lambda = lambda.dd(tm = c(0,tree$brts[-nrow(tree)]),tree = tree,pars = pars)
+  sigma = (lambda + mu)*number_of_species(tree)
+  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  log.lik = (sum(-sigma*wt)+sum(log(rho)))
+  if(min(pars)<0) log.lik = -Inf
+  return(log.lik)
 }
 
-loglik.tree.rpd2 <- function(pars,tree){
-  # parameters
-  lambda_0 = pars[1]
-  gamma = 1
-  mu_0 = pars[2]
-  alpha = pars[3]
-  beta = pars[4]
-  ###
-  n = number_of_species(tree)
-  Pt = c(0,sapply(tree$brts[-length(tree$brts)], function(x) phylodiversity(x,tree)))
-  wt = diff(c(0,tree$brts))
-  a = transform_tan(alpha)
-  b = transform_tan(beta)
-  # rho
-  to = tree$to
-  to = head(to,-1)
-  to[to==2] = 1
-  lambda = sapply(c(0,tree$brts), lambda.rpd2,tree=tree,pars=pars)
-  rho = pmax(lambda[-length(lambda)]*to+mu_0*(1-to),0)
-  # sigma 
-  sigma = n*( (lambda_0+mu_0)*wt - gamma*(n^(a-1))*((Pt+n*wt)^(b+1)-Pt^(b+1))/(b+1) )
-  if(min(c(lambda_0,mu_0,gamma))<0) log.lik = -Inf
-  loglik = sum(-sigma)+sum(log(rho))
-  return(loglik)
-  
-}
-
-loglik.tree.rpd3 <- function(pars,tree){
-  to = tree$to
-  to = head(to,-1)
-  to[to==2] = 1
+loglik.tree.dd_new <- function(pars,tree){
   
   mu = max(0,pars[3])
   wt = diff(c(0,tree$brts))
   
-  n = tree$n
-  brts = tree$brts[-length(tree$brts)]
-  Pt = c(0,tree$pd[-nrow(tree)])
-
-  brts_i = tree$brts
-  brts_im1 = c(0,brts)
-
-  lambda = pmax(0,pars[1] - pars[2] * Pt/n)
-  rho = pmax(lambda[-length(lambda)] * to + mu * (1-to),0)
+  to = tree$to
+  to = head(to,-1)
+  to[to==2] = 1
   
-  sigma_over_tree = (pars[1]+pars[3]-(pars[2]/n)*(Pt-brts_i*n))*wt - pars[2]*(brts_i^2-brts_im1^2)
+  lambda = lambda.dd(tm = c(0,tree$brts[-nrow(tree)]),tree = tree,pars = pars)
   
-  log.lik = -sum(sigma_over_tree) + sum(log(rho))
+  sigma = (lambda + mu)*sapply(c(0,tree$brts[-nrow(tree)]), number_of_species,tree = tree)
+  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
+  log.lik = (sum(-sigma*wt)+sum(log(rho)))
+  
+  return(log.lik)
 }
-
 
 ## work in progress
 loglik.tree.erpd <- function(pars,tree){

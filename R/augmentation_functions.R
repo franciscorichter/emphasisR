@@ -145,6 +145,7 @@ augment_tree_thinning <- function(brts,pars,model="dd"){
   if(model=="rpd2"){
     mu = pars[2]
   }
+  brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
   cbt=0
@@ -177,6 +178,11 @@ augment_tree_thinning <- function(brts,pars,model="dd"){
   tree = tree[order(tree$brts),]
   
   logg = log_sampling_prob_nh(df = tree,pars = pars,model = model)
+  
+  tree$pd = sapply(tree$brts, function(x)
+    emphasis:::phylodiversity(x, tree))
+  tree$n = c(1,sapply(tree$brts[-nrow(tree)], function(x)
+    emphasis:::number_of_species(tree = tree, tm = x)))
 
   return(list(tree=tree,logg=logg))
 }
