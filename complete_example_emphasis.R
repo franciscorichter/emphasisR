@@ -81,14 +81,14 @@ l0 = 3.659926
 ga = 0.1479505
 mu =  0.182003
 
-pars = c(l0,0.01,mu)*0.1
-input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd3",importance_sampler="emphasis",cores=2,method="thinning",aceleration_rate=1.1)
+pars = c(l0,0,mu,ga)
+input = list(brts=brts_dendroica,pars=pars,sample_size=500,model="rpd5",importance_sampler="emphasis",cores=4,method="thinning",aceleration_rate=1.1,parallel=TRUE)
 #pars = c( -0.2505580,-0.9612669,0.5727150)
 
 ##  complete iterative framework 
 MCEM = data.frame(par1=NULL,par2=NULL,par3=NULL,loglik_hat=NULL,E_time=NULL,M_time=NULL)
 sample_size = input$sample_size
-prev_lg = 99999
+prev_lg = -99999
 for(i in 1:10000){
   print(pars)
   st = mc_sample_independent_trees(brts = input$brts,pars = pars,nsim = sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores, method = input$method)
