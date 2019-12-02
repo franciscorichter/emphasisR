@@ -1,6 +1,28 @@
 ### EMPHASIS functions
 
-
+mcem.tree <- function(input,max_iterations=100000,report=TRUE,file=NULL){
+  pars = PARS = input$pars
+  MCEM=data.frame(loglik_hat=NULL,E_time=NULL,M_time=NULL,sample_size=NULL)
+  sample_size = input$sample_size
+  prev_lg = -99999
+  for(i in 1:max_iterations){
+    
+    st = mc_sample_independent_trees(brts = input$brts,pars = pars,nsim = sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores, method = input$method)
+    lg = log(st$fhat)
+    if(report){ 
+      print(paste(c("parameters: ",pars)))
+      print(paste("loglikelihood: ",lg))
+      print(paste("sample size: ",sample_size))
+    }
+    M = M_step(st = st,init_par = pars,model = input$model)
+    pars = M$po$par
+    PARS = rbind(pars,PARS)
+    MCEM = rbind(MCEM,data.frame(loglik_hat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
+    if(prev_lg > lg) sample_size = sample_size*input$aceleration_rate
+    prev_lg = lg
+    save(MCEM,input,PARS,file=file)
+  }
+}
 
 
 ###############################################################
