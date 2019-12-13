@@ -23,7 +23,7 @@ brts_anolis = c(103.31057277, 97.96837055, 94.923127866, 94.866216796, 90.810203
                 4.4685701345, 4.33572126899998, 0.828930356499995, 0.552543471999996
 )
 
-
+mle_anolis = c(0.068759,0.0005709097,0.005940)
 
 brts_cetacea = c(35.857845, 33.799004, 32.390661, 31.621529, 28.000001, 26.063017, 
                  26.000001, 24.698215, 22.044392, 19.195664, 18.226421, 18.023412, 
@@ -79,19 +79,18 @@ brts_plethodon = c(11.3, 9.55365380008198, 9.26434040327225, 8.83592350352767,
 
 mle_plethodon = c(0.523708,0.01570368,0.025529)
 
-brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.5828624
-)
+setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Dendroica/rpd5")
 
-
+#setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Anolis/rpd5")
 #devtools::install_github("franciscorichter/emphasis")
 library(emphasis)
 ## input 1. Simple tree, Ok initial parameters
-l0 = mle_plethodon[1]
-ga = mle_plethodon[2]
-mu =  mle_plethodon[3]
+l0 = mle_dendroica[1]
+ga = mle_dendroica[2]
+mu =  mle_dendroica[3]
 
 pars = c(l0,0,mu,ga)
-input = list(brts=brts_plethodon,pars=pars,sample_size=100,model="rpd5",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1.1,parallel=TRUE)
-mcem.tree(input,file="plethodon_rpd5_2Dec_rep_1_pro.RData")
+input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd5",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE)
+mcem.tree(input,file="dendroica_rpd5_10Dec_rep_1_pc.RData")
 
 

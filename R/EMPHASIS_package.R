@@ -16,6 +16,7 @@ mcem.tree <- function(input,max_iterations=100000,report=TRUE,file=NULL){
     }
     M = M_step(st = st,init_par = pars,model = input$model)
     pars = M$po$par
+    print(M$po$value)
     PARS = rbind(pars,PARS)
     MCEM = rbind(MCEM,data.frame(loglik_hat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
     if(prev_lg > lg) sample_size = sample_size*input$aceleration_rate
@@ -149,18 +150,21 @@ M_step <-function(st,init_par = NULL,model="dd",exclude_proportion_trees = 0){
   
   time0 = proc.time()
   
-  w = st$weights/max(st$weights)
+  sub_st = get_contributing_trees(st)
+  loglik = get(paste0("loglik.tree.", model))
+  po = subplex(par = init_par, fn = Q_approx,st = sub_st, loglik=loglik, hessian = TRUE)
+
+  M_time = get.time(time0)
+  return(list(po=po,M_time=M_time))
+}
+
+get_contributing_trees <- function(st, exclude_proportion_trees=0){
+  w = st$weights/sum(st$weights)
   contributing_trees = (w > exclude_proportion_trees)
-  ######################
   sub_trees = st$trees[contributing_trees]
   effective_sample_size = sum(contributing_trees)
   sub_st = list(trees = sub_trees, weights = st$weights[contributing_trees])
-  loglik = get(paste0("loglik.tree.", model))
-  po = subplex(par = init_par, fn = Q_approx,st = sub_st, loglik=loglik, hessian = TRUE)
-  #######################
-
-  M_time = get.time(time0)
-  return(list(po=po,M_time=M_time,effective_sample_size=effective_sample_size))
+  return(sub_st)
 }
 
 Q_approx = function(pars,st,loglik){
