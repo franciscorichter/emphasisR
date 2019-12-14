@@ -44,7 +44,8 @@ mc_augmentation_inverse <-
            importance_sampler,
            sample_size,
            parallel = TRUE,
-           no_cores = 2) {
+           no_cores = 2,
+           maxnumspec=50) {
     #### parallel set-up
     time = proc.time()
     cl <- makeCluster(no_cores)
@@ -93,11 +94,16 @@ mc_augmentation_inverse <-
             missing_speciations = missing_speciations[-sample_ext_time_index]
           }
         }
+        tree=df
+        tree$pd = sapply(tree$brts, function(x)
+          emphasis:::phylodiversity(x, tree))
+        tree$n = c(1,sapply(tree$brts[-nrow(tree)], function(x)
+          emphasis:::number_of_species(tree = tree, tm = x)))
         ##################
         return(list(
           logg.samp = log.samp.unif.prob,
-          dim = nrow(df),
-          tree = df
+          dim = nrow(tree),
+          tree = tree
         ))
       }
     }

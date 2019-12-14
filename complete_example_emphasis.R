@@ -78,9 +78,9 @@ brts_plethodon = c(11.3, 9.55365380008198, 9.26434040327225, 8.83592350352767,
                    0.498973146096477)
 
 mle_plethodon = c(0.523708,0.01570368,0.025529)
+brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.5828624)
 
-setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Dendroica/rpd5")
-
+setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Dendroica/rpd5/ss1000")
 #setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Anolis/rpd5")
 #devtools::install_github("franciscorichter/emphasis")
 library(emphasis)
@@ -90,7 +90,12 @@ ga = mle_dendroica[2]
 mu =  mle_dendroica[3]
 
 pars = c(l0,0,mu,ga)
-input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd5",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE)
+input = list(brts=brts_dendroica,pars=pars,sample_size=1000,model="rpd5",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE)
 mcem.tree(input,file="dendroica_rpd5_10Dec_rep_1_pc.RData")
 
+
+
+pars = c(0.3,-0.01,0.04)
+input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="rpd2",importance_sampler="uniform",cores=detectCores(),method="inverse",aceleration_rate=1,parallel=TRUE,maxnumspec=50)
+mcem.tree(input,file="pd_ss100_uniform.RData")
 
