@@ -93,9 +93,7 @@ pars = c(l0,0,mu,ga)
 input = list(brts=brts_dendroica,pars=pars,sample_size=1000,model="rpd5",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE)
 mcem.tree(input,file="dendroica_rpd5_10Dec_rep_1_pc.RData")
 
-
-
 pars = c(0.3,-0.01,0.04)
-input = list(brts=brts_vangidae,pars=pars,sample_size=1000,model="rpd2",importance_sampler="uniform",cores=detectCores(),method="inverse",aceleration_rate=1,parallel=TRUE,maxnumspec=50)
-mcem.tree(input,file="pd_ss1000_uniform.RData")
+input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="dd",importance_sampler="uniform",cores=detectCores(),method="inverse",aceleration_rate=1,parallel=TRUE,maxnumspec=50)
+mcem.tree(input,file="test.RData")
 

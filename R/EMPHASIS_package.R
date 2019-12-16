@@ -15,7 +15,9 @@ mcem.tree <- function(input,max_iterations=100000,report=TRUE,file=NULL){
       print(paste("sample size: ",sample_size))
     }
     M = M_step(st = st,init_par = pars,model = input$model)
-    if(M$po$value > -99999999)  pars = M$po$par
+    if(!is.na(M$po$value)){
+      pars = M$po$par
+    }
     print(M$po$value)
     PARS = rbind(pars,PARS)
     MCEM = rbind(MCEM,data.frame(loglik_hat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
