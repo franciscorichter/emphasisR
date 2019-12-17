@@ -73,22 +73,26 @@ server <- function(input, output) {
     inFile <- input$file1
     DF_temp = NULL
     for(i in 1:nrow(inFile)){
-      load(inFile[[i, 'datapath']])
-      if(exists("MCEM_temp")){
-        DF = data.frame(iteration=MCEM_temp$em.iteration,par1=MCEM_temp$par1,par2=MCEM_temp$par2,par3=MCEM_temp$par3,E_time=MCEM_temp$E_time,M_time=MCEM_temp$M_time,efective_sample_size=MCEM_temp$effective.size)
-        rm(MCEM_temp)
-      }
-      if(exists("MCEM")){
-        DF = data.frame(iteration=1:nrow(MCEM),par1=MCEM$par1,par2=MCEM$par2,par3=MCEM$par3,E_time=MCEM$E_time,M_time=MCEM$M_time,effective_sample_size=input$sample_size,log_fhat=MCEM$loglik_hat)
-      }
-      if("pars3" %in% names(DF)){
-        names(DF)[names(DF)=="pars3"] <- "par3"
-      }
-      DF$rep = i
-      DF_temp = rbind(DF_temp,DF)
+    
+      file = inFile[[i, 'datapath']]
+      load(file)
+      
+      MCEM$cores = input$cores
+      MCEM$rep = as.character(i)
+      MCEM$comp = substr(file,nchar(file)-8,nchar(file)-6)
+      
+      #colnames(PARS) = c("par1","par2","par3","par4")
+      PARS = cbind(PARS,data.frame(it=nrow(PARS):1))
+      PARS = PARS[order(PARS$it),]
+      rownames(PARS) = NULL
+      #colnames(PARS) = c("par1","par2","par3","it")
+      PARS = PARS[-nrow(PARS),]
+      DF1 = data.frame(iteration=PARS$it,par1=PARS[,1],par2=PARS[,2],par3=PARS[,3],par4=PARS[,4],E_time=MCEM$E_time,M_time=MCEM$M_time,sample_size=MCEM$sample_size,cores=MCEM$cores,rep=MCEM$rep,comp=MCEM$comp,fhat=MCEM$loglik_hat)
+      
+      DF_temp = rbind(DF_temp,DF1)
+    
     }
-    DF_temp$rep = as.character(DF_temp$rep)
-    save(DF_temp,file="palPaper.RData")
+    #save(DF_temp,file="palPaper.RData")
     return(DF_temp)
   })
   
