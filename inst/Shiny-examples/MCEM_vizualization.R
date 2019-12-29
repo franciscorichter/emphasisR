@@ -93,7 +93,7 @@ server <- function(input, output) {
       rownames(PARS) = NULL
       #colnames(PARS) = c("par1","par2","par3","it")
       PARS = PARS[-nrow(PARS),]
-      DF1 = data.frame(iteration=PARS$it,par1=PARS[,1],par2=-PARS[,4],par3=-PARS[,2],par4=PARS[,3],E_time=MCEM$E_time,M_time=MCEM$M_time,sample_size=MCEM$sample_size,cores=MCEM$cores,rep=MCEM$rep,comp=MCEM$comp,fhat=MCEM$loglik_hat)
+      DF1 = data.frame(iteration=PARS$it,mu0=PARS[,3],lambda0=-PARS[,1],N=-PARS[,2],PD=PARS[,3],E_time=MCEM$E_time,M_time=MCEM$M_time,sample_size=MCEM$sample_size,cores=MCEM$cores,rep=MCEM$rep,comp=MCEM$comp,fhat=MCEM$loglik_hat)
       
       DF_temp = rbind(DF_temp,DF1)
     
