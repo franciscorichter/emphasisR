@@ -12,6 +12,7 @@ Depends:
     ape,
     subplex,
     ggplot2,
+    GGally,
     truncdist,
     doParallel,
     parallel,
