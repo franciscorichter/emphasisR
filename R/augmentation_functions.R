@@ -305,7 +305,7 @@ tree_augmentation <- function(obs_brts,pars,model,importance_sampler,maxnumspec=
     df = uniform_tree_augmentation(brts = obs_brts,maxnumspec=maxnumspec)
     logg = log.sampling.prob.uniform(df,maxnumspec=maxnumspec,initspec=initspec,p=0.5)
   }
-  logf = loglik.tree(pars=pars,tree=df,model=model,initspec = initspec)
+  logf = loglik.tree(pars=pars,tree=df,model=model)
   logweight = logf-logg
   weight = exp(logweight)
   return(list(tree=df,weight=weight,logf=logf,logg=logg))

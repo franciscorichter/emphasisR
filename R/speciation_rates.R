@@ -243,7 +243,7 @@ speciation_rate_old <- function(x,tree,pars,model){
     lambda = lambda.pd_t(time_m=x,pars=pars,tree=tree)
   }
   if(model == "rpd"){
-    lambda = lambda.rpd(time_m=x,pars=pars,tree=tree)
+    lambda = lambda.rpd(tm=x,pars=pars,tree=tree)
   }
   return(lambda)
 }

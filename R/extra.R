@@ -243,8 +243,8 @@ prune.tree <- function(tree){
   return(nbrts)
 }
 
-nh_tree_augmentation_dd <- function(observed.branching.times,pars,model="dd",initspec = 1){
-  
+nh_tree_augmentation_dd <- function(brts,pars,model="dd",initspec = 1){
+  observed.branching.times=brts
   b = max(observed.branching.times)
   brts = sort(brts)
   mu = pars[3]
