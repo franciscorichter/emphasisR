@@ -3,16 +3,14 @@
 mcem.tree <- function(input,max_iterations=100000,report=TRUE,file=NULL){
   pars = PARS = input$pars
   MCEM=data.frame(loglik_hat=NULL,E_time=NULL,M_time=NULL,sample_size=NULL)
-  sample_size = input$sample_size
-  #prev_lg = -99999
   for(i in 1:max_iterations){
     
-    st = mc_sample_independent_trees(brts = input$brts,pars = pars,nsim = sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores, method = input$method)
-    lg = log(st$fhat)
+    st = mc_sample_independent_trees(brts = input$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores, method = input$method)
+lg = log(st$fhat)
     if(report){ 
       print(paste(c("parameters: ",pars)))
       print(paste("loglikelihood: ",lg))
-      print(paste("sample size: ",sample_size))
+      print(paste("sample size: ",input$sample_size))
     }
     M = M_step(st = st,init_par = pars,model = input$model)
     if(!is.na(M$po$value)){
@@ -20,9 +18,7 @@ mcem.tree <- function(input,max_iterations=100000,report=TRUE,file=NULL){
     }
     print(M$po$value)
     PARS = rbind(pars,PARS)
-    MCEM = rbind(MCEM,data.frame(loglik_hat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
-    #if(prev_lg > lg) sample_size = sample_size*input$aceleration_rate
-    #prev_lg = lg
+    MCEM = rbind(MCEM,data.frame(loglik_hat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=input$sample_size))
     save(MCEM,input,PARS,file=file)
   }
 }
@@ -148,16 +144,25 @@ time_limit_dd <- function(obs_brts,missing_speciations,missing_extinctions,max_n
 ##############################
 ####### M-step 
 
-M_step <-function(st,init_par = NULL,model="dd",exclude_proportion_trees = 0){
+M_step <-function(st,init_par,model,reltol=0.001){
   
   time0 = proc.time()
   
   sub_st = get_contributing_trees(st)
-  loglik = get(paste0("loglik.tree.", model))
-  po = subplex(par = init_par, fn = Q_approx,st = sub_st, loglik=loglik, hessian = TRUE)
+  
+  po = subplex(par = init_par, fn = Q_approx,st = sub_st, loglik = get(paste0("loglik.tree.", model)), hessian = FALSE,control=list(reltol=reltol))
 
   M_time = get.time(time0)
   return(list(po=po,M_time=M_time))
+}
+
+M_step_optim <- function(st,init_par,model="dd"){
+  time0 = proc.time()
+  sub_st = get_contributing_trees(st)
+  
+  optim(par=init_par, fn=Q_approx, st = sub_st, method = "L-BFGS-B",model=model)
+  M_time = get.time(time0)
+  
 }
 
 get_contributing_trees <- function(st, exclude_proportion_trees=0){
@@ -170,6 +175,7 @@ get_contributing_trees <- function(st, exclude_proportion_trees=0){
 }
 
 Q_approx = function(pars,st,loglik){
+  
   l = sapply(st$trees, loglik, pars=pars)
   w = st$weights
   Q = -sum(l*w)

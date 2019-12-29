@@ -23,8 +23,6 @@ brts_anolis = c(103.31057277, 97.96837055, 94.923127866, 94.866216796, 90.810203
                 4.4685701345, 4.33572126899998, 0.828930356499995, 0.552543471999996
 )
 
-
-
 brts_cetacea = c(35.857845, 33.799004, 32.390661, 31.621529, 28.000001, 26.063017, 
                  26.000001, 24.698215, 22.044392, 19.195664, 18.226421, 18.023412, 
                  17.939427, 17.890656, 16.066686, 15.669702, 15.099325, 14.540283, 
@@ -81,7 +79,7 @@ rv = NULL #Do I need this?
 theme_emphasis =  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
                         panel.background = element_blank(), axis.line = element_line(colour = "black"))  #
 
-MCEM = data.frame(par1=NULL,par2=NULL,par3=NULL,fhat=NULL,fhat.se=NULL,E_time=NULL,M_time=NULL,mc.samplesize=NULL,effective.size=NULL,hessian.inv=NULL)
+MCEM = data.frame(par1=NULL,par2=NULL,par3=NULL,fhat=NULL,fhat.se=NULL,E_time=NULL,M_time=NULL,mc.samplesize=NULL,effective.size=NULL)
 #pars = c(0,0,0)
 #3C0C62  purple
 #D8FCFC  lightblue 
@@ -101,8 +99,6 @@ ui <- fluidPage(
                 
                 sidebarPanel(id="sidebar",
                              img(src='emphasis_logo.png', align = "center",height = 170),
-                             
-                             
                              
                              h3("Data"),  
                              selectInput("brts", "Choose Phylo/Branching times:",

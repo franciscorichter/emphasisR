@@ -85,14 +85,14 @@ setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Dendroica/rpd5/
 #devtools::install_github("franciscorichter/emphasis")
 library(emphasis)
 ## input 1. Simple tree, Ok initial parameters
-l0 = mle_dendroica[1]
-ga = mle_dendroica[2]
-mu =  mle_dendroica[3]
+l0 = mle_plethodon[1]
+ga = mle_plethodon[2]
+mu =  mle_plethodon[3]
 
 pars = c(l0,0,mu,ga)
-#pars = c(l0,ga,mu)
-input = list(brts=brts_dendroica,pars=pars,sample_size=100000,model="rpd5",importance_sampler="emphasis",cores=detectCores()-4,method="thinning",aceleration_rate=1,parallel=TRUE)
-mcem.tree(input,file="den_ss100000rpd_28Dec_mac.RData")
+pars = c(l0,ga,mu)
+input = list(brts=brts_plethodon,pars=pars,sample_size=100,model="dd",importance_sampler="emphasis",cores=detectCores()-4,method="thinning",aceleration_rate=1,parallel=TRUE)
+mcem.tree(input,file="ple_ss100_17Dec.RData")
 
 pars = c(1,-0.01,0.1)
 input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="rpd2b",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE,maxnumspec=50)

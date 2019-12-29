@@ -1,4 +1,5 @@
 library(emphasis)
+library(GGally)
 library(xtable)
 rm(list = ls())
 
@@ -25,21 +26,19 @@ ui <- fluidPage(
       uiOutput('columns2'),
       
       # Input: Numeric entry for number of obs to view ----
-      numericInput(inputId = "obs",
-                   label = "Number of plot observations:",
-                   value = 1),
+      
       
       selectInput(inputId = "typePlot",
                   label = "Type of plot:",
                   choices = c("Path","Points")),
       
-      numericInput(inputId = "burning",
+      numericInput(inputId = "burn1",
                    label = "Number of observations to burn:",
                    value = 1),
       
-      numericInput(inputId = "filter",
+      numericInput(inputId = "burn2b",
                    label = "Set maximum number of iterations to consider for all data sets:",
-                   value = 2000),
+                   value = 200),
       
       checkboxInput("logY",
                     label="Log scale on Y axis"),
@@ -54,8 +53,15 @@ ui <- fluidPage(
     mainPanel(
       
       # Output: Formatted text for caption ----
-      plotOutput("parameter_estimation_general"),
-      
+      numericInput(inputId = "obs1",
+                   label = "left limit for plot:",
+                   value = 1),
+      numericInput(inputId = "obs2",
+                   label = "right limit for plot:",
+                   value = 100),
+      plotOutput("parameter_estimation_general", click = "plot_click"),
+      uiOutput("correlations_tab"),
+      plotOutput("correlations"),
       # Output: Verbatim text for data summary ----
       
       tableOutput("view"),
@@ -87,7 +93,7 @@ server <- function(input, output) {
       rownames(PARS) = NULL
       #colnames(PARS) = c("par1","par2","par3","it")
       PARS = PARS[-nrow(PARS),]
-      DF1 = data.frame(iteration=PARS$it,par1=PARS[,1],par2=PARS[,2],par3=PARS[,3],par4=PARS[,4],E_time=MCEM$E_time,M_time=MCEM$M_time,sample_size=MCEM$sample_size,cores=MCEM$cores,rep=MCEM$rep,comp=MCEM$comp,fhat=MCEM$loglik_hat)
+      DF1 = data.frame(iteration=PARS$it,par1=PARS[,1],par2=-PARS[,4],par3=-PARS[,2],par4=PARS[,3],E_time=MCEM$E_time,M_time=MCEM$M_time,sample_size=MCEM$sample_size,cores=MCEM$cores,rep=MCEM$rep,comp=MCEM$comp,fhat=MCEM$loglik_hat)
       
       DF_temp = rbind(DF_temp,DF1)
     
@@ -102,6 +108,15 @@ server <- function(input, output) {
     return(input)
   })
   
+  right = reactive({
+    if(is.null(input$plot_click$x)){
+      val = 100
+    }else{
+      val = input$plot_click$x
+    }
+    val
+  })
+  
   output$columns1 = renderUI({
     selectInput(inputId = "par1",
                 label = "Choose x plot parameter:",
@@ -111,7 +126,13 @@ server <- function(input, output) {
   output$columns2 = renderUI({
     selectInput(inputId = "par2",
                 label = "Choose y plot parameter:",
-                choices=names(DF()))
+                choices=rev(names(DF())))
+  })
+  
+  output$correlations_tab = renderUI({
+    selectInput(inputId = "replic",
+                label = "Choose replicant:",
+                choices = unique(DF()$rep))
   })
   
   output$caption <- renderText({
@@ -120,14 +141,14 @@ server <- function(input, output) {
 
   output$summary <- renderPrint({
     df = DF()
-    df = df[input$burning:input$filter,]
+    df = df[df$iteration %in% input$obs1:input$obs2,]
     summary(df)
   })
   
-  data_to_table <- function(df,replicant,init_plot=input$burning,end_point=input$filter){
+  data_to_table <- function(df,replicant,init_plot=input$burn1,end_point=right()){
     df = df[df$rep==replicant,]
-    df = df[init_plot:end_point,]
-    summ = data.frame(MSS = mean(df$efective_sample_size),replicant=replicant,par1=median(df$par1),par2=median(df$par2),par3=median(df$par3),E_time = median(df$E_time), M_time = median(df$M_time))
+    df = df[df$iteration %in% input$obs1:input$obs2,]
+    summ = data.frame(lfhat = mean(df$fhat),replicant=replicant,par1=median(df$par1),par2=median(df$par2),par3=median(df$par3),par4=median(df$par4),E_time = median(df$E_time), M_time = median(df$M_time), sample_size=mean(df$sample_size),cores=mean(df$cores))
     return(summ)
   }
   
@@ -135,7 +156,7 @@ server <- function(input, output) {
     ta=NULL
     df = DF()
     for(i in unique(df$rep)){
-      ta = rbind(ta,data_to_table(df=df,replicant=i,init_plot=input$burning)) 
+      ta = rbind(ta,data_to_table(df=df,replicant=i,init_plot=input$burn1)) 
     }
     xtable(ta,digits=3)
   })
@@ -148,7 +169,7 @@ server <- function(input, output) {
     ta=NULL
     df = DF()
     for(i in unique(df$rep)){
-      ta = rbind(ta,data_to_table(df=df,replicant=i,init_plot=input$burning)) 
+      ta = rbind(ta,data_to_table(df=df,replicant=i,init_plot=input$burn1)) 
     }
     ta
   },
@@ -158,9 +179,9 @@ server <- function(input, output) {
   
   output$parameter_estimation_general <- renderPlot({
     df = DF()
-    df = df[input$obs:nrow(df),]
+    df = df[df$iteration %in% input$obs1:input$obs2,]
     if(input$typePlot=="Path"){
-      plot_par_est = ggplot(df,aes(colour=rep))+geom_path(aes_string(x=input$par1,y=input$par2))+geom_vline(xintercept = input$burning)+geom_vline(xintercept = input$filter)#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
+      plot_par_est = ggplot(df,aes(colour=rep))+geom_path(aes_string(x=input$par1,y=input$par2))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
     }
     if(input$typePlot=="Points"){
       plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes_string(x=input$par1,y=input$par2,alpha=(1:nrow(df))/(2*nrow(df)),size=input$effective_sampling))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
@@ -168,43 +189,26 @@ server <- function(input, output) {
     if(input$logY){
       plot_par_est = plot_par_est + scale_y_log10() 
     }
+    if(input$par1=="iteration"){
+      plot_par_est = plot_par_est +geom_vline(xintercept = input$obs1)+geom_vline(xintercept = input$obs2)
+    }
     plot_par_est + theme_bw()
   })
   
-  
-  output$sample_size <-renderPlot({
+  output$correlations <- renderPlot({
     df = DF()
-    df = df[input$obs:nrow(df),]
-    change.ss = which(diff(df$mc.samplesize)>0)
-    plot.lambda = ggplot(df)+geom_line(aes(x=iteration,y=efective_sample_size))+ggtitle("Effective sample size")#+geom_hline(yintercept = lambda.est,colour="red")
-    if(sum(change.ss)>0){
-      plot.lambda = plot.lambda + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
-    }
-    plot.lambda
+    df = df[df$iteration %in% input$obs1:input$obs2,]
+    data = df[df$rep == input$replic,2:5]
+    #ggcorr(data, palette = "RdYlGn", name = "rho", 
+    #       label = FALSE, label_color = "black")
+    ggpairs(data)
   })
   
+
   
-  output$logfhat <- renderPlot({
-    df = DF()
-    #lambda.est = mean(df$par1[input$burning:nrow(df)])
-    df = df[input$obs:nrow(df),]
-    ggplot(df)+geom_histogram(aes(x=log(fhat)))
-    
-  })
+
   
-  output$fhat <- renderPlot({
-    if(nrow(rv$MCEM)>3){ 
-      MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
-      fhat.plot = ggplot(MCEM) + geom_line(aes(iteration,log(fhat))) # + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
-      #  if(input$ddd) fhat.plot = fhat.plot + geom_point(aes(em.iteration,ftrue))
-      if(input$CI) fhat.plot = fhat.plot + geom_line(aes(iteration,log(rv$MCEM$fhat+1.96*rv$MCEM$fhat.se)),col="red") + geom_line(aes(iteration,log(rv$MCEM$fhat-1.96*rv$MCEM$fhat.se)),col="red")#+ geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen')
-      change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
-      if(sum(change.ss)>0){
-        fhat.plot = fhat.plot + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
-      }
-      fhat.plot  + theme_emphasis + ggtitle(label = "Estimated log likelihood")
-    }
-  })
+
   
   output$diff_fhat_hist <- renderPlot({
     if(nrow(rv$MCEM)>12){ 
