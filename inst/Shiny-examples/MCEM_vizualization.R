@@ -27,6 +27,12 @@ ui <- fluidPage(
       
       # Input: Numeric entry for number of obs to view ----
       
+        
+     
+        radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'),
+                     inline = TRUE),
+        downloadButton('downloadReport'),
+     # downloadButton("report", "Generate report"),
       
       selectInput(inputId = "typePlot",
                   label = "Type of plot:",
@@ -63,7 +69,7 @@ ui <- fluidPage(
       uiOutput("correlations_tab"),
       plotOutput("correlations"),
       # Output: Verbatim text for data summary ----
-      
+      textOutput("caption"),
       tableOutput("view"),
       verbatimTextOutput("summary"),
       verbatimTextOutput("code")
@@ -135,8 +141,8 @@ server <- function(input, output) {
                 choices = unique(DF()$rep))
   })
   
-  output$caption <- renderText({
-    input$caption
+  output$caption <- renderPrint({
+    print(In())
   })
 
   output$summary <- renderPrint({
@@ -174,8 +180,32 @@ server <- function(input, output) {
     ta
   },
    digits = 6)
+
   
- 
+  output$downloadReport <- downloadHandler(
+    filename = function() {
+      paste('my-report', sep = '.', switch(
+        input$format, PDF = 'pdf', HTML = 'html', Word = 'docx'
+      ))
+    },
+    
+    content = function(file) {
+      src <- normalizePath('report.Rmd')
+      
+      # temporarily switch to the temp dir, in case you do not have write
+      # permission to the current working directory
+      owd <- setwd(tempdir())
+      on.exit(setwd(owd))
+      file.copy(src, 'report.Rmd', overwrite = TRUE)
+      
+      library(rmarkdown)
+      out <- render('report.Rmd', switch(
+        input$format,
+        PDF = pdf_document(), HTML = html_document(), Word = word_document()
+      ))
+      file.rename(out, file)
+    }
+  )
   
   output$parameter_estimation_general <- renderPlot({
     df = DF()
@@ -201,7 +231,8 @@ server <- function(input, output) {
     data = df[df$rep == input$replic,2:5]
     #ggcorr(data, palette = "RdYlGn", name = "rho", 
     #       label = FALSE, label_color = "black")
-    ggpairs(data)
+    gp = ggpairs(data)
+    gp
   })
   
 
@@ -216,7 +247,7 @@ server <- function(input, output) {
       bwidth <- breaks[2]-breaks[1]
       rv$MCEM$diff_fhat = c(0,diff(rv$MCEM$fhat))
       gl = ggplot(rv$MCEM[input$charts:nrow(rv$MCEM),]) + geom_histogram(aes(diff_fhat),binwidth = bwidth)#,binwidth = (max(diff_fhat)-max(diff_fhat))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
-      gl  + theme_emphasis + ggtitle(label = "Delta likelihood")
+      gl  + theme_bw() + ggtitle(label = "Delta likelihood")
       #stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1))
     }
   })
