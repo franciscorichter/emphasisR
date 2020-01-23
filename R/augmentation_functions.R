@@ -1,5 +1,3 @@
-
-
 mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,method="inverse",parallel=TRUE){
   
   time=proc.time()
@@ -11,7 +9,6 @@ mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importanc
   }
   return(E)
 }
-
 
 mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_size,parallel=FALSE,no_cores=2){
   time = proc.time()
@@ -36,6 +33,60 @@ mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_s
   En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
   return(En)
 }
+
+
+
+augment_tree_thinning <- function(brts,pars,model="dd"){
+  mu = pars[3]
+  if(model=="rpd2"){
+    mu = pars[2]
+  }
+  brts = cumsum(-diff(c(brts,0)))
+  b = max(brts)
+  missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
+  cbt=0
+  
+  while(cbt < b){
+    
+    tree = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
+                      t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
+                      to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
+    tree = tree[order(tree$brts),]
+    
+    next_bt = min(tree$brts[tree$brts>cbt])
+    lambda_max = max(sum_speciation_rate(cbt,tree,pars,model)*(1-exp(-mu*(b-cbt))),sum_speciation_rate(next_bt,tree,pars,model)*(1-exp(-mu*(b-next_bt))))
+    u1 = runif(1)
+    next_speciation_time = cbt-log(x = u1)/lambda_max
+    if(next_speciation_time < next_bt){
+      u2 = runif(1)
+      pt = sum_speciation_rate(next_speciation_time,tree,pars,model)*(1-exp(-mu*(b-next_speciation_time)))/lambda_max
+      if(u2<pt){
+        extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
+        missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
+        # choose species to speciate, and add it to tree. 
+      }
+    }
+    cbt = min(next_speciation_time,next_bt)
+  }
+  tree = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
+                    t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
+                    to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
+  tree = tree[order(tree$brts),]
+  
+  logg = log_sampling_prob_nh(df = tree,pars = pars,model = model)
+  
+  tree$pd = sapply(tree$brts, function(x)
+    emphasis:::phylodiversity(x, tree))
+  
+  ## check this one
+  tree$n = c(2,1+sapply(tree$brts[-nrow(tree)], function(x)
+    emphasis:::number_of_species(tree = tree, tm = x)))
+  
+  return(list(tree=tree,logg=logg))
+}
+
+##############################################
+
 
 mc_augmentation_inverse <-
   function(brts,
@@ -146,52 +197,6 @@ pd_at_brts <- function(tree){
 
 ## thinning method
 
-augment_tree_thinning <- function(brts,pars,model="dd"){
-  mu = pars[3]
-  if(model=="rpd2"){
-    mu = pars[2]
-  }
-  brts = cumsum(-diff(c(brts,0)))
-  b = max(brts)
-  missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
-  cbt=0
-  
-  while(cbt < b){
-    
-    tree = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
-                      t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
-                      to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
-    tree = tree[order(tree$brts),]
-    
-    next_bt = min(tree$brts[tree$brts>cbt])
-    lambda_max = max(sum_speciation_rate(cbt,tree,pars,model)*(1-exp(-mu*(b-cbt))),sum_speciation_rate(next_bt,tree,pars,model)*(1-exp(-mu*(b-next_bt))))
-    u1 = runif(1)
-    next_speciation_time = cbt-log(x = u1)/lambda_max
-    if(next_speciation_time < next_bt){
-      u2 = runif(1)
-      pt = sum_speciation_rate(next_speciation_time,tree,pars,model)*(1-exp(-mu*(b-next_speciation_time)))/lambda_max
-      if(u2<pt){
-        extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
-        missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
-        # choose species to speciate, and add it to tree. 
-      }
-    }
-    cbt = min(next_speciation_time,next_bt)
-  }
-  tree = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
-                    t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
-                    to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
-  tree = tree[order(tree$brts),]
-  
-  logg = log_sampling_prob_nh(df = tree,pars = pars,model = model)
-  
-  tree$pd = sapply(tree$brts, function(x)
-    emphasis:::phylodiversity(x, tree))
-  tree$n = c(1,sapply(tree$brts[-nrow(tree)], function(x)
-    emphasis:::number_of_species(tree = tree, tm = x)))
-
-  return(list(tree=tree,logg=logg))
-}
 
 
 #inverse method

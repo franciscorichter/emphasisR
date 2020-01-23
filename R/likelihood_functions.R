@@ -11,7 +11,6 @@ loglik.tree.dd <- function(pars,tree){
   to[to==2] = 1
   mu = max(0,pars[3])
   wt = diff(c(0,tree$brts))
-  initspec=1
   n = tree$n
   lambda = lambda.dd.n(pars,n)
   sigma = (lambda + mu)*n
@@ -193,6 +192,8 @@ loglik.tree.rpd <- function(pars,tree){
   
 }
 
+########################
+
 loglik.tree.dd2 <- function(pars,tree){
   to = tree$to
   to = head(to,-1)
@@ -253,8 +254,6 @@ loglik.tree.erpd <- function(pars,tree){
   return(loglik)
   
 }
-
-
 
 loglik.tree.rpd_old <- function(pars,tree){
   # parameters
@@ -334,8 +333,6 @@ loglik.tree.rpd_taylor <- function(pars,tree,prev_pars){
   loglik = sum(-sigma)+sum(rho)
   return(loglik)
 }
-
-
 
 loglik.tree.edd <- function(pars,tree,model,initspec=1){
   to = tree$to

@@ -5,7 +5,8 @@ log_sampling_prob_nh <- function(df,pars,model="dd",...){
   b = max(df$brts)
   to = top = head(df$to,-1)
   to[to==2] = 1
-  initspec=1
+  #initspec=1
+  initspec=2
   N = c(initspec,initspec+cumsum(to)+cumsum(to-1))
   brts_i = df$brts
   brts_im1 = c(0,df$brts[-nrow(df)])

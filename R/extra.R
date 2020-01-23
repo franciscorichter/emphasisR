@@ -24,7 +24,7 @@ phylodiversity <- function(tm,tree){
   i2<-tree$to==0&i1
   i3<-tree$t_ext%in%tree$brts[i2]
   dt<-diff(c(0,tree$brts[i1&!i2&!i3],tm))
-  return(sum(dt*(1:length(dt))))
+  return(sum(dt*(2:(length(dt)+1))))
 }
 
 vectors2phylo <- function(list){
