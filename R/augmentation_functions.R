@@ -1,15 +1,3 @@
-mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,method="inverse",parallel=TRUE){
-  
-  time=proc.time()
-  if(seed>0) set.seed(seed)
-  if(method == "thinning"){
-    E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = parallel,no_cores = no_cores)
-  }else{
-    E = mc_augmentation_inverse(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = parallel,no_cores = no_cores)
-  }
-  return(E)
-}
-
 mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_size,parallel=FALSE,no_cores=2){
   time = proc.time()
   if(!parallel){
@@ -33,8 +21,6 @@ mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_s
   En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
   return(En)
 }
-
-
 
 augment_tree_thinning <- function(brts,pars,model="dd"){
   mu = pars[3]

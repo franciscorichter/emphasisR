@@ -92,8 +92,12 @@ mu =  mle_dendroica[3]
 pars = c(l0,0,mu,ga)
 #pars = c(l0,ga,mu)
 pars = c(4.016086, -0.005787463, 0.1728389, 0.1651889)
-input = list(brts=brts_dendroica,pars=pars,sample_size=200000,model="rpd5",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE)
-mcem.tree(input,file="den_ss200000rpd_29Dec_mac.RData")
+
+
+mu0=0.1623; lambda0=3.671; Npar=-0.1559; PDpar=0.082897
+pars = c(lambda0, Npar, mu0, PDpar)
+input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd5",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE)
+mcem.tree(input,file="den_ss100rpd5_17Jan_mac.RData")
 
 pars = c(1,-0.01,0.1)
 input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="rpd2b",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE,maxnumspec=50)
