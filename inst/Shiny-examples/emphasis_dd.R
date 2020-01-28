@@ -119,10 +119,10 @@ ui <- fluidPage(
                              
                              #E2. review this
                              h3("Initial parameters"),
-                             numericInput("par0", "Initial lambda_0:", 2),
-                             numericInput("par1", "Initial lambda_0:", 2),
-                             numericInput("par2", "Initial lambda_1:", 0.03),
-                             numericInput("par3", "Initial mu_0:", 0.05),
+                             numericInput("par0", "Initial lambda_0:", NULL),
+                             numericInput("par1", "Initial lambda_0:", NULL),
+                             numericInput("par2", "Initial lambda_1:", NULL),
+                             numericInput("par3", "Initial mu_0:", NULL),
                              
                              h3("Settings"),
                           
@@ -288,18 +288,17 @@ server <- shinyServer(function(input,output,session) {
       
       withProgress(message = paste("Performing MCEM: iteration ", rv$em.iteration), value = 0, {
         
-        time = proc.time()
         setProgress(value=0,detail = "Performing E step")
 
         st = mcE_step(brts = input_values$brts,pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,seed=0,parallel=input$parallel)
+        E_time = st$E_time
         
-        E_time = get.time(time)
-        
-        time = proc.time()
         setProgress(value=0.5,detail = "Performing M step")
         M = M_step(st = st,init_par = pars,model = input$model)
         
-        M_time = get.time(time)
+        M_time = M$M_time
+      })
+      
         if(!is.na(M$po$value)){
           pars = M$po$par
         }
@@ -307,8 +306,6 @@ server <- shinyServer(function(input,output,session) {
         fhat = st$fhat
         
         mcem = list(pars=pars,fhat=fhat,st=st,effective_sample_size=M$effective_sample_size,E_time=E_time,M_time=M_time)
-        
-      })
       
       
       MCEM_last = data.frame(par0 = pars[1],
@@ -316,9 +313,8 @@ server <- shinyServer(function(input,output,session) {
                              par2=pars[3],
                              par3=pars[4],
                              fhat=mcem$fhat,
-                             #  fhat.se=mcem$se,
-                             E_time=mcem$E_time,
-                             M_time=mcem$M_time,
+                             E_time=st$E_time,
+                             M_time=M$M_time,
                              mc.samplesize=input$sample_size,
                              cores = input$cores,
                              effective.size=mcem$effective_sample_size,

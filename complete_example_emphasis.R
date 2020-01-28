@@ -82,16 +82,28 @@ brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.582
 
 ######### sparate E and m step
 
-pars = c(0.1,1,0.1,-0.1)
-input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd5",cores=2,parallel=TRUE)
+#pars = c(0.3,1,-0.01,0.01)
+pars = c(0.3,1,-0.01,NULL)
+input = list(brts=brts_heliconius,pars=pars,sample_size=100,model="rpd1",cores=2,parallel=TRUE)
 
-st = mcE_step(brts = input$brts,pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+n_it = 100
+for(i in 1:n_it){
+  print(paste("iteration",i))
+  st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+  
+  M = M_step(st = st, init_par = pars, model = input$model)
+  pars = M$po$par
+  print(pars)
+  print(st$fhat)
+  mcem = data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time)
+}
 
-E_time = get.time(time)
 
-time = proc.time()
-setProgress(value=0.5,detail = "Performing M step")
-M = M_step(st = st,init_par = pars,model = input$model)
+
+#### comparing likelihood
+
+pars2 = c(250,1,0,1,1,2)
+dd_loglik(pars1=c(pars[2],pars[1],(pars[1]-pars[2])/pars[3]),pars2,brts_heliconius,missnumspec = 0)
 ###########
 
 
