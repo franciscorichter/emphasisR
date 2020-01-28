@@ -1,5 +1,4 @@
 ###DATA
-
 brts_anolis = c(103.31057277, 97.96837055, 94.923127866, 94.866216796, 90.810203432, 
                 90.44410561, 90.080885176, 86.938065219, 83.192481566, 79.903508082, 
                 78.144291981, 75.916079896, 75.270062039, 74.19732113, 72.825735377, 
@@ -80,7 +79,24 @@ brts_plethodon = c(11.3, 9.55365380008198, 9.26434040327225, 8.83592350352767,
 mle_plethodon = c(0.523708,0.01570368,0.025529)
 brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.5828624)
 
-setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Dendroica/rpd5/ss1000")
+
+######### sparate E and m step
+
+pars = c(0.1,1,0.1,-0.1)
+input = list(brts=brts_dendroica,pars=pars,sample_size=100,model="rpd5",cores=2,parallel=TRUE)
+
+st = mcE_step(brts = input$brts,pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+
+E_time = get.time(time)
+
+time = proc.time()
+setProgress(value=0.5,detail = "Performing M step")
+M = M_step(st = st,init_par = pars,model = input$model)
+###########
+
+
+
+#setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Dendroica/rpd5/ss1000")
 #setwd("~/Google Drive/scripts for jobs and data/Experiments/MCEM/Anolis/rpd5")
 #devtools::install_github("franciscorichter/emphasis")
 library(emphasis)

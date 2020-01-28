@@ -17,8 +17,8 @@ log_sampling_prob_nh <- function(df,pars,model="dd",...){
   lambda_b = sapply(df$brts[df$to==1]-0.000000001,speciation_rate,tree = df,pars = pars,model = model,...)
   if(length(lambda_b)==0) lambda_b = 1
   text = df$t_ext[df$to==1]-df$brts[df$to==1]
-  mu = pars[3]
-  inte=vector(mode = "numeric",length = length(brts_i))
+  mu = pars[1]
+  inte = vector(mode = "numeric",length = length(brts_i))
   for(i in 1:length(brts_i)){
     inte[i] = intensity(x=brts_i[i],tree = df,model = model,time0 = brts_im1[i],pars = pars,...)
   }

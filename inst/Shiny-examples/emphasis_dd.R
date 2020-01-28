@@ -114,26 +114,22 @@ ui <- fluidPage(
                                            #   "Birds" = paste(as.character(brts_birds), collapse=", "))
                                          )       
                              ),
+                             #E1. change this to load data
                              textInput('vec1', 'Or enter a vector (comma delimited) with branching times (Selecting Other)', "4,3.9,3.8,1"),
-                             #  actionButton("goTree","Load Tree"),
+                             
+                             #E2. review this
                              h3("Initial parameters"),
+                             numericInput("par0", "Initial lambda_0:", 2),
                              numericInput("par1", "Initial lambda_0:", 2),
                              numericInput("par2", "Initial lambda_1:", 0.03),
                              numericInput("par3", "Initial mu_0:", 0.05),
                              
                              h3("Settings"),
-                             selectInput("importance_sampler", "Choose Data augmentation sampler:",
-                                         list("emphasis" = "emphasis",
-                                              "uniform" = "uniform"
-                                              )),
-                             selectInput("method", "Choose NHPP method:",
-                                         list("inverse" = "inverse",
-                                              "thinning" = "thinning"
-                                         )),
+                          
                              selectInput("model", "Choose diversification model:",
                                          list("Diversity dependence" = "dd",
                                               "Phylodiversity dependence" = "pd",
-                                              "RPD" = "rpd",
+                                              "RPD" = "rpd1",
                                               "RPD2" = "rpd2",
                                               "RPD3" = "rpd3",
                                               "RPD5" = "rpd5",
@@ -141,26 +137,26 @@ ui <- fluidPage(
                                               "eRPD" = "erpd",
                                               "Exponential diversity dependence" = "edd",
                                               "Exponential Phylodiversity dependence" = "epd"
-                                         )),                
+                                         )),        
+                             
                              numericInput("sample_size", "Monte-Carlo sample size:", 10),
-                             numericInput("proportion_of_subset", "Proportion of best trees to take:", 1),
-                             #numericInput("maxspec", "Maximum number of missing species:", 30),
+                         
                              h3("Options"),
-                        #     conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
+                             #     conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
                              #checkboxInput("log", "show estimated lkelihood on log scale", FALSE),
                              checkboxInput("log_w", "show weights on log scale", FALSE),
                              numericInput("charts", "See charts from iteration:", 1),
-                       
-                        #actionButton("resetbutt","Reset"),
+                             
+                             #actionButton("resetbutt","Reset"),
                              checkboxInput("parallel", "Parallel", TRUE),
                              numericInput("cores",paste("Your computer holds",n_cores,"cores, how many of them you want to use?"),2),
-                       h3("Controls"),
-                       actionButton("gogobutt","Go"),
-                       actionButton("stopbutt","Stop"),
-                       h3("Save"),
-                       checkboxInput("save", "Save Current MCEM state", FALSE),
-                       textInput("file", "Directory where you want to save:", "~/Google Drive/scripts for jobs and data/Experiments/MCEM/MCEM.RData")
-                       
+                             h3("Controls"),
+                             actionButton("gogobutt","Go"),
+                             actionButton("stopbutt","Stop"),
+                             h3("Save"),
+                             checkboxInput("save", "Save Current MCEM state", FALSE),
+                             textInput("file", "Directory where you want to save:", "~/Google Drive/scripts for jobs and data/Experiments/MCEM/MCEM.RData")
+                             
                 ),
                 mainPanel(
                   tabsetPanel(type = "tabs",
@@ -168,10 +164,10 @@ ui <- fluidPage(
                               tabPanel("Help",
                                        h1("Welcome to Emphasis!"),
                                        
-                                     #  "Emphasis mework for a diversity dependence model.\n",
+                                       #  "Emphasis mework for a diversity dependence model.\n",
                                        "This UI version of the emphasis framework allows interactive and user friendly usage for Emphasis analysis.\n",
                                        "If you are familiar with the emphasis approach you just need a short description of the functionalities of this app and we are good to go.\n",
-                                     #  "As a simple example we suggest to type the tree 4,3.9,3.8,1,0.5.",
+                                       #  "As a simple example we suggest to type the tree 4,3.9,3.8,1,0.5.",
                                        
                                        h3("Data"),
                                        "Load your phylogenetic tree. At the moment (for current models) data consists on a vector with branching times starting from stem age in decreasing order.",
@@ -179,15 +175,15 @@ ui <- fluidPage(
                                        "Below we vizualize the tree to analyze",
                                        plotOutput("phylogenetic_tree"),
                                        
-                                      
-                                      h3("Diversification model"),
-                                      "Select the model for diversification rates.",
-                                      
-                                      # textOutput("diversification_model"),
-                                    
+                                       
+                                       h3("Diversification model"),
+                                       "Select the model for diversification rates.",
+                                       
+                                       # textOutput("diversification_model"),
+                                       
                                        includeHTML("dd.html"),
-                                     
-                                     
+                                       
+                                       
                                        h3("Initial parameters"),
                                        "Initial parameters for diversity dependence model.",
                                        h3("Settings"),
@@ -214,26 +210,26 @@ ui <- fluidPage(
                               tabPanel("Analysis",
                                        
                                        fluidRow(
-                                      #   column(5,
-                                    #    
-                                               # h3("Parameters"),
-                                                plotOutput("lambda"),
-                                                plotOutput("mu"),
-                                                plotOutput("K"),
-                                    #),
+                                         #   column(5,
+                                         #    
+                                         # h3("Parameters"),
+                                         plotOutput("lambda"),
+                                         plotOutput("mu"),
+                                         plotOutput("K"),
+                                         #),
                                          
-                                        # column(5,
-                                            #    h3("Weights"),
-                                                plotOutput("weights_by_dimension"),  #weight_vs_dimension
-                                                plotOutput("fhat"),
-                                                plotOutput("fvsg"),
-                                   #      ),
-                                    #     column(5,
-                                           #     h3("Information"),
-                                                plotOutput("timeconsumption"),
-                                              #  textOutput("txtOutput2"),
-                                                textOutput("txtOutput3")
-                                      #   )
+                                         # column(5,
+                                         #    h3("Weights"),
+                                         plotOutput("weights_by_dimension"),  #weight_vs_dimension
+                                         plotOutput("fhat"),
+                                         plotOutput("fvsg"),
+                                         #      ),
+                                         #     column(5,
+                                         #     h3("Information"),
+                                         plotOutput("timeconsumption"),
+                                         #  textOutput("txtOutput2"),
+                                         textOutput("txtOutput3")
+                                         #   )
                                        )),
                               
                               tabPanel("About",
@@ -254,13 +250,10 @@ ui <- fluidPage(
 
 
 server <- shinyServer(function(input,output,session) {
-
+  
   
   rv <- reactiveValues(MCEM=MCEM,
                        run=F,
-                       sdl=NULL,
-                       sdm=NULL,
-                       sdk=NULL,
                        dim=NULL,
                        dims=NULL,
                        weights=NULL,
@@ -281,7 +274,7 @@ server <- shinyServer(function(input,output,session) {
     }
     # load reactive input values
     input_values$brts = brts
-    input_values$init_pars = c(input$par1,input$par2,input$par3)
+    input_values$init_pars = c(input$par0,input$par1,input$par2,input$par3)
     
   })
   
@@ -297,8 +290,8 @@ server <- shinyServer(function(input,output,session) {
         
         time = proc.time()
         setProgress(value=0,detail = "Performing E step")
-        # st = mc_augmentation_thinning(brts=input_values$brts,pars = pars,model = input$model,importance_sampler = input$method,sample_size = input$sample_size,parallel = FALSE,no_cores = input$cores)
-        st = mc_sample_independent_trees(brts = input_values$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores,maxnumspec = 100,method=input$method,parallel = input$parallel)
+
+        st = mcE_step(brts = input_values$brts,pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,seed=0,parallel=input$parallel)
         
         E_time = get.time(time)
         
@@ -307,37 +300,29 @@ server <- shinyServer(function(input,output,session) {
         M = M_step(st = st,init_par = pars,model = input$model)
         
         M_time = get.time(time)
-         if(!is.na(M$po$value)){
+        if(!is.na(M$po$value)){
           pars = M$po$par
-         }
-        # hessian_inverse = try(diag(solve(M$po$hessian)))
+        }
+        
         fhat = st$fhat
-        # se = st$fhat.se
-        # if(!is.numeric(h1)) h1 = c(NULL,NULL,NULL)
         
         mcem = list(pars=pars,fhat=fhat,st=st,effective_sample_size=M$effective_sample_size,E_time=E_time,M_time=M_time)
         
       })
       
-  
-      MCEM_last = data.frame(par1=pars[1],
-                             par2=pars[2],
-                             par3=pars[3],
+      
+      MCEM_last = data.frame(par0 = pars[1],
+                             par1=pars[2],
+                             par2=pars[3],
+                             par3=pars[4],
                              fhat=mcem$fhat,
-                           #  fhat.se=mcem$se,
+                             #  fhat.se=mcem$se,
                              E_time=mcem$E_time,
                              M_time=mcem$M_time,
                              mc.samplesize=input$sample_size,
                              cores = input$cores,
                              effective.size=mcem$effective_sample_size,
-                           #  hessian.inv1 = mcem$hessian_inverse[1],
-                          #   hessian.inv2 = mcem$hessian_inverse[2],
-                          #   hessian.inv3 = mcem$hessian_inverse[3],
-                             sdl = NaN,
-                             sdm = NaN,
-                             sdk = NaN,
-                             em.iteration = rv$em.iteration,
-                             diff_fhat = NaN
+                             em.iteration = rv$em.iteration
       )
       rv$MCEM = rbind(rv$MCEM,MCEM_last)
       
@@ -393,21 +378,21 @@ server <- shinyServer(function(input,output,session) {
     rv$MCEM
   }))
   
-
+  
   
   output$txtOutput3 = renderText({
     paste0("Proportion of likelihood: ", rv$MCEM$effective.size[nrow(rv$MCEM)] )
   })
   
   
-
+  
   output$lambda <- renderPlot({
     
     if(nrow(rv$MCEM)>2){ 
       lambda.est = rv$MCEM$par1[nrow(rv$MCEM)]
       MCEM = rv$MCEM[input$charts:nrow(rv$MCEM),]
       plot.lambda = ggplot(MCEM) + geom_line(aes(em.iteration,par1)) + ggtitle(label=paste("Last estimation:  ", lambda.est)) + ylab("parameter 1") + xlab("EM iteration")
-    #  if(input$CI & nrow(rv$MCEM)>12) plot.lambda = plot.lambda + geom_errorbar(aes(x=em.iteration, y=par1, ymin = par1-1.96*sdl, ymax = par1 + 1.96*sdl), colour='darkgreen') 
+      #  if(input$CI & nrow(rv$MCEM)>12) plot.lambda = plot.lambda + geom_errorbar(aes(x=em.iteration, y=par1, ymin = par1-1.96*sdl, ymax = par1 + 1.96*sdl), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
         plot.lambda = plot.lambda + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
@@ -421,7 +406,7 @@ server <- shinyServer(function(input,output,session) {
       mu.est = rv$MCEM$par2[length(rv$MCEM$par2)]
       MCEM = rv$MCEM[input$charts:length(rv$MCEM$par3),]
       plot.mu = ggplot(MCEM) + geom_line(aes(em.iteration,par2)) + ggtitle(label=paste("Last estimation:  ",mu.est)) + ylab("Parameter 2") + xlab("EM iteration")
-    #  if(input$CI & nrow(rv$MCEM)>12) plot.mu = plot.mu + geom_errorbar(aes(x=em.iteration, y=par2, ymin = par2-1.96*sdm, ymax = par2 + 1.96*sdm), colour='darkgreen') 
+      #  if(input$CI & nrow(rv$MCEM)>12) plot.mu = plot.mu + geom_errorbar(aes(x=em.iteration, y=par2, ymin = par2-1.96*sdm, ymax = par2 + 1.96*sdm), colour='darkgreen') 
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
         plot.mu = plot.mu + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
@@ -448,7 +433,7 @@ server <- shinyServer(function(input,output,session) {
       MCEM = rv$MCEM[input$charts:nrow(rv$MCEM),]
       fhat.plot = ggplot(MCEM) + geom_line(aes(em.iteration,log(fhat))) # + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
       #  if(input$ddd) fhat.plot = fhat.plot + geom_point(aes(em.iteration,ftrue))
-     # if(input$CI) fhat.plot = fhat.plot + geom_line(aes(em.iteration,log(rv$MCEM$fhat+1.96*rv$MCEM$fhat.se)),col="red") + geom_line(aes(em.iteration,log(rv$MCEM$fhat-1.96*rv$MCEM$fhat.se)),col="red")#+ geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen')
+      # if(input$CI) fhat.plot = fhat.plot + geom_line(aes(em.iteration,log(rv$MCEM$fhat+1.96*rv$MCEM$fhat.se)),col="red") + geom_line(aes(em.iteration,log(rv$MCEM$fhat-1.96*rv$MCEM$fhat.se)),col="red")#+ geom_errorbar(aes(x=it, y=K, ymin = K-1.96*sdk, ymax = K + 1.96*sdk), colour='darkgreen')
       change.ss = which(diff(rv$MCEM$mc.samplesize)>0)
       if(sum(change.ss)>0){
         fhat.plot = fhat.plot + geom_vline(xintercept = change.ss, colour="darkgreen",linetype="dotted")
@@ -456,17 +441,7 @@ server <- shinyServer(function(input,output,session) {
       fhat.plot # + theme_emphasis + ggtitle(label = "Estimated log likelihood")
     }
   })
-  
-  output$diff_fhat_hist <- renderPlot({
-    if(nrow(rv$MCEM)>12){ 
-      breaks <- pretty(range(rv$MCEM$diff_fhat), n = nclass.FD(rv$MCEM$diff_fhat), min.n = 1)
-      bwidth <- breaks[2]-breaks[1]
-      rv$MCEM$diff_fhat = c(0,diff(rv$MCEM$fhat))
-      gl = ggplot(rv$MCEM[input$charts:nrow(rv$MCEM),]) + geom_histogram(aes(diff_fhat),binwidth = bwidth)#,binwidth = (max(diff_fhat)-max(diff_fhat))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
-      gl  + theme_emphasis + ggtitle(label = "Delta likelihood")
-      #stat_function(fun = dnorm, n = 101, args = list(mean = 0, sd = 1))
-    }
-  })
+
   
   output$timeconsumption <- renderPlot({
     if(nrow(rv$MCEM)>2){ 

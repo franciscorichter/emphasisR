@@ -23,10 +23,7 @@ mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_s
 }
 
 augment_tree_thinning <- function(brts,pars,model="dd"){
-  mu = pars[3]
-  if(model=="rpd2"){
-    mu = pars[2]
-  }
+  mu = pars[1]
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
@@ -62,7 +59,7 @@ augment_tree_thinning <- function(brts,pars,model="dd"){
   logg = log_sampling_prob_nh(df = tree,pars = pars,model = model)
   
   tree$pd = sapply(tree$brts, function(x)
-    emphasis:::phylodiversity(x, tree))
+  emphasis:::phylodiversity(x, tree))
   
   ## check this one
   tree$n = c(2,1+sapply(tree$brts[-nrow(tree)], function(x)
@@ -247,7 +244,7 @@ intensity <- function(x, tree, model, time0, pars){
     val = 0
   }else{
     nh_rate <- function(wt){
-      sum_speciation_rate(x=wt,tree = tree,pars = pars,model = model)*(1-exp(-(max(tree$brts)-wt)*pars[3]))
+      sum_speciation_rate(x=wt,tree = tree,pars = pars,model = model)*(1-exp(-(max(tree$brts)-wt)*pars[1]))
     }
     if(x != time0) x <- x-0.00000000001
     val = pracma:::quad(f = Vectorize(nh_rate),xa = time0,xb = x)
