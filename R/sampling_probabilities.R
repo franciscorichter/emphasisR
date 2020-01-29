@@ -12,7 +12,7 @@ log_sampling_prob_nh <- function(df,pars,model="dd",...){
   brts_im1 = c(0,df$brts[-nrow(df)])
   missing_speciations = (df$to == 1)
   nb = N[missing_speciations]
-  No = c(initspec,initspec+cumsum(top==2))[missing_speciations]
+  No = c(1,1+cumsum(top==2))[missing_speciations]
   Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
   lambda_b = sapply(df$brts[df$to==1]-0.000000001,speciation_rate,tree = df,pars = pars,model = model,...)
   if(length(lambda_b)==0) lambda_b = 1
