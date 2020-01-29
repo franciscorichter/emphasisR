@@ -28,17 +28,6 @@ phylodiversity <- function(tm,tree){
 }
 
 
-mc_sample_independent_trees <- function(brts,pars,nsim=1000,model="dd",importance_sampler="emphasis",no_cores=2,pars3=NULL,maxnumspec=NULL,seed=0,method="inverse",parallel=TRUE){
-  
-  time=proc.time()
-  if(seed>0) set.seed(seed)
-  if(method == "thinning"){
-    E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = parallel,no_cores = no_cores)
-  }else{
-    E = mc_augmentation_inverse(brts = brts,pars = pars,model = model,importance_sampler = importance_sampler,sample_size = nsim,parallel = parallel,no_cores = no_cores)
-  }
-  return(E)
-}
 
 vectors2phylo <- function(list){
   t=list$wt
@@ -154,44 +143,6 @@ get.time <- function(time,mode='sec'){
   return(ti)
 }
 
-W <- function (z, branch = 0)
-{
-  stopifnot(length(branch) == 1, is.numeric(z))
-  if (anyNA(z)) {
-    warning("Some values of ", deparse(substitute(z)), " are NA or NaN. ",
-            "Returning 'NA' for these entries.")
-    non.na.z <- z[!is.na(z)]
-  }
-  else {
-    non.na.z <- z
-  }
-  W.non.na.z <- rep(NA, length(non.na.z))
-  if (branch == 0) {
-    W.non.na.z <- lamW::lambertW0_C(non.na.z)
-  }
-  else if (branch == -1) {
-    if (any(is.infinite(z))) {
-      warning("'Inf' is not a valid argument of the non-principal branch W",
-              " (branch = -1).")
-    }
-    W.non.na.z <- lamW::lambertWm1_C(non.na.z)
-  }
-  else {
-    stop("Branch was ", branch, "; must be either '0' or '-1'.")
-  }
-  if (length(W.non.na.z) == length(z)) {
-    dim(W.non.na.z) <- dim(z)
-    return(W.non.na.z)
-  }
-  else {
-    W.z <- rep(NA, length(z))
-    W.z[!is.na(z)] <- W.non.na.z
-    W.z[is.nan(W.z)] <- NA
-    dim(W.z) <- dim(z)
-    return(W.z)
-  }
-}
-
 get.topologies <- function(M){
   if(M == 0)
   {
@@ -255,40 +206,3 @@ prune.tree <- function(tree){
   nbrts = brts[tree$to==1]
   return(nbrts)
 }
-
-nh_tree_augmentation_dd <- function(brts,pars,model="dd",initspec = 1){
-  observed.branching.times=brts
-  b = max(observed.branching.times)
-  brts = sort(brts)
-  mu = pars[3]
-  missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
-  N = initspec # current number of species
-  cbt = 0 # current branching time
-  while(cbt < b){
-    lambda = lambda.dd(pars,N)
-    all_bt = c(observed.branching.times,missing_branches$speciation_time,missing_branches$extinction_time)
-    next_bt = min(all_bt[all_bt>cbt])
-    next_speciation_time = rnhpp_dd(s=N*lambda,mu=mu,r=b-cbt,cbt=cbt,next_bt=next_bt)
-    if(next_speciation_time < next_bt){ # add new species
-      extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
-      missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
-      cbt = next_speciation_time
-      N = N+1
-    }else{
-      cbt = next_bt
-      if(next_bt %in% missing_branches$extinction_time){
-        N = N-1
-      }else{
-        N = N+1
-      }
-    }
-  }
-  df = data.frame(brts = c(missing_branches$speciation_time,observed.branching.times,missing_branches$extinction_time),
-                  bte = c(missing_branches$extinction_time, rep(Inf,length(observed.branching.times)+nrow(missing_branches))),
-                  to = c(rep(1,nrow(missing_branches)),rep(2,length(observed.branching.times)),rep(0,nrow(missing_branches))))
-  df = df[order(df$brts),]
-  df$t.ext = df$bte-df$brts
-  return(df)
-  
-}
-
