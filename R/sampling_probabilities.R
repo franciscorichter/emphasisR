@@ -27,6 +27,37 @@ log_sampling_prob_nh <- function(df,pars,model="dd",...){
 }
 
 
+intensity <- function(x, tree, model, time0, pars){
+  max_time_for_continuity = min(tree$brts[tree$brts>time0])
+  if(x==time0){
+    val = 0
+  }else{
+    nh_rate <- function(wt){
+      sum_speciation_rate(x=wt,tree = tree,pars = pars,model = model)*(1-exp(-(max(tree$brts)-wt)*pars[1]))
+    }
+    if(x != time0) x <- x-0.00000000001
+    val = pracma:::quad(f = Vectorize(nh_rate),xa = time0,xb = x)
+  }
+  return(val)
+}
+
+inverse = function (f, lower = 0, upper = 100,...) {
+  function (y) uniroot((function (x) f(x,...) - y), lower = lower, upper = upper)[1]
+}
+
+IntInv <- function(ex,time0,time_max,tree,model,pars){
+  if(sign(intensity(x = time0,tree = tree,model = model,time0 = time0,pars = pars)-ex)==sign(intensity(x = time_max, time0 = time0,tree=tree,model=model,pars = pars)-ex)){
+    value = Inf
+  }else{
+    IntInv_inner = inverse(intensity,time0,time_max,tree=tree,model=model,time0=time0,pars=pars)
+    inverse = IntInv_inner(ex)
+    value = inverse$root
+  }
+  return(value)
+}
+
+
+
 log_sampling_prob_nh_dd <- function(df,pars,model="dd",initspec=1){
   b = max(df$brts)
   to = top = head(df$to,-1)
