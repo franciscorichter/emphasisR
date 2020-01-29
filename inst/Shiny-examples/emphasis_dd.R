@@ -119,17 +119,17 @@ ui <- fluidPage(
                              
                              #E2. review this
                              h3("Initial parameters"),
-                             numericInput("par0", "Initial mu_0:", NULL),
+                             numericInput("par0", "Initial lambda_0:", NULL),
                              numericInput("par1", "Initial lambda_0:", NULL),
-                             numericInput("par2", "Initial N:", NULL),
-                             numericInput("par3", "Initial PD/N:", NULL),
+                             numericInput("par2", "Initial lambda_1:", NULL),
+                             numericInput("par3", "Initial mu_0:", NULL),
                              
                              h3("Settings"),
                           
                              selectInput("model", "Choose diversification model:",
                                          list("Diversity dependence" = "dd",
                                               "Phylodiversity dependence" = "pd",
-                                              "RPD1" = "rpd1",
+                                              "RPD" = "rpd1",
                                               "RPD2" = "rpd2",
                                               "RPD3" = "rpd3",
                                               "RPD5" = "rpd5",
@@ -139,7 +139,7 @@ ui <- fluidPage(
                                               "Exponential Phylodiversity dependence" = "epd"
                                          )),        
                              
-                             numericInput("sample_size", "Monte-Carlo sample size:", 100),
+                             numericInput("sample_size", "Monte-Carlo sample size:", 10),
                          
                              h3("Options"),
                              #     conditionalPanel(length(rv$fhat)>10, checkboxInput("CI", "Check CI (after it 10)", FALSE)),
