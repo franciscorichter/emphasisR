@@ -83,27 +83,49 @@ brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.582
 ######### sparate E and m step
 
 #pars = c(0.3,1,-0.01,0.01)
-pars = c(0.3,1,-0.01,NULL)
-input = list(brts=brts_heliconius,pars=pars,sample_size=100,model="rpd1",cores=2,parallel=TRUE)
+pars = c(0.1,1,-0.01,NULL)
+input = list(brts=brts_dendroica,pars=pars,sample_size=1000,model="rpd1",cores=2,parallel=TRUE)
 
 n_it = 100
+mcem = NULL
 for(i in 1:n_it){
-  print(paste("iteration",i))
+  print(paste("iteration",i+100))
   st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
   
   M = M_step(st = st, init_par = pars, model = input$model)
   pars = M$po$par
   print(pars)
-  print(st$fhat)
-  mcem = data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time)
+  print(log(st$fhat))
+  mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time))
 }
 
+ppp = dd_ML(brts = brts_dendroica,missnumspec = 0,cond = 0,soc = 2)
+pars = c(ppp$mu,ppp$lambda,(ppp$mu-ppp$lambda)/ppp$K,NULL)
+input = list(brts=brts_dendroica,pars=pars,sample_size=10000,model="rpd1",cores=8,parallel=TRUE)
+
+n_it = 100
+for(i in 1:n_it){
+  print(paste("iteration",i))
+  #  print(pars)
+  # pars = M$po$par
+  st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+  
+  #M = M_step(st = st, init_par = pars, model = input$model)
+  pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
+  
+  #  print(log(st$fhat))
+  #mcem = data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time)
+}
 
 
 #### comparing likelihood
 
 pars2 = c(250,1,0,1,1,2)
 dd_loglik(pars1=c(pars[2],pars[1],(pars[1]-pars[2])/pars[3]),pars2,brts_heliconius,missnumspec = 0)
+
+dd_ML(brts_dendroica,cond=0,soc=2)
+
+
 ###########
 
 
