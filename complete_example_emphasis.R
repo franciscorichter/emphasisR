@@ -84,9 +84,9 @@ brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.582
 
 #pars = c(0.3,1,-0.01,0.01)
 pars = c(ppp$mu,ppp$lambda,(ppp$mu-ppp$lambda)/ppp$K,NULL)
-input = list(brts=brts_dendroica,pars=pars,sample_size=5000,model="rpd1",cores=2,parallel=TRUE)
+input = list(brts=brts_dendroica,pars=pars,sample_size=500,model="rpd1",cores=2,parallel=TRUE)
 
-n_it = 100
+n_it = 500
 for(i in 1:n_it){
   print(paste("iteration",i))
   #print(pars)
