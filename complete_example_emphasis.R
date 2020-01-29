@@ -83,20 +83,30 @@ brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.582
 ######### sparate E and m step
 
 #pars = c(0.3,1,-0.01,0.01)
-pars = c(0.3,1,-0.01,NULL)
-input = list(brts=brts_heliconius,pars=pars,sample_size=100,model="rpd1",cores=2,parallel=TRUE)
+pars = c(ppp$mu,ppp$lambda,(ppp$mu-ppp$lambda)/ppp$K,NULL)
+input = list(brts=brts_dendroica,pars=pars,sample_size=5000,model="rpd1",cores=2,parallel=TRUE)
 
 n_it = 100
 for(i in 1:n_it){
   print(paste("iteration",i))
+  #print(pars)
+ # pars = M$po$par
   st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
   
-  M = M_step(st = st, init_par = pars, model = input$model)
-  pars = M$po$par
-  print(pars)
-  print(st$fhat)
-  mcem = data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time)
+  #M = M_step(st = st, init_par = pars, model = input$model)
+  pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
+  
+#  print(log(st$fhat))
+  #mcem = data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time)
 }
+
+ggplot(pp,aes(x=fhat,y=..density..,fill=ss)) + geom_histogram(position="identity")
+
+ggplot(pp) + geom_point(aes(x=ss,y=fhat,colour=ss))+geom_hline(yintercept = ppp$loglik)
+
+p100 = mean(pp$fhat[pp$ss==100])
+p500 = mean(pp$fhat[pp$ss==500])
+p1000 = mean(pp$fhat[pp$ss==1000])
 
 
 
