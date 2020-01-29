@@ -83,30 +83,13 @@ brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.582
 ######### sparate E and m step
 
 #pars = c(0.3,1,-0.01,0.01)
-pars = c(0.1,1,-0.01,NULL)
-input = list(brts=brts_dendroica,pars=pars,sample_size=1000,model="rpd1",cores=2,parallel=TRUE)
-
-n_it = 100
-mcem = NULL
-for(i in 1:n_it){
-  print(paste("iteration",i+100))
-  st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
-  
-  M = M_step(st = st, init_par = pars, model = input$model)
-  pars = M$po$par
-  print(pars)
-  print(log(st$fhat))
-  mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time))
-}
-
-ppp = dd_ML(brts = brts_dendroica,missnumspec = 0,cond = 0,soc = 2)
 pars = c(ppp$mu,ppp$lambda,(ppp$mu-ppp$lambda)/ppp$K,NULL)
-input = list(brts=brts_dendroica,pars=pars,sample_size=10000,model="rpd1",cores=8,parallel=TRUE)
+input = list(brts=brts_dendroica,pars=pars,sample_size=500,model="rpd1",cores=2,parallel=TRUE)
 
-n_it = 100
+n_it = 500
 for(i in 1:n_it){
   print(paste("iteration",i))
-  #  print(pars)
+  #print(pars)
   # pars = M$po$par
   st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
   
@@ -117,15 +100,20 @@ for(i in 1:n_it){
   #mcem = data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time)
 }
 
+ggplot(pp,aes(x=fhat,y=..density..,fill=ss)) + geom_histogram(position="identity")
+
+ggplot(pp) + geom_point(aes(x=ss,y=fhat,colour=ss))+geom_hline(yintercept = ppp$loglik)
+
+p100 = mean(pp$fhat[pp$ss==100])
+p500 = mean(pp$fhat[pp$ss==500])
+p1000 = mean(pp$fhat[pp$ss==1000])
+
+
 
 #### comparing likelihood
 
 pars2 = c(250,1,0,1,1,2)
 dd_loglik(pars1=c(pars[2],pars[1],(pars[1]-pars[2])/pars[3]),pars2,brts_heliconius,missnumspec = 0)
-
-dd_ML(brts_dendroica,cond=0,soc=2)
-
-
 ###########
 
 
@@ -152,4 +140,5 @@ mcem.tree(input,file="den_ss100rpd5_17Jan_mac.RData")
 pars = c(1,-0.01,0.1)
 input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="rpd2b",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE,maxnumspec=50)
 mcem.tree(input,file="pd_ss100_emphasis.RData")
+
 
