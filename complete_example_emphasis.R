@@ -90,7 +90,7 @@ tree = data.frame(brts = brts,to=rep(2,length(brts)),t_ext=rep(Inf,length(brts))
 
 pars = c(0.05,0.3,-0.005,NULL)
 #pars = c(ppp$mu,ppp$lambda,(ppp$mu-ppp$lambda)/ppp$K,NULL)
-input = list(brts=brts,pars=pars,sample_size=300,model="rpd1",cores=2,parallel=TRUE)
+input = list(brts=brts,pars=pars,sample_size=100,model="rpd1",cores=2,parallel=TRUE)
 
 n_it = 500
 mcem=NULL
@@ -104,22 +104,31 @@ for(i in 1:n_it){
   #pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
   AIC = 2*length(pars)-2*log(st$fhat)
   AICc = AIC + (2*length(pars)*length(pars)+2*length(pars))/(input$sample_size-length(pars)-1)
-  print(fhat=log(st$fhat))
+  print(log(st$fhat))
   pars = M$po$par
   mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=input$sample_size,AICc=AICc))
 }
 
-ggplot(pp,aes(x=fhat,y=..density..,fill=ss)) + geom_histogram(position="identity")
 
 ggplot(pp) + geom_point(aes(x=ss,y=fhat,colour=ss))+geom_hline(yintercept = ppp$loglik)+geom_hline(yintercept = median(pp$fhat[pp$ss==100]),color='green')+geom_hline(yintercept = median(pp$fhat[pp$ss==1000]),color='blue')+geom_hline(yintercept = median(pp$fhat[pp$ss==500]),color='red')
-
-p100 = mean(pp$fhat[pp$ss==100])
-p500 = mean(pp$fhat[pp$ss==500])
-p1000 = mean(pp$fhat[pp$ss==1000])
 
 
 
 #### comparing likelihood
+dddd = DDD:::dd_ML(brts = brts,cond = 1,soc = 2)
+
+pars = c(dddd$mu,dddd$lambda,(dddd$mu-dddd$lambda)/dddd$K)
+input = list(brts=brts,pars=pars,sample_size=300,model="rpd1",cores=2,parallel=TRUE)
+
+n_it = 500
+mcem=NULL
+for(i in 1:n_it){
+  print(paste("iteration",i))
+  st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+  pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
+ }
+
+
 
 pars2 = c(250,1,0,1,1,2)
 dd_loglik(pars1=c(pars[2],pars[1],(pars[1]-pars[2])/pars[3]),pars2,brts_heliconius,missnumspec = 0)
