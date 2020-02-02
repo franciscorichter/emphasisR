@@ -102,7 +102,7 @@ mcem=NULL
 for(i in 1:n_it){
   print(paste("iteration",i))
   print(pars)
-   
+  
   st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
   
   M = M_step(st = st, init_par = pars, model = input$model)
