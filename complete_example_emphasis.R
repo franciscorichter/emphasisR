@@ -79,38 +79,56 @@ brts_plethodon = c(11.3, 9.55365380008198, 9.26434040327225, 8.83592350352767,
 mle_plethodon = c(0.523708,0.01570368,0.025529)
 brts_vangidae = c(9.77, 9.652180854, 8.612705507, 7.491360279, 4.94075617, 2.5828624)
 
+# data prepataion
+newick="((Orycteropus_afer:93.5553,(Loxodonta_africana:59.821,Dugong_dugon:59.821):33.7343):9.2258,((( Cyclopes_didactylus:38.0246,(Myrmecophaga_tridactyla:12.8339,(Tamandua_mexicana:1.0027,(Tamand ua_tetradactyla_NC:0.1684,Tamandua_tetradactyla:0.1684):0.8342):11.8312):25.1907):20.8529,((Ch oloepus_hoffmanni:9.6461,(Choloepus_didactylus_NC:0.2072,Choloepus_didactylus:0.2072):9.4389): 21.0823,(Bradypus_torquatus:19.635,(Bradypus_pygmaeus:7.9961,(Bradypus_tridactylus:5.9217,(Bra dypus_variegatus:1.1677,Bradypus_variegatus_NC:1.1677):4.754):2.0743):11.6388):11.0935):28.149 1):9.2283,((Dasypus_kappleri:12.9351,((Dasypus_septemcinctus:0.0776,Dasypus_hybridus:0.0776):5 .259,(Dasypus_novemcinctus_FG:3.9067,((Dasypus_yepesi:0.6622,Dasypus_sabanicola:0.6622):2.3934 ,(Dasypus_novemcinctus_NC:2.8906,(Dasypus_pilosus_2:0.3478,Dasypus_pilosus_1:0.3478):2.5427):0 .165):0.851):1.43):7.5984):32.3822,((Euphractus_sexcinctus:10.9399,(Chaetophractus_villosus:9. 0975,(Zaedyus_pichiy:8.2149,(Chaetophractus_vellerosus:0.2264,Chaetophractus_nationi:0.2264):7 .9884):0.8826):1.8424):26.2721,((Chlamyphorus_truncatus:19.4188,Calyptophractus_retusus:19.418 8):13.1925,(Priodontes_maximus:25.7131,((Tolypeutes_tricinctus:14.0698,Tolypeutes_matacus:14.0 698):8.4247,(Cabassous_tatouay:11.0105,(Cabassous_chacoensis:8.6233,(Cabassous_centralis:1.313 ,(Cabassous_unicinctus_2:0.2894,Cabassous_unicinctus_1:0.2894):1.0235):7.3102):2.3871):11.4841 ):3.2184):6.8982):4.6007):8.1053):22.7885):34.6752);"
+phy = read.tree(text = newick)
+brts=sort(branching.times(phy),decreasing = TRUE)
+names(brts)=NULL
+brts = brts[brts>1]
+ddd = DDD:::dd_ML(brts = brts)
+
+
+tree = data.frame(brts = brts,to=rep(2,length(brts)),t_ext=rep(Inf,length(brts)))
+
 
 ######### sparate E and m step
 
-#pars = c(0.3,1,-0.01,0.01)
-pars = c(ppp$mu,ppp$lambda,(ppp$mu-ppp$lambda)/ppp$K,NULL)
-input = list(brts=brts_dendroica,pars=pars,sample_size=500,model="rpd1",cores=2,parallel=TRUE)
+pars = c(0.05,0.3,-0.005,NULL)
+#pars = c(ppp$mu,ppp$lambda,(ppp$mu-ppp$lambda)/ppp$K,NULL)
+input = list(brts=brts,pars=pars,sample_size=100,model="rpd1",cores=2,parallel=TRUE)
 
 n_it = 500
+mcem=NULL
 for(i in 1:n_it){
   print(paste("iteration",i))
-  #print(pars)
-  # pars = M$po$par
+  print(pars)
+  
   st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
   
-  #M = M_step(st = st, init_par = pars, model = input$model)
-  pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
-  
-  #  print(log(st$fhat))
-  #mcem = data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time)
+  M = M_step(st = st, init_par = pars, model = input$model)
+  #pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
+  AIC = 2*length(pars)-2*log(st$fhat)
+  AICc = AIC + (2*length(pars)*length(pars)+2*length(pars))/(input$sample_size-length(pars)-1)
+  print(log(st$fhat))
+  pars = M$po$par
+  mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=input$sample_size,AICc=AICc))
 }
 
-ggplot(pp,aes(x=fhat,y=..density..,fill=ss)) + geom_histogram(position="identity")
 
-ggplot(pp) + geom_point(aes(x=ss,y=fhat,colour=ss))+geom_hline(yintercept = ppp$loglik)
-
-p100 = mean(pp$fhat[pp$ss==100])
-p500 = mean(pp$fhat[pp$ss==500])
-p1000 = mean(pp$fhat[pp$ss==1000])
+ggplot(pp) + geom_point(aes(x=ss,y=fhat,colour=ss))+geom_hline(yintercept = ppp$loglik)+geom_hline(yintercept = median(pp$fhat[pp$ss==100]),color='green')+geom_hline(yintercept = median(pp$fhat[pp$ss==1000]),color='blue')+geom_hline(yintercept = median(pp$fhat[pp$ss==500]),color='red')
 
 
 
 #### comparing likelihood
+dddd = DDD:::dd_ML(brts = brts,cond = 1,soc = 2)
+
+pars = c(dddd$mu,dddd$lambda,(dddd$mu-dddd$lambda)/dddd$K)
+input = list(brts=brts,pars=pars,sample_size=300,model="rpd1",cores=2,parallel=TRUE)
+
+
+
+
+
 
 pars2 = c(250,1,0,1,1,2)
 dd_loglik(pars1=c(pars[2],pars[1],(pars[1]-pars[2])/pars[3]),pars2,brts_heliconius,missnumspec = 0)
@@ -140,5 +158,3 @@ mcem.tree(input,file="den_ss100rpd5_17Jan_mac.RData")
 pars = c(1,-0.01,0.1)
 input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="rpd2b",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE,maxnumspec=50)
 mcem.tree(input,file="pd_ss100_emphasis.RData")
-
-
