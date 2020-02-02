@@ -158,5 +158,3 @@ mcem.tree(input,file="den_ss100rpd5_17Jan_mac.RData")
 pars = c(1,-0.01,0.1)
 input = list(brts=brts_vangidae,pars=pars,sample_size=100,model="rpd2b",importance_sampler="emphasis",cores=detectCores(),method="thinning",aceleration_rate=1,parallel=TRUE,maxnumspec=50)
 mcem.tree(input,file="pd_ss100_emphasis.RData")
-
-
