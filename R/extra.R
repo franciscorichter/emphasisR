@@ -27,6 +27,15 @@ phylodiversity <- function(tm,tree){
   return(sum(dt*(2:(length(dt)+1))))
 }
 
+emphasis_bootstrap <- function(input,n_it=100){
+  pp=NULL
+  for(i in 1:n_it){
+    print(paste("iteration",i))
+    st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+    pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
+  }
+return(pp)
+}
 
 
 vectors2phylo <- function(list){

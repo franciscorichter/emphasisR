@@ -22,6 +22,23 @@ lg = log(st$fhat)
     save(MCEM,input,PARS,file=file)
   }
 }
+emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL){
+  pars = input$pars
+  for(i in 1:input$n_it){
+    st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+    if(print_process){
+      print(paste("iteration",i))
+      print(pars)
+      print(log(st$fhat))
+    }
+    M = M_step(st = st, init_par = pars, model = input$model)
+    AIC = 2*length(pars)-2*log(st$fhat)
+    AICc = AIC + (2*length(pars)*length(pars)+2*length(pars))/(input$sample_size-length(pars)-1)
+    pars = M$po$par
+    mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=input$sample_size,AICc=AICc))
+    save(input,mcem,file=file)
+  }
+}
 
 
 ##############################
