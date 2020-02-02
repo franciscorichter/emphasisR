@@ -22,9 +22,14 @@ lg = log(st$fhat)
     save(MCEM,input,PARS,file=file)
   }
 }
-emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL){
-  pars = input$pars
-  for(i in 1:input$n_it){
+emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000){
+  if(is.null(mcem)){
+    pars = input$pars
+  }else{
+    pars = mcem[nrow(mcem),1:4]
+    pars = pars[!is.na(pars)]
+  }
+  for(i in 1:n_it){
     st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
     if(print_process){
       print(paste("iteration",i))
