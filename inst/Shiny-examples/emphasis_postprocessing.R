@@ -200,18 +200,23 @@ server <- function(input, output) {
   
   output$parameter_estimation_general <- renderPlot({
     df = DF()
-    df = df[df$iteration %in% input$obs1:input$obs2,]
+    if(input$obs2>nrow(df)){
+      lim2 = nrow(df)
+    }else{
+      lim2 = input$obs2
+    }
+    #df = df[df$iteration %in% input$obs1:lim2 & !is.na(df$mu0),]
     if(input$typePlot=="Path"){
       plot_par_est = ggplot(df,aes(colour=rep))+geom_path(aes_string(x=input$par1,y=input$par2))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
     }
     if(input$typePlot=="Points"){
-      plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes_string(x=input$par1,y=input$par2,alpha=(1:nrow(df))/(2*nrow(df)),size=input$effective_sampling))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
+      plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes_string(x=input$par1,y=input$par2,alpha=(1:nrow(df))/(2*nrow(df))))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
     }
-    if(input$logY){
-      plot_par_est = plot_par_est + scale_y_log10() 
-    }
+ #   if(input$logY){
+#      plot_par_est = plot_par_est + scale_y_log10() 
+#    }
     if(input$par1=="iteration"){
-      plot_par_est = plot_par_est +geom_vline(xintercept = input$obs1)+geom_vline(xintercept = input$obs2)
+      plot_par_est = plot_par_est +geom_vline(xintercept = input$obs1)+geom_vline(xintercept = lim2)
     }
     plot_par_est + theme_bw()
   })

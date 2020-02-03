@@ -176,49 +176,52 @@ get.topologies <- function(M){
 }
 
 
+### simulation of trees 
 
-
-sim.tree <- function(pars,CT,seed=1,model="dd",soc=1){
-  set.seed(seed)
-  mu = pars[1]
+sim.tree <- function(pars, model,ct,soc){
+  tree = data.frame(brts=0,to=1,t_ext=Inf, parent=0, child = 1)
+  cbt = 0 
   N = soc
-  brts = 0
-  to = c(1,1)
-  while(max(brts)<CT & N>0){
-    speciation_r = get(paste0("lambda.", model))
-    lambda = speciation_r(tm,tree,pars,soc=soc)
-    if(model=="rpd1") lambda = max(0, pars[2] + pars[3]*N )
-    if(model=="rpd5"){
-      #i2<-
-       # to==0&i1
-    #  i3<-tree$t_ext%in%tree$brts[i2]
-     # dt<-diff(c(0,tree$brts[i1&!i2&!i3],tm))
-    #  sum(dt*(soc:(length(dt)+soc-1)))
-    }# lambda = lambda.cr(pars,N)
-    pd = soc:N
-    N = sapply(tm, n_from_time,tree=tree,soc=soc)
-    lambda = max(0, pars[2] + pars[3]*N + pars[4] * (pd/N) )
-    sigma = N*(mu+lambda)
-    wt = rexp(1,rate=sigma)
-    tev = rbinom(n=1,size=1,prob= (lambda/(lambda+mu)) )
-    brts = c(brts,max(brts)+wt)
-    to = c(to,tev)
-    if(tev==1) N = N+1
-    if(tev==0 & max(brts)<CT){
-      N = N-1
-      ext = sample((1:length(to))[to==1],1)
-      to[ext] = -1
+  mu = pars[1]
+  ## sim waiting time,
+  spec.cnt = soc
+  while((cbt < ct)  &  (N > 0)){
+    tmp.tree<-rbind(tree[-1,], data.frame(brts=ct,to=1,t_ext=Inf, parent=NA, child = NA))
+    rate_max = max(sum_speciation_rate(cbt,tmp.tree,pars,model,soc = soc),sum_speciation_rate(ct,tmp.tree,pars,model,soc=soc))+mu*N
+    u1 = runif(1)
+    next_event_time = cbt-log(x = u1)/rate_max
+    
+    if(next_event_time < ct){
+      u2 = runif(1)
+      pt = (sum_speciation_rate(next_event_time,tmp.tree,pars,model,soc=soc)+mu*N)/rate_max
+      if(u2<pt){
+        l1 = speciation_rate(next_event_time,tmp.tree,pars = pars, model = model,soc=soc)
+        to = sample(c(1,0),size=1,prob=c(l1,mu)/(l1+mu))
+        #   print(l1/(l1+mu))
+        if(to == 1){
+          spec.cnt = spec.cnt + 1 
+          current.spec = tree$child[tree$to==1 & is.infinite(tree$t_ext)]
+          tree = rbind(tree,data.frame(brts=next_event_time,to=1,t_ext=Inf,parent=sample(current.spec,1), child=spec.cnt))
+          N = N + 1
+        }else{
+          N = N - 1 
+          #extant = which(is.infinite(tree$t_ext) & (tree$to != 0) & tree$brts < next_speciation_time)
+          current.spec = tree$child[tree$to==1 & is.infinite(tree$t_ext)]
+          extinction = sample(current.spec,1)
+          tree = rbind(tree,data.frame(brts=next_event_time,to=0,t_ext=Inf,parent=extinction, child=NA))
+          tree$t_ext[tree$child==extinction] = next_event_time
+        }
+      }
     }
+    cbt = next_event_time
   }
-  to = to[-length(to)]
-  if(max(brts)>CT) brts[length(brts)]=CT
-  tree = list(wt=diff(brts),to=to)
+  tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf, parent=NA, child = NA))
   return(tree)
 }
 
-prune.tree <- function(tree){
-  brts = sum(tree$wt)-c(0,cumsum(tree$wt))
-  brts = c(brts[1],brts[-length(brts)])
-  nbrts = brts[tree$to==1]
-  return(nbrts)
+
+remove.extinctions <- function(tree){
+  extant_brts = tree$brts[tree$to==1 & is.infinite(tree$t_ext)]
+  return(extant_brts)
 }
+
