@@ -1,27 +1,5 @@
 ### EMPHASIS functions
 
-mcem.tree <- function(input,max_iterations=100000,report=TRUE,file=NULL){
-  pars = PARS = input$pars
-  MCEM=data.frame(loglik_hat=NULL,E_time=NULL,M_time=NULL,sample_size=NULL)
-  for(i in 1:max_iterations){
-    
-    st = mc_sample_independent_trees(brts = input$brts,pars = pars,nsim = input$sample_size,model = input$model, importance_sampler = input$importance_sampler,no_cores = input$cores, method = input$method)
-lg = log(st$fhat)
-    if(report){ 
-      print(paste(c("parameters: ",pars)))
-      print(paste("loglikelihood: ",lg))
-      print(paste("sample size: ",input$sample_size))
-    }
-    M = M_step(st = st,init_par = pars,model = input$model)
-    if(!is.na(M$po$value)){
-      pars = M$po$par
-    }
-    print(M$po$value)
-    PARS = rbind(pars,PARS)
-    MCEM = rbind(MCEM,data.frame(loglik_hat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=input$sample_size))
-    save(MCEM,input,PARS,file=file)
-  }
-}
 emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000){
   if(is.null(mcem)){
     pars = input$pars
@@ -30,7 +8,7 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000)
     pars = pars[!is.na(pars)]
   }
   for(i in 1:n_it){
-    st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+    st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     if(print_process){
       print(paste("iteration",i))
       print(pars)
@@ -49,9 +27,9 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000)
 ##############################
 ####### E-step 
 
-mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE){
+mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE,soc=2){
   if(seed>0) set.seed(seed)
-  E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = "emphasis",sample_size = sample_size,parallel = parallel,no_cores = no_cores)
+  E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = "emphasis",sample_size = sample_size,parallel = parallel,no_cores = no_cores,soc=soc)
   return(E)
 }
 

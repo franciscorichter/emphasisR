@@ -1,37 +1,31 @@
 # more utilities
 
-number_of_species <- function(tree,tm=NULL){
-  initspec = 1
-  to = head(tree$to,-1)
+n_from_time <- function(tm,tree,soc){
+  to = top = head(tree$to,-1)
   to[to==2] = 1
+  initspec = soc
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  
-  
-  if(is.null(tm)){
-    N=n
+  if(tm==max(tree$brts)){
+    N = n[max(which(c(0,tree$brts) < tm))]
   }else{
-    if(tm==max(tree$brts)){
-      N = n[max(which(c(0,tree$brts) < tm))]
-    }else{
-      N = n[max(which(c(0,tree$brts) <= tm))]
-    }
+    N = n[max(which(c(0,tree$brts) <= tm))]
   }
   return(N)
-}
+} 
 
-phylodiversity <- function(tm,tree){
+phylodiversity <- function(tm,tree,soc){
   i1<-tree$brts<=tm 
   i2<-tree$to==0&i1
   i3<-tree$t_ext%in%tree$brts[i2]
   dt<-diff(c(0,tree$brts[i1&!i2&!i3],tm))
-  return(sum(dt*(2:(length(dt)+1))))
+  return(sum(dt*(soc:(length(dt)+soc-1))))
 }
 
 emphasis_bootstrap <- function(input,n_it=100){
   pp=NULL
   for(i in 1:n_it){
     print(paste("iteration",i))
-    st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel)
+    st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
   }
 return(pp)
