@@ -26,6 +26,7 @@ emphasis_bootstrap <- function(input,n_it=100){
   for(i in 1:n_it){
     print(paste("iteration",i))
     st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
+    print(log(st$fhat))
     pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
   }
 return(pp)
@@ -176,15 +177,27 @@ get.topologies <- function(M){
 
 
 
-sim.tree <- function(pars,CT,seed=1,model="dd"){
+
+sim.tree <- function(pars,CT,seed=1,model="dd",soc=1){
   set.seed(seed)
-  mu = pars[2]
-  N = 2
+  mu = pars[1]
+  N = soc
   brts = 0
   to = c(1,1)
   while(max(brts)<CT & N>0){
-    if(model=="dd") lambda = lambda.dd(pars,N)
-    if(model=="cr") lambda = lambda.cr(pars,N)
+    speciation_r = get(paste0("lambda.", model))
+    lambda = speciation_r(tm,tree,pars,soc=soc)
+    if(model=="rpd1") lambda = max(0, pars[2] + pars[3]*N )
+    if(model=="rpd5"){
+      #i2<-
+       # to==0&i1
+    #  i3<-tree$t_ext%in%tree$brts[i2]
+     # dt<-diff(c(0,tree$brts[i1&!i2&!i3],tm))
+    #  sum(dt*(soc:(length(dt)+soc-1)))
+    }# lambda = lambda.cr(pars,N)
+    pd = soc:N
+    N = sapply(tm, n_from_time,tree=tree,soc=soc)
+    lambda = max(0, pars[2] + pars[3]*N + pars[4] * (pd/N) )
     sigma = N*(mu+lambda)
     wt = rexp(1,rate=sigma)
     tev = rbinom(n=1,size=1,prob= (lambda/(lambda+mu)) )
