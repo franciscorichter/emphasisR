@@ -23,7 +23,7 @@ mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_s
 }
 
 augment_tree_thinning <- function(brts,pars,model="dd",soc){
-  mu = pars[1]
+  mu = max(0,pars[1])
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)

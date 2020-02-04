@@ -51,20 +51,6 @@ loglik.tree.rpd1 <- function(pars,tree){
 ############################################################
 
 
-loglik.tree.dd <- function(pars,tree){
-  to = tree$to
-  to = head(to,-1)
-  to[to==2] = 1
-  mu = max(0,pars[3])
-  wt = diff(c(0,tree$brts))
-  n = tree$n
-  lambda = lambda.dd.n(pars,n)
-  sigma = (lambda + mu)*n
-  rho = pmax(lambda[-length(lambda)]*to+mu*(1-to),0)
-  log.lik = sum(-sigma*wt)+sum(log(rho))
-  if(min(pars)<0) log.lik = -Inf
-  return(log.lik)
-}
 
 
 
