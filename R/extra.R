@@ -28,6 +28,7 @@ emphasis_bootstrap <- function(input,n_it=100){
     st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     print(log(st$fhat))
     pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
+    save(pp,input,file=paste("bootstrap_",input$model,sep=""))
   }
 return(pp)
 }
