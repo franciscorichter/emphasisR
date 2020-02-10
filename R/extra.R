@@ -22,17 +22,17 @@ phylodiversity <- function(tm,tree,soc){
 }
 
 emphasis_bootstrap <- function(input,n_it=100,print=FALSE){
-  pp=NULL
+  P=NULL
   for(i in 1:n_it){
     st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     if(print==TRUE){
-    print(paste("iteration",i))
-    print(log(st$fhat))
+      print(paste("iteration",i))
+      print(log(st$fhat))
     }
-    pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
-    save(pp,input,file=paste("bootstrap_",input$model,sep=""))
+    P = rbind(P,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
+    save(P,input,file=paste("bootstrap_",input$model,sep=""))
   }
-return(pp)
+return(P)
 }
 
 
