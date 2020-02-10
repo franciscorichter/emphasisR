@@ -29,7 +29,7 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000)
 
 mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE,soc=2){
   if(seed>0) set.seed(seed)
-  E = mc_augmentation_thinning(brts = brts,pars = pars,model = model,importance_sampler = "emphasis",sample_size = sample_size,parallel = parallel,no_cores = no_cores,soc=soc)
+  E = mc_augmentation(brts = brts,pars = pars,model = model,importance_sampler = "emphasis",sample_size = sample_size,parallel = parallel,no_cores = no_cores,soc=soc)
   return(E)
 }
 
