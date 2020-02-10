@@ -63,7 +63,7 @@ augment_tree <- function(brts,pars,model="dd",soc){
   
   tree$n = sapply(c(0,tree$brts[-length(tree$brts)]), n_from_time,tree=tree,soc=soc)
   
-  return(list(tree=tree,logg=logg))
+  return(list(tree=tree))
 }
 
 ##############################################
