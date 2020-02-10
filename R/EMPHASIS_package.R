@@ -15,10 +15,10 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000)
       print(log(st$fhat))
     }
     M = M_step(st = st, init_par = pars, model = input$model)
-    AIC = 2*length(pars)-2*log(st$fhat)
-    AICc = AIC + (2*length(pars)*length(pars)+2*length(pars))/(input$sample_size-length(pars)-1)
+    #AIC = 2*length(pars)-2*log(st$fhat)
+    #AICc = AIC + (2*length(pars)*length(pars)+2*length(pars))/(input$sample_size-length(pars)-1)
     if(!is.infinite(M$po$value)) pars = M$po$par
-    mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=input$sample_size,AICc=AICc))
+    mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=input$sample_size))
     save(input,mcem,file=file)
   }
 }

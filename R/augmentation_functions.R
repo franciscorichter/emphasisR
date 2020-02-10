@@ -45,7 +45,6 @@ augment_tree <- function(brts,pars,model="dd",soc){
       if(u2<pt){
         extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
         missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
-        # choose species to speciate, and add it to tree. 
       }
     }
     cbt = min(next_speciation_time,next_bt)
@@ -55,7 +54,7 @@ augment_tree <- function(brts,pars,model="dd",soc){
                     to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
   tree = tree[order(tree$brts),]
   
-  logg = log_sampling_prob_nh(df = tree,pars = pars,model = model,soc=soc)
+  #logg = log_sampling_prob_nh(df = tree,pars = pars,model = model,soc=soc)
   
   tree$pd = sapply(tree$brts, function(x)
   emphasis:::phylodiversity(x, tree,soc=soc))

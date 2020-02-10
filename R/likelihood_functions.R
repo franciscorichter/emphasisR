@@ -23,7 +23,7 @@ loglik.tree.rpd5 <- function(pars,tree){
   lambda = pmax(0,pars[2] + pars[4] * Pt[-1]/n[-length(n)] + pars[3]*n[-length(n)])
   rho = pmax(lambda * to + mu * (1-to),0)
   
-  sigma_over_tree = n*((pars[1]+pars[2]+pars[3]*n+(pars[4]/n)*(Pt-brts_im1*n))*wt + pars[4]*(brts_i^2-brts_im1^2)/2)
+  sigma_over_tree = n*((mu+pmax(0,pars[2]+pars[3]*n+(pars[4]/n)*(Pt-brts_im1*n)))*wt + pars[4]*(brts_i^2-brts_im1^2)/2)
   
   log.lik = -sum(sigma_over_tree) + sum(log(rho))
   return(log.lik)
@@ -39,10 +39,10 @@ loglik.tree.rpd1 <- function(pars,tree){
   
   n = tree$n
   
-  lambda = pmax(0,pars[2] + pars[3] * n[-nrow(tree)])
-  rho = pmax(lambda * to + mu * (1-to),0)
+  lambda = pmax(0,pars[2] + pars[3] * n)
+  rho = pmax(lambda[-nrow(tree)] * to + mu * (1-to),0)
   
-  sigma_over_tree = n*(pars[1]+pars[2]+pars[3]*n)*wt 
+  sigma_over_tree = n*(mu+lambda)*wt 
   
   log.lik = -sum(sigma_over_tree) + sum(log(rho))
   return(log.lik)

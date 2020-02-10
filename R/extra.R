@@ -1,7 +1,7 @@
 # more utilities
 
 n_from_time <- function(tm,tree,soc){
-  to = top = head(tree$to,-1)
+  to = head(tree$to,-1)
   to[to==2] = 1
   initspec = soc
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
