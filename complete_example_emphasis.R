@@ -91,11 +91,13 @@ ddd = DDD:::dd_ML(brts = brts)
 tree = data.frame(brts = brts,to=rep(2,length(brts)),t_ext=rep(Inf,length(brts)))
 
 
-######### sparate E and m step
+######### mcem
 
-pars = c(0.05,0.3,-0.005,NULL)
-#pars = c(ppp$mu,ppp$lambda,(ppp$mu-ppp$lambda)/ppp$K,NULL)
-input = list(brts=brts,pars=pars,sample_size=100,model="rpd1",cores=2,parallel=TRUE)
+pars = c(ddd$mu,ddd$lambda,(ddd$mu-ddd$lambda)/ddd$K,NULL)
+input = list(brts=brts,pars=pars,sample_size=100,model="rpd1",cores=2,parallel=TRUE,n_it=100)
+emphasis(input,file=paste("xen_",as.character(input$sample_size),".RData",sep=""))
+
+
 
 n_it = 500
 mcem=NULL
