@@ -1,29 +1,28 @@
-mc_augmentation_thinning <- function(brts,pars,model,importance_sampler,sample_size,parallel=FALSE,no_cores=2,soc){
+mc_augmentation <- function(brts,pars,model,importance_sampler,sample_size,parallel=FALSE,no_cores=2,soc){
   time = proc.time()
   if(!parallel){
-    st =  lapply(1:sample_size,function(i){augment_tree_thinning(brts = brts,pars = pars,model=model,soc=soc)} )
+    st =  lapply(1:sample_size,function(i){augment_tree(brts = brts,pars = pars,model=model,soc=soc)} )
   }else{
-    st = mclapply(1:sample_size,function(i){augment_tree_thinning(brts = brts,pars = pars,model=model,soc=soc)},mc.cores = no_cores)
+    st = mclapply(1:sample_size,function(i){augment_tree(brts = brts,pars = pars,model=model,soc=soc)},mc.cores = no_cores)
   }
-
   trees = lapply(st,function(list) list$tree)
   dim = sapply(st,function(list) nrow(list$tree))
   E_time = get.time(time)
-  
   ####
-  log_lik_tree <- loglik.tree(model)
-  logf = sapply(trees,log_lik_tree, pars=pars)
-  logg =    sapply(st,function(list) list$logg)
+  logf = sapply(trees,loglik.tree(model), pars=pars)
+  logg = sapply(trees,log_sampling_prob_nh, pars=pars,model=model,soc=soc)
+ #logg = log_sampling_prob_nh(df = tree,pars = pars,model = model,soc=soc)
+  
+ # logg =    sapply(st,function(list) list$logg)
   log_weights = logf-logg
   w = exp(log_weights)
   ####
-  
   En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
   return(En)
 }
 
-augment_tree_thinning <- function(brts,pars,model="dd",soc){
-  mu = pars[1]
+augment_tree <- function(brts,pars,model="dd",soc){
+  mu = max(0,pars[1])
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)

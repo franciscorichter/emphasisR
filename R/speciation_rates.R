@@ -32,7 +32,14 @@ lambda.rpd1 <- function(tm,tree,pars,soc){
 }
 
 
-
+lambda.rpd5c <- function(tm,tree,pars,soc){
+  
+  pd = sapply(tm,phylodiversity,tree=tree,soc=soc)-tm
+  N = sapply(tm, n_from_time,tree=tree,soc=soc)
+  lambda = max(0, pars[2] + pars[3]*N + pars[4] * (pd/N) )
+  return(lambda)
+  
+}
 
 #############################
 

@@ -183,7 +183,7 @@ sim.tree <- function(pars, model,ct,soc){
   tree = data.frame(brts=0,to=1,t_ext=Inf, parent=0, child = 1)
   cbt = 0 
   N = soc
-  mu = pars[1]
+  mu = max(0,pars[1])
   ## sim waiting time,
   spec.cnt = soc
   while((cbt < ct)  &  (N > 0)){
