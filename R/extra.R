@@ -21,12 +21,14 @@ phylodiversity <- function(tm,tree,soc){
   return(sum(dt*(soc:(length(dt)+soc-1))))
 }
 
-emphasis_bootstrap <- function(input,n_it=100){
+emphasis_bootstrap <- function(input,n_it=100,print=FALSE){
   pp=NULL
   for(i in 1:n_it){
-    print(paste("iteration",i))
     st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
+    if(print==TRUE){
+    print(paste("iteration",i))
     print(log(st$fhat))
+    }
     pp = rbind(pp,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
     save(pp,input,file=paste("bootstrap_",input$model,sep=""))
   }
