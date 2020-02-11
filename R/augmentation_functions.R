@@ -7,10 +7,11 @@ mc_augmentation <- function(brts,pars,model,importance_sampler,sample_size,paral
   }
   trees = lapply(st,function(list) list$tree)
   dim = sapply(st,function(list) nrow(list$tree))
-  E_time = get.time(time)
+  
   ####
   logf = sapply(trees,loglik.tree(model), pars=pars)
-  logg = sapply(trees,log_sampling_prob_nh, pars=pars,model=model,soc=soc)
+  logg = mcsapply(trees,log_sampling_prob_nh, pars=pars,model=model,soc=soc,mc.cores = no_cores)
+  E_time = get.time(time)
  #logg = log_sampling_prob_nh(df = tree,pars = pars,model = model,soc=soc)
   
  # logg =    sapply(st,function(list) list$logg)
@@ -19,6 +20,16 @@ mc_augmentation <- function(brts,pars,model,importance_sampler,sample_size,paral
   ####
   En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
   return(En)
+}
+
+mcsapply <- function (X, FUN, no_cores, ..., simplify = TRUE, USE.NAMES = TRUE) {
+  FUN <- match.fun(FUN)
+  answer <- parallel::mclapply(X = X, FUN = FUN, ..., mc.cores = no_cores)
+  if (USE.NAMES && is.character(X) && is.null(names(answer))) 
+    names(answer) <- X
+  if (!isFALSE(simplify) && length(answer)) 
+    simplify2array(answer, higher = (simplify == "array"))
+  else answer
 }
 
 augment_tree <- function(brts,pars,model="dd",soc){
