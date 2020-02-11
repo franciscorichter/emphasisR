@@ -23,7 +23,6 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000)
   }
 }
 
-
 ##############################
 ####### E-step 
 

@@ -17,7 +17,7 @@ log_sampling_prob_nh <- function(df,pars,model="dd",soc,...){
   mu = max(0,pars[1])
   inte = vector(mode = "numeric",length = length(brts_i))
   for(i in 1:length(brts_i)){
-    inte[i] = intensity(x=brts_i[i],tree = df,model = model,time0 = brts_im1[i],pars = pars,soc,...)
+    inte[i] = intensity(x=brts_i[i],tree = df,model = model,time0 = brts_im1[i],pars = pars,soc)
   }
   logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
   return(logg)
@@ -36,13 +36,13 @@ log_sampling_prob_nh_old <- function(df,pars,model="dd",soc,...){
   nb = N[missing_speciations]
   No = c(1,1+cumsum(top==2))[missing_speciations]
   Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
-  lambda_b = sapply(df$brts[df$to==1]-0.000000001,speciation_rate,tree = df,pars = pars,model = model,soc,...)
+  lambda_b = sapply(df$brts[df$to==1]-0.000000001,speciation_rate,tree = df,pars = pars,model = model,soc)
   if(length(lambda_b)==0) lambda_b = 1
   text = df$t_ext[df$to==1]-df$brts[df$to==1]
   mu = max(0,pars[1])
   inte = vector(mode = "numeric",length = length(brts_i))
   for(i in 1:length(brts_i)){
-    inte[i] = intensity(x=brts_i[i],tree = df,model = model,time0 = brts_im1[i],pars = pars,soc,...)
+    inte[i] = emphasis:::intensity(x=brts_i[i],tree = df,model = model,time0 = brts_im1[i],pars = pars,soc)
   }
   logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
   return(logg)
@@ -79,7 +79,10 @@ intensity.rpd1 <- function(tree, pars){
   n = tree$n
   lambda = pmax(0,pars[2] + pars[3] * n)
   wt = diff(c(0,tree$brts))
-  sigma_over_tree = n*(mu+lambda)*wt
+  brts_i = df$brts
+  brts_im1 = c(0,df$brts[-nrow(df)])
+  sigma_over_tree = n*(lambda)*(wt - (exp(-mu*max(df$brts))/mu)*(exp(mu*brts_i)-exp(mu*brts_im1)) )
+  
   return(sigma_over_tree)
 }
 

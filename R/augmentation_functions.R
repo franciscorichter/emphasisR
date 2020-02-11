@@ -11,7 +11,7 @@ mc_augmentation <- function(brts,pars,model,importance_sampler,sample_size,paral
   ####
   logf = sapply(trees,loglik.tree(model), pars=pars)
   #logg = sapply(trees,sampling_prob, pars=pars,model=model,soc=soc)
-  logg = sapply(trees,log_sampling_prob_nh, pars=pars,model=model,soc=soc)
+  logg = sapply(trees,sampling_prob, pars=pars,model=model,soc=soc)
   E_time = get.time(time)
  #logg = log_sampling_prob_nh(df = tree,pars = pars,model = model,soc=soc)
   
