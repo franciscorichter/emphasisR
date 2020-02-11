@@ -25,6 +25,44 @@ log_sampling_prob_nh <- function(df,pars,model="dd",soc,...){
   return(logg)
 }
 
+sampling_prob <- function(df,pars,model,soc){
+  if(is.null(df$t_ext)) df$t_ext  = df$bte
+  b = max(df$brts)
+  
+  to = top = head(df$to,-1)
+  to[to==2] = 1
+  initspec=soc
+  N = c(initspec,initspec+cumsum(to)+cumsum(to-1))
+  
+  brts_i = df$brts
+  brts_im1 = c(0,df$brts[-nrow(df)])
+  
+  missing_speciations = (df$to == 1)
+  nb = N[missing_speciations]
+  No = c(1,1+cumsum(top==2))[missing_speciations]
+  Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
+  lambda_b = sapply(df$brts[df$to==1]-0.000000001,speciation_rate,tree = df,pars = pars,model = model,soc,...)
+  if(length(lambda_b)==0) lambda_b = 1
+  text = df$t_ext[df$to==1]-df$brts[df$to==1]
+  mu = max(0,pars[1])
+
+  intensity = get(paste0("intensity.", model))
+  inte = intensity(tree=df,pars=pars)
+  
+  logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
+  return(logg)
+}
+
+
+
+intensity.rpd1 <- function(tree, pars){
+  mu = max(0,pars[1])
+  n = tree$n
+  lambda = pmax(0,pars[2] + pars[3] * n)
+  wt = diff(c(0,tree$brts))
+  sigma_over_tree = n*(mu+lambda)*wt
+  return(sigma_over_tree)
+}
 
 intensity <- function(x, tree, model, time0, pars,soc){
   max_time_for_continuity = min(tree$brts[tree$brts>time0])

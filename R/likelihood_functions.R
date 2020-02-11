@@ -39,7 +39,7 @@ loglik.tree.rpd1 <- function(pars,tree){
   
   n = tree$n
   
-  lambda = pmax(0,pars[2] + pars[3] * n)
+  lambda = pmax(0, pars[2] + pars[3] * n)
   rho = pmax(lambda[-nrow(tree)] * to + mu * (1-to),0)
   
   sigma_over_tree = n*(mu+lambda)*wt 
@@ -47,6 +47,8 @@ loglik.tree.rpd1 <- function(pars,tree){
   log.lik = -sum(sigma_over_tree) + sum(log(rho))
   return(log.lik)
 }
+
+
 
 loglik.tree.rpd5c <- function(pars,tree){
   to = tree$to
