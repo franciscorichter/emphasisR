@@ -58,7 +58,7 @@ sampling_prob <- function(tree,pars,model,soc){
   
   missing_speciations = (tree$to == 1)
   nb = N[missing_speciations]
-  No = c(1,1+cumsum(top==2))[missing_speciations]
+  No = c(soc,soc+cumsum(top==2))[missing_speciations]
   Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
   lambda_b = sapply(tree$brts[tree$to==1]-0.000000001,speciation_rate,tree = tree,pars = pars,model = model,soc=soc)
   if(length(lambda_b)==0) lambda_b = 1
@@ -79,9 +79,9 @@ intensity.rpd1 <- function(tree, pars){
   n = tree$n
   lambda = pmax(0,pars[2] + pars[3] * n)
   wt = diff(c(0,tree$brts))
-  brts_i = df$brts
-  brts_im1 = c(0,df$brts[-nrow(df)])
-  sigma_over_tree = n*(lambda)*(wt - (exp(-mu*max(df$brts))/mu)*(exp(mu*brts_i)-exp(mu*brts_im1)) )
+  brts_i = tree$brts
+  brts_im1 = c(0,tree$brts[-nrow(tree)])
+  sigma_over_tree = n*(lambda)*(wt - (exp(-mu*max(tree$brts))/mu)*(exp(mu*brts_i)-exp(mu*brts_im1)) )
   
   return(sigma_over_tree)
 }
