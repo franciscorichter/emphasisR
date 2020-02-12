@@ -28,8 +28,25 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000)
 
 mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE,soc=2){
   if(seed>0) set.seed(seed)
-  E = mc_augmentation(brts = brts,pars = pars,model = model,importance_sampler = "emphasis",sample_size = sample_size,parallel = parallel,no_cores = no_cores,soc=soc)
-  return(E)
+  time = proc.time()
+  if(!parallel){
+    st =  lapply(1:sample_size,function(i){augment_tree(brts = brts,pars = pars,model=model,soc=soc)} )
+  }else{
+    st = mclapply(1:sample_size,function(i){augment_tree(brts = brts,pars = pars,model=model,soc=soc)},mc.cores = no_cores)
+  }
+  trees = lapply(st,function(list) list$tree)
+  dim = sapply(st,function(list) nrow(list$tree))
+  
+  ####
+  logf = sapply(trees,loglik.tree(model), pars=pars)
+  logg = sapply(trees,sampling_prob, pars=pars,model=model,soc=soc)
+  E_time = get.time(time)
+  log_weights = logf-logg
+  w = exp(log_weights)
+  ####
+  En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
+  return(En)
+
 }
 
 ##############################
