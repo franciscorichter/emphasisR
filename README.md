@@ -7,13 +7,7 @@ This package provides the code to apply the emphasis framework created by Franci
 To install `emphasis` do the following command from within R:
 
 ```
-install.packages("devtools")
-install.packages("curl")
 devtools::install_github("franciscorichter/emphasis")
 ```
 
-### Usage
 
-```
-emphasis.app()
-```

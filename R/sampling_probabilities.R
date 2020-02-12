@@ -65,8 +65,8 @@ sampling_prob <- function(df,pars,model,soc){
   text = df$t_ext[df$to==1]-df$brts[df$to==1]
   mu = max(0,pars[1])
 
-  intensity = get(paste0("intensity.", model))
-  inte = intensity(tree=df,pars=pars)
+  intensity.temp = get(paste0("intensity.", model))
+  inte = intensity.temp(tree=df,pars=pars)
   
   logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
   return(logg)
