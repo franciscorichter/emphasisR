@@ -72,6 +72,7 @@ intensity.rpd5 <- function(tree,pars){
   }
   brts_i = tree$brts
   brts_im1 = c(0,brts_i[-length(brts_i)])
+  inte = vector(mode="numeric",length = length(brts_i))
   for(i in 1:nrow(tree)){
     if((roots[i] > brts_im1[i]) & (roots[i] < brts_i[i])  ){
       if((pars[2] + pars[3] * n[i] + pars[4] *(Pt[i]/n[i]))<0){
