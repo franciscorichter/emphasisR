@@ -24,7 +24,7 @@ phylodiversity <- function(tm,tree,soc){
 emphasis_bootstrap <- function(input,n_it=100,print=FALSE,file="bootstrap_temp.RData"){
   P=NULL
   for(i in 1:n_it){
-    st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
+    st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=FALSE,soc=input$soc)
     if(print==TRUE){
       print(paste("iteration",i))
       print(paste("log-lik: ",log(st$fhat),sep=""))

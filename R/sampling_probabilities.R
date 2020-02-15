@@ -1,54 +1,6 @@
 # augmentaion (sampling) probability 
 
-log_sampling_prob_nh <- function(df,pars,model,soc,...){
-  to = top = head(df$to,-1)
-  to[to==2] = 1
-  initspec=soc
-  N = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  brts_i = df$brts
-  brts_im1 = c(0,df$brts[-nrow(df)])
-  missing_speciations = (df$to == 1)
-  nb = N[missing_speciations]
-  No = c(1,1+cumsum(top==2))[missing_speciations]
-  Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
-  lambda_b = sapply(df$brts[df$to==1]-0.000000001,speciation_rate,tree = df,pars = pars,model = model,soc)
-  if(length(lambda_b)==0) lambda_b = 1
-  text = df$t_ext[df$to==1]-df$brts[df$to==1]
-  mu = max(0,pars[1])
-  inte = vector(mode = "numeric",length = length(brts_i))
-  for(i in 1:length(brts_i)){
-    inte[i] = intensity(x=brts_i[i],tree = df,model = model,time0 = brts_im1[i],pars = pars,soc)
-  }
-  logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
-  return(logg)
-}
-
-log_sampling_prob_nh_old <- function(df,pars,model="dd",soc,...){
-  if(is.null(df$t_ext)) df$t_ext  = df$bte
-  b = max(df$brts)
-  to = top = head(df$to,-1)
-  to[to==2] = 1
-  initspec=soc
-  N = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  brts_i = df$brts
-  brts_im1 = c(0,df$brts[-nrow(df)])
-  missing_speciations = (df$to == 1)
-  nb = N[missing_speciations]
-  No = c(1,1+cumsum(top==2))[missing_speciations]
-  Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
-  lambda_b = sapply(df$brts[df$to==1]-0.000000001,speciation_rate,tree = df,pars = pars,model = model,soc)
-  if(length(lambda_b)==0) lambda_b = 1
-  text = df$t_ext[df$to==1]-df$brts[df$to==1]
-  mu = max(0,pars[1])
-  inte = vector(mode = "numeric",length = length(brts_i))
-  for(i in 1:length(brts_i)){
-    inte[i] = emphasis:::intensity(x=brts_i[i],tree = df,model = model,time0 = brts_im1[i],pars = pars,soc)
-  }
-  logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
-  return(logg)
-}
-
-sampling_prob <- function(tree,pars,model,soc){
+sampling_prob <- function(tree,pars,model,soc,numerical=FALSE){
   to = top = head(tree$to,-1)
   to[to==2] = 1
   N = c(soc,soc+cumsum(to)+cumsum(to-1))
@@ -60,13 +12,17 @@ sampling_prob <- function(tree,pars,model,soc){
   nb = N[missing_speciations]
   No = c(soc,soc+cumsum(top==2))[missing_speciations]
   Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
+  
   lambda_b = sapply(tree$brts[tree$to==1]-0.000000001,speciation_rate,tree = tree,pars = pars,model = model,soc=soc)
   if(length(lambda_b)==0) lambda_b = 1
   text = tree$t_ext[tree$to==1]-tree$brts[tree$to==1]
   mu = max(0,pars[1])
-
-  intensity.temp = get(paste0("intensity.", model))
-  inte = intensity.temp(tree=tree,pars=pars)
+  if(numerical){
+    inte = intensity.numerical(tree = tree,pars = pars,model=model)
+  }else{
+    intensity.temp = get(paste0("intensity.", model))
+    inte = intensity.temp(tree=tree,pars=pars)
+  }
   
   logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
   return(logg)
@@ -75,6 +31,7 @@ sampling_prob <- function(tree,pars,model,soc){
 
 
 intensity.rpd1 <- function(tree, pars){
+  
   mu = max(0,pars[1])
   n = tree$n
   lambda = pmax(0,pars[2] + pars[3] * n)
@@ -86,16 +43,50 @@ intensity.rpd1 <- function(tree, pars){
   return(sigma_over_tree)
 }
 
-intensity <- function(x, tree, model, time0, pars,soc){
-  max_time_for_continuity = min(tree$brts[tree$brts>time0])
-  if(x==time0){
-    val = 0
-  }else{
-    nh_rate <- function(wt){
-      sum_speciation_rate(x=wt,tree = tree,pars = pars,model = model,soc=soc)*(1-exp(-(max(tree$brts)-wt)*pars[1]))
-    }
-    if(x != time0) x <- x-0.00000000001
-    val = pracma:::quad(f = Vectorize(nh_rate),xa = time0,xb = x)
+
+
+intensity.numerical <- function(tree, pars, model){
+  nh_rate <- function(x){
+    sum_speciation_rate(x=x,tree = tree,pars = pars,model = model,soc=tree$n[1])*(1-exp(-(max(tree$brts)-x)*pars[1]))
   }
-  return(val)
+  brts_i = tree$brts
+  brts_im1 = c(0,brts_i[-length(brts_i)])
+  inte = vector(mode="numeric",length = length(brts_i))
+  for(i in 1:length(brts_i)){
+    inte[i] = pracma:::quad(f = Vectorize(nh_rate),xa = brts_im1[i],xb = brts_i[i]-0.00000000001)
+  }
+  return(inte)
+}
+
+
+### intensity rpd5
+
+intensity.rpd5 <- function(tree,pars){
+  n = tree$n; Pt = c(0,tree$pd)
+  c2 = pars[4]; c3 = exp(-pars[1]*max(tree$brts)); c4 = pars[1]
+  c1 = pars[2] + pars[3]*n + pars[4]*((Pt[-nrow(tree)]-n*c(0,tree$brts[-length(tree$brts)]))/n)
+  if(c2==0){
+    roots = rep(Inf,times=length(c1))
+  }else{
+    roots = -c1/c2
+  }
+  brts_i = tree$brts
+  brts_im1 = c(0,brts_i[-length(brts_i)])
+  for(i in 1:nrow(tree)){
+    if((roots[i] > brts_im1[i]) & (roots[i] < brts_i[i])  ){
+      if((pars[2] + pars[3] * n[i] + pars[4] *(Pt[i]/n[i]))<0){
+        inte[i] = (ind.rpd5(x=brts_i[i],c1[i],c2,c3,c4)-ind.rpd5(x=roots[i],c1[i],c2,c3,c4))*n[i]
+      }else{
+        inte[i] = (ind.rpd5(x=roots[i],c1[i],c2,c3,c4)-ind.rpd5(x=brts_im1[i],c1[i],c2,c3,c4))*n[i]
+      }
+    }else{
+      inte[i] = (ind.rpd5(x=brts_i[i],c1[i],c2,c3,c4)-ind.rpd5(x=brts_im1[i],c1[i],c2,c3,c4))*n[i]
+    }
+  }
+  return(inte)
+}
+
+ind.rpd5 <- function(x,c1,c2,c3,c4){
+  r = (c2 * x^2)/2 + c1*x - (c3*exp(c4*x)*(c2*(c4*x-1)+c1*c4))/(c4^2) 
+  return(r)
 }

@@ -38,7 +38,9 @@ augment_tree <- function(brts,pars,model="dd",soc){
     tree = tree[order(tree$brts),]
     
     next_bt = min(tree$brts[tree$brts>cbt])
+    ###  sabado 15/2/20: cambiar esta parte a funciones max_model
     lambda_max = max(sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))),sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
+    ###
     u1 = runif(1)
     next_speciation_time = cbt-log(x = u1)/lambda_max
     if(next_speciation_time < next_bt){
