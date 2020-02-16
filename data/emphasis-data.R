@@ -7,7 +7,7 @@
 #'
 #' @docType data
 #'
-#' @usage data(branching_times_7phylogenies)
+#' @usage data(branching_times)
 #'
 #' @format An object of class `"cross"`; see [qtl::read.cross()].
 #'
@@ -30,4 +30,4 @@
 #'             
 #'             
 #'                
-"branching_times_7phylogenies"
+"branching_times"

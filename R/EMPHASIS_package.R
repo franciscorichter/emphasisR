@@ -1,5 +1,6 @@
 ### EMPHASIS functions
 
+
 emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000){
   if(is.null(mcem)){
     pars = input$pars

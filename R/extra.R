@@ -36,6 +36,12 @@ emphasis_bootstrap <- function(input,n_it=100,print=FALSE,file="bootstrap_temp.R
 return(P)
 }
 
+data_to_table <- function(df,replicant,left,right){
+  df = df[df$rep==replicant,]
+  df = df[df$iteration %in% left:right,]
+  summ = data.frame(lfhat = mean(df$fhat),sd_fhat=sd(df$fhat),mad_fhat=mad(df$fhat),replicant=replicant,par1=median(df$par1),par2=median(df$par2),par3=median(df$par3),par4=median(df$par4),E_time = mean(df$E_time), M_time = mean(df$M_time), sample_size=mean(df$sample_size))
+  return(summ)
+}
 
 vectors2phylo <- function(list){
   t=list$wt
