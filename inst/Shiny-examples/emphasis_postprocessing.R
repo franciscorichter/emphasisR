@@ -61,6 +61,7 @@ server <- function(input, output) {
   
   DF <- reactive({
     inFile <- input$file1
+    DF_temp=NULL
     if(is.null(inFile)){
       DF_temp =     data.frame(iteration=1,par1=1,par2=1,par3=1,par4=1,E_time=1,M_time=1,sample_size=1,fhat=1,rep=1)
 

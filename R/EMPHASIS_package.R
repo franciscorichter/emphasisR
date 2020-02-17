@@ -9,11 +9,13 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000)
     pars = pars[!is.na(pars)]
   }
   for(i in 1:n_it){
-    st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     if(print_process){
       print(paste("iteration",i))
       print(pars)
-      print(log(st$fhat))
+    }
+    st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
+    if(print_process){
+      print(paste("loglikelihood estimation: ",log(st$fhat)))
     }
     M = M_step(st = st, init_par = pars, model = input$model)
     #AIC = 2*length(pars)-2*log(st$fhat)
