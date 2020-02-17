@@ -44,8 +44,8 @@ ui <- fluidPage(
       tableOutput("view"),
       plotOutput("parameter_estimation_general", click = "plot_click"),
       textInput("text1", "Describe the data here", value=""),
-      uiOutput("correlations_tab"),
-      plotOutput("correlations"),
+     # uiOutput("correlations_tab"),
+   #   plotOutput("correlations"),
       # Output: Verbatim text for data summary ----
       #textOutput("caption"),
       
@@ -111,11 +111,11 @@ server <- function(input, output) {
                 choices=rev(names(DF())))
   })
   
-  output$correlations_tab = renderUI({
-    selectInput(inputId = "replic",
-                label = "Choose replicant:",
-                choices = unique(DF()$rep))
-  })
+  #output$correlations_tab = renderUI({
+  #  selectInput(inputId = "replic",
+  #              label = "Choose replicant:",
+  #              choices = unique(DF()$rep))
+  #})
   
 
   
@@ -201,15 +201,15 @@ server <- function(input, output) {
     plot_par_est + theme_bw()
   })
   
-  output$correlations <- renderPlot({
-    df = DF()
-    df = df[df$iteration %in% input$obs[1]:input$obs[2],]
-    data = df[df$rep == input$replic,2:5]
-    #ggcorr(data, palette = "RdYlGn", name = "rho", 
-    #       label = FALSE, label_color = "black")
-    gp = ggpairs(data)
-    gp
-  })
+ # output$correlations <- renderPlot({
+#    df = DF()
+#   df = df[df$iteration %in% input$obs[1]:input$obs[2],]
+#    data = df[df$rep == input$replic,2:5]
+
+#    #       label = FALSE, label_color = "black")
+ #   gp = ggpairs(data)
+  #  gp
+ # })
   
   
 }
