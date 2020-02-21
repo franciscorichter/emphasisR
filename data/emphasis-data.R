@@ -19,7 +19,7 @@
 #' response. Genetics 195:1077-1086
 #' ([PubMed](https://www.ncbi.nlm.nih.gov/pubmed/23979570))
 #'
-#' @source Rampal
+#' @source to be written 
 #'
 #' @examples
 #' data(branching_times_7phylogenies)

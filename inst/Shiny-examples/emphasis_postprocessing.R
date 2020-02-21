@@ -148,7 +148,7 @@ server <- function(input, output) {
     }
     ta
   },
-  digits = 4)
+  digits = 3)
 
   
   output$report <- downloadHandler(
