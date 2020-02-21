@@ -1,7 +1,7 @@
 ### EMPHASIS functions
 
 
-emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000){
+emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=NULL){
   if(is.null(mcem)){
     pars = input$pars
   }else{
@@ -13,13 +13,26 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=1000)
       print(paste("iteration",i))
       print(pars)
     }
-    st = mcE_step(brts = input$brts, pars = pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
+    ### sample size
+    if(length(input$sample_size)>1){
+      if(i < 400){
+        sample_size = input$sample_size[1]
+      }
+      if(i >= 400 & i<800){
+        sample_size = input$sample_size[2]
+      }
+      if(i >=800){
+        sample_size = input$sample_size[3]
+      }
+    }else{
+      sample_size = input$sample_size
+    }
+    ####
+    st = mcE_step(brts = input$brts, pars = pars,sample_size=sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     if(print_process){
       print(paste("loglikelihood estimation: ",log(st$fhat)))
     }
     M = M_step(st = st, init_par = pars, model = input$model)
-    #AIC = 2*length(pars)-2*log(st$fhat)
-    #AICc = AIC + (2*length(pars)*length(pars)+2*length(pars))/(input$sample_size-length(pars)-1)
     if(!is.infinite(M$po$value)) pars = M$po$par
     mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=input$sample_size))
     save(input,mcem,file=file)
