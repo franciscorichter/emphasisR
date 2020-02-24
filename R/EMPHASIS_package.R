@@ -6,28 +6,13 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=NULL)
     pars = input$pars
   }else{
     pars = mcem[nrow(mcem),1:4]
-    pars = pars[!is.na(pars)]
   }
+  sample_size = input$sample_size
   for(i in 1:n_it){
     if(print_process){
       print(paste("iteration",i))
       print(pars)
     }
-    ### sample size
-    if(length(input$sample_size)>1){
-      if(i < 400){
-        sample_size = input$sample_size[1]
-      }
-      if(i >= 400 & i<800){
-        sample_size = input$sample_size[2]
-      }
-      if(i >=800){
-        sample_size = input$sample_size[3]
-      }
-    }else{
-      sample_size = input$sample_size
-    }
-    ####
     st = mcE_step(brts = input$brts, pars = pars,sample_size=sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     if(print_process){
       print(paste("loglikelihood estimation: ",log(st$fhat)))
