@@ -21,20 +21,27 @@ phylodiversity <- function(tm,tree,soc){
   return(sum(dt*(soc:(length(dt)+soc-1))))
 }
 
-emphasis_bootstrap <- function(input,n_it=100,print=FALSE){
+emphasis_bootstrap <- function(input,n_it=100,print=FALSE,file="bootstrap_temp.RData"){
   P=NULL
   for(i in 1:n_it){
-    st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
+    st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=FALSE,soc=input$soc)
     if(print==TRUE){
       print(paste("iteration",i))
-      print(log(st$fhat))
+      print(paste("log-lik: ",log(st$fhat),sep=""))
+      print(paste("took: ",st$E_time,sep=""))
     }
     P = rbind(P,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
-    save(P,input,file=paste("bootstrap_",input$model,sep=""))
+    save(P,input,file=file)
   }
 return(P)
 }
 
+data_to_table <- function(df,replicant,left,right){
+  df = df[df$rep==replicant,]
+  df = df[df$iteration %in% left:right,]
+  summ = data.frame(lfhat = mean(df$fhat),sd_fhat=sd(df$fhat),mad_fhat=mad(df$fhat),replicant=replicant,par1=median(df$par1),par2=median(df$par2),par3=median(df$par3),par4=median(df$par4),E_time = sum(df$E_time)/60, M_time = sum(df$M_time)/60, sample_size=mean(df$sample_size))
+  return(summ)
+}
 
 vectors2phylo <- function(list){
   t=list$wt

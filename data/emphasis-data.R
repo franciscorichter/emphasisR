@@ -7,7 +7,7 @@
 #'
 #' @docType data
 #'
-#' @usage data(branching_times_7phylogenies)
+#' @usage data(branching_times)
 #'
 #' @format An object of class `"cross"`; see [qtl::read.cross()].
 #'
@@ -19,7 +19,7 @@
 #' response. Genetics 195:1077-1086
 #' ([PubMed](https://www.ncbi.nlm.nih.gov/pubmed/23979570))
 #'
-#' @source Rampal
+#' @source to be written 
 #'
 #' @examples
 #' data(branching_times_7phylogenies)
@@ -30,4 +30,4 @@
 #'             
 #'             
 #'                
-"branching_times_7phylogenies"
+"branching_times"

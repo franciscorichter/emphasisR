@@ -1,67 +1,24 @@
-#### Introduction / Input
+---
+title: "Dynamic report"
+output: pdf_document
+params:
+  ta: NA
+  text1: NA
+---
 
-
-```{r model, echo=FALSE}
-a = In()
-df = DF()
-df = df[df$iteration %in% input$obs1:input$obs2,]
-if(is.null(a$data_set)) a$data_set = "nn"
-inputTable = data.frame(Input = c("Data set","Sample size","MCEM iterations taken into account"),Value = c(a$data_set,a$sample_size,nrow(df)))
-knitr::kable(inputTable)
+```{r}
+# For PDF output, change the header to have "output: pdf_document".
+#
+# Note that due to an issue in rmarkdown, the default value of a parameter in
+# the header cannot be `NULL`, so I used a default of `NA` for the default value
+# of `n`.
+params$text1
 ```
-
-#### Estimations
 
 
 ```{r}
-estimations = data.frame(lfhat = mean(df$fhat),mu0=median(df$mu0),lambda0=median(df$lambda0),Npar=median(df$N),PDpar=median(df$PD),E_time = median(df$E_time), M_time = median(df$M_time), sample_size=mean(df$sample_size))
-knitr::kable(estimations)
-save(estimations,df,file="~/Google Drive/scripts for jobs and data/Experiments/MCEM/tempData/estimations_temp.RData")
+# The `params` object is available in the document.
+params$ta
 ```
-
-### Anaysis 
-
-
-#### likelihood
-
-
-```{r, echo=FALSE}
-df$diff_fhat = c(0,diff(df$fhat))
-breaks <- pretty(range(df$diff_fhat), n = nclass.FD(df$diff_fhat), min.n = 1)
-bwidth <- breaks[2]-breaks[1]
-gl = ggplot(df) + geom_histogram(aes(diff_fhat))#,binwidth = bwidth)#,binwidth = (max(diff_fhat)-max(diff_fhat))/50)# + ggtitle(label=paste("Last estimation:  ",mean(rv$mcem_it$K[input$charts:length(rv$mcem_it$K)])),subtitle =   paste("number of last iterations to consider: ", length(rv$mcem_it$K)-input$charts)) 
-gl_hist = gl + theme_bw() + ggtitle(label = "Delta likelihood")
-
-plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes(x=iteration,y=fhat,alpha=(1:nrow(df))/(2*nrow(df))))#,size=input$effective_sampling))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
-#gl_hist
-#plot_par_est + theme_bw()
-```
-
-
-
-#### Correlations matrix
-
-
-```{r, echo=FALSE}
-data = df[,2:5]
-    #ggcorr(data, palette = "RdYlGn", name = "rho", 
-    #       label = FALSE, label_color = "black")
-ggpairs(data)
-```
-
-
-
-#### Values for PD and N
-
-```{r, echo=FALSE}
-plot_par_est = ggplot(df,aes(colour=rep))+geom_point(aes(x=N,y=PD,alpha=(1:nrow(df))/(2*nrow(df))))#,size=input$effective_sampling))#+ggtitle("lambda Estimation",subtitle = paste("Current estimation:",par_est))+geom_hline(yintercept = par_est,colour="red")
-gl_hist
-plot_par_est + theme_bw()
-```
-
-
-#### Error
-
-
 
 
