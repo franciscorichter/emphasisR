@@ -43,6 +43,26 @@ data_to_table <- function(df,replicant,left,right){
   return(summ)
 }
 
+AIC <- function(LogLik,k){
+  aic <- (2*k)-(2*LogLik)
+  return(aic)
+}
+
+AICweights <- function(LogLik,k){
+  IC <- AIC(LogLik,k)
+  bestmodelIC <- min(IC)
+  weights <- exp(-0.5*(IC-bestmodelIC))
+  weights <- weights/sum(weights)
+  return(weights)
+}
+
+AICw <- function(l1,l2,k1,k2){
+  IC <- AIC(c(l1,l2),c(k1,k2))
+  bestmodelIC <- min(IC)
+  weights <- exp(-0.5*(IC-bestmodelIC))
+  weights <- weights/sum(weights)
+  return(weights[1])
+}
 vectors2phylo <- function(list){
   t=list$wt
   n=list$n
@@ -234,4 +254,41 @@ remove.extinctions <- function(tree){
   extant_brts = tree$brts[tree$to==1 & is.infinite(tree$t_ext)]
   return(extant_brts)
 }
+
+multiplot <- function(lp, plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(lp, plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
 
