@@ -30,7 +30,7 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=NULL,
     }
     save(input,mcem,file=file)
     if(i>10){
-      if( ( mean(mcem$fhat)-mean(mcem$fhat[-nrow(mcem)]) ) < tol){
+      if( abs( mean(mcem$fhat)-mean(mcem$fhat[-nrow(mcem)]) ) < tol){
         key = 1 + key
         if(key==3){
           break
