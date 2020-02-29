@@ -23,7 +23,7 @@ mc_augmentation <- function(brts,pars,model,importance_sampler,sample_size,paral
   return(En)
 }
 
-augment_tree <- function(brts,pars,model="dd",soc){
+augment_tree <- function(brts,pars,model,soc){
   mu = max(0,pars[1])
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
