@@ -12,6 +12,7 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=NULL,
   mcem_old = mcem
   mcem = NULL
   sample_size = input$sample_size
+  key = 0
   for(i in 1:n_it){
     if(print_process){
       print(paste("iteration",i))
@@ -30,7 +31,7 @@ emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=NULL,
     save(input,mcem,file=file)
     if(i>10){
       if( ( mean(mcem$fhat)-mean(mcem$fhat[-nrow(mcem)]) ) < tol){
-        key=1+key
+        key = 1 + key
         if(key==3){
           break
         }
