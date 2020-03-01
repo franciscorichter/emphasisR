@@ -15,7 +15,6 @@ emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
     if(print_process){
       print(paste("Performing M step, iteration",i))
       print(paste("loglikelihood random estimation: ",log(st$fhat)))
-      print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
     }
     M = M_step(st = st, init_par = pars, model = input$model)
     if(!is.infinite(M$po$value) & !is.na(log(st$fhat))){ 
@@ -43,9 +42,12 @@ emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
 ##############################
 ####### E-step 
 
-mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE,soc=2){
+mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE,soc=2,printprocess=TRUE){
   if(seed>0) set.seed(seed)
   time = proc.time()
+ # if(printprocess){
+    
+ # }
   if(!parallel){
     st =  lapply(1:sample_size,function(i){augment_tree(brts = brts,pars = pars,model=model,soc=soc)} )
   }else{
