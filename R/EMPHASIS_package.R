@@ -1,32 +1,30 @@
 ### EMPHASIS functions
 
 
-emphasis <- function(input,file=".RData",print_process=TRUE,mcem=NULL,n_it=NULL,tol=0.01){
-  if(is.null(mcem)){
-    pars = input$pars
-  }else{
-    pars = mcem[nrow(mcem),1:4]
-    names(pars) = NULL
-    pars = as.numeric(pars)
-  }
-  mcem_old = mcem
+emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
+  pars = input$pars
   mcem = NULL
   sample_size = input$sample_size
   key = 0
   for(i in 1:n_it){
     if(print_process){
-      print(paste("iteration",i))
+      print(paste("Performing E step, iteration",i))
       print(pars)
     }
     st = mcE_step(brts = input$brts, pars = pars,sample_size=sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     if(print_process){
-      print(paste("loglikelihood estimation: ",log(st$fhat)))
-      print(paste("mean loglikelihood estimation: ",mean(mcem$fhat)))
+      print(paste("Performing M step, iteration",i))
+      print(paste("loglikelihood random estimation: ",log(st$fhat)))
+      print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
     }
     M = M_step(st = st, init_par = pars, model = input$model)
     if(!is.infinite(M$po$value) & !is.na(log(st$fhat))){ 
       pars = M$po$par
       mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
+    }
+    if(print_process){
+      print(paste("Q random estimation: ",M$po$value))
+      print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
     }
     save(input,mcem,file=file)
     if(i>10){

@@ -1,4 +1,4 @@
-mc_augmentation <- function(brts,pars,model,importance_sampler,sample_size,parallel=FALSE,no_cores=2,soc){
+mc_augmentation <- function(brts,pars,model,sample_size,parallel=FALSE,no_cores=2,soc){
   time = proc.time()
   if(!parallel){
     st =  lapply(1:sample_size,function(i){augment_tree(brts = brts,pars = pars,model=model,soc=soc)} )
@@ -10,12 +10,9 @@ mc_augmentation <- function(brts,pars,model,importance_sampler,sample_size,paral
   
   ####
   logf = sapply(trees,loglik.tree(model), pars=pars)
-  #logg = sapply(trees,sampling_prob, pars=pars,model=model,soc=soc)
   logg = sapply(trees,sampling_prob, pars=pars,model=model,soc=soc)
-  E_time = get.time(time)
- #logg = log_sampling_prob_nh(df = tree,pars = pars,model = model,soc=soc)
   
- # logg =    sapply(st,function(list) list$logg)
+  E_time = get.time(time)
   log_weights = logf-logg
   w = exp(log_weights)
   ####
@@ -43,15 +40,16 @@ augment_tree <- function(brts,pars,model,soc){
     ###
     u1 = runif(1)
     next_speciation_time = cbt-log(x = u1)/lambda_max
-    if(next_speciation_time < next_bt){
+    if(next_speciation_time < next_bt){  ## 
       u2 = runif(1)
       pt = sum_speciation_rate(next_speciation_time,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_speciation_time)))/lambda_max
       if(u2<pt){
         extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
         missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
+        ## tree = data.frame(brts=,t_ext=,to=)
         if(nrow(missing_branches)>1000){
-          print(tree)
-          stop("Too many species!!!")
+          #print(tree)
+          stop("Current parameters leds to a large number of species")
         }
       }
     }
@@ -62,13 +60,7 @@ augment_tree <- function(brts,pars,model,soc){
                     to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
   tree = tree[order(tree$brts),]
   
-  #logg = log_sampling_prob_nh(df = tree,pars = pars,model = model,soc=soc)
-  
-  tree$pd = sapply(tree$brts, function(x)
-  emphasis:::phylodiversity(x, tree,soc=soc))
-  
-  ## check this one
-  
+  tree$pd = sapply(tree$brts, function(x) emphasis:::phylodiversity(x, tree,soc=soc))
   tree$n = sapply(c(0,tree$brts[-length(tree$brts)]), n_from_time,tree=tree,soc=soc)
   
   return(list(tree=tree))
