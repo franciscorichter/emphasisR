@@ -5,11 +5,11 @@ n_from_time <- function(tm,tree,soc){
   to[to==2] = 1
   initspec = soc
   n = c(initspec,initspec+cumsum(to)+cumsum(to-1))
-  if(tm==max(tree$brts)){
-    N = n[max(which(c(0,tree$brts) < tm))]
-  }else{
-    N = n[max(which(c(0,tree$brts) <= tm))]
-  }
+ # if(tm==max(tree$brts)){
+  #  N = n[max(which(c(0,tree$brts) < tm))]
+  #}else{
+    N = n[max(which(c(-1,tree$brts) < tm))]
+  #}
   return(N)
 } 
 

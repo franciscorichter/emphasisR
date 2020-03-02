@@ -1,22 +1,7 @@
 # augmentaion (sampling) probability 
 
-sampling_prob <- function(tree,pars,model,soc,numerical=FALSE){
-  to = top = head(tree$to,-1)
-  to[to==2] = 1
-  N = c(soc,soc+cumsum(to)+cumsum(to-1))
-  
-  brts_i = tree$brts
-  brts_im1 = c(0,tree$brts[-nrow(tree)])
-  
-  missing_speciations = (tree$to == 1)
-  nb = N[missing_speciations]
-  No = c(soc,soc+cumsum(top==2))[missing_speciations]
-  Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
-  
-  lambda_b = sapply(tree$brts[tree$to==1]-0.000000001,speciation_rate,tree = tree,pars = pars,model = model,soc=soc)
-  if(length(lambda_b)==0) lambda_b = 1
-  text = tree$t_ext[tree$to==1]-tree$brts[tree$to==1]
-  mu = max(0,pars[1])
+sampling_prob <- function(tree,pars,model,numerical=FALSE){
+
   if(numerical){
     inte = intensity.numerical(tree = tree,pars = pars,model=model)
   }else{
@@ -24,7 +9,24 @@ sampling_prob <- function(tree,pars,model,soc,numerical=FALSE){
     inte = intensity.temp(tree=tree,pars=pars)
   }
   
-  logg = -sum(inte)+sum(log(nb)+log(mu))-sum(mu*text)+sum(log(lambda_b))-sum(log(2*No+Ne))
+  missing_speciations = (tree$to == 1)
+  if(sum(missing_speciations)>0){
+    top = head(tree$to,-1)
+    N = tree$n
+    soc = N[1]
+    
+    nb = N[missing_speciations]
+    No = c(soc,soc+cumsum(top==2))[missing_speciations]
+    Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
+    
+    brts_miss = tree$brts[missing_speciations]
+    lambda_b = sapply(brts_miss,speciation_rate,tree = tree,pars = pars,model = model,soc=soc)
+    text = tree$t_ext[missing_speciations]-brts_miss
+    mu = max(0,pars[1])
+    logg = -sum(inte)+sum(log(nb)+log(mu)+log(lambda_b)-mu*text-log(2*No+Ne))
+  }else{
+    logg = -sum(inte)
+  }
   return(logg)
 }
 
@@ -53,7 +55,7 @@ intensity.numerical <- function(tree, pars, model){
   brts_im1 = c(0,brts_i[-length(brts_i)])
   inte = vector(mode="numeric",length = length(brts_i))
   for(i in 1:length(brts_i)){
-    inte[i] = pracma:::quad(f = Vectorize(nh_rate),xa = brts_im1[i],xb = brts_i[i]-0.00000000001)
+    inte[i] = pracma:::quad(f = Vectorize(nh_rate),xa = brts_im1[i]+0.00000000001,xb = brts_i[i])
   }
   return(inte)
 }

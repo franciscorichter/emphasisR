@@ -11,10 +11,11 @@ augment_tree <- function(brts,pars,model,soc){
                       t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
                       to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
     tree = tree[order(tree$brts),]
-    
+    tree$n = sapply(tree$brts,n_from_time,tree=tree,soc=soc)
+    tree$pd = sapply(tree$brts,phylodiversity,tree=tree,soc=soc)
     next_bt = min(tree$brts[tree$brts>cbt])
-    ###  sabado 15/2/20: cambiar esta parte a funciones max_model
-    lambda_max = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
+   # lambda_max = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
+    lambda_max = lambda_max(cbt,tree,pars,model)
     ###
     u1 = runif(1)
     next_speciation_time = cbt - log(x = u1)/lambda_max
@@ -26,7 +27,6 @@ augment_tree <- function(brts,pars,model,soc){
         missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
         ## tree = data.frame(brts=,t_ext=,to=)
         if(nrow(missing_branches)>1000){
-          #print(tree)
           stop("Current parameters leds to a large number of species")
         }
       }
@@ -38,14 +38,63 @@ augment_tree <- function(brts,pars,model,soc){
                     to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
   tree = tree[order(tree$brts),]
   
-  tree$pd = sapply(tree$brts, function(x) emphasis:::phylodiversity(x, tree,soc=soc))
-  tree$n = sapply(c(0,tree$brts[-length(tree$brts)]), n_from_time,tree=tree,soc=soc)
+  tree$pd = sapply(tree$brts, phylodiversity, tree=tree,soc=soc)
+  tree$n = sapply(tree$brts, n_from_time,tree=tree,soc=soc)
   
   return(list(tree=tree))
 }
 
 ##############################################
 
+lambda_max_rpd5c <- function(cbt,tree,pars){
+  
+  m=min(which(tree$brts>cbt))
+  brts_im1 = c(0,brts_i[-length(brts_i)])[m]
+  
+  n = tree$n[m]; Pt = c(0,tree$pd)[m]
+  c2 = pars[4]*((n-1)/n); c3 = exp(-pars[1]*max(tree$brts)); c4 = pars[1]
+  c1 = pars[2] + pars[3]*n + pars[4]*((Pt-n*brts_im1)/n)
+  
+  bt1 = cbt
+  bt2 = min(tree$brts[tree$brts>cbt])
+  
+  #d1 = exp(-c4*bt1)*(c1*c3*c4 + c2*(exp(c4*bt1) + c3*(-1 + c4*bt1)))
+  #d2 = exp(-c4*bt2)*(c1*c3*c4 + c2*(exp(c4*bt2) + c3*(-1 + c4*bt2)))
+  d1 = -c3 * c4 * exp(c4 * bt1) *(c1 + c2 * bt1) + c2* (-c3) * exp(c4* bt1) + c2
+  d2 = -c3 * c4 * exp(c4 * bt2) *(c1 + c2 * bt2) + c2* (-c3) * exp(c4* bt2) + c2
+  
+  
+  if(d1>0 & d2>0){
+    max_lambda = sum_speciation_rate(bt2,tree,pars,model,soc=soc)*(1-exp(-mu*(b-bt2)))
+  }
+  if(d1<0 & d2<0){
+    max_lambda =  sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt)))
+  }
+  if((d1>0 & d2<0)){
+    max_lambda = (-c2 - c1*c4 + c2* lambertWp((e^(1 + (c1*c4)/c2))/c))/(c2*c4)
+    if(max_lambda<bt1 | max_lambda>bt2){
+      stop("maximum out of boundaries")
+    }else{
+      print(paste("inflection point:",max_lambda))
+    }
+  }
+  if((d1<0 & d2>0)){
+    max_lambda = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
+  }
+  return(max_lambda)
+  
+}
 
+lambda_max <- function(tm,tree,pars,model){
+  lambda_max = get(paste0("lambda_max_", model))
+  lm = speciation_r(tm,tree,pars)
+}
 
-
+lambda_max_rpd1 <- function(cbt,tree,pars){
+  m=min(which(tree$brts>cbt))
+  brts_im1 = c(0,brts_i[-length(brts_i)])[m]
+  n = tree$n[m]
+  max_lambda = max(0,pars[2]+pars[3]*n)
+  return(max_lambda)
+  
+}
