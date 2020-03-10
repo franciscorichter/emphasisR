@@ -87,7 +87,8 @@ lambda_max_rpd5c <- function(cbt,tree,pars){
 
 lambda_max <- function(tm,tree,pars,model){
   lambda_max = get(paste0("lambda_max_", model))
-  lm = speciation_r(tm,tree,pars)
+  lm = lambda_max(tm,tree,pars)
+  return(lm)
 }
 
 lambda_max_rpd1 <- function(cbt,tree,pars){
