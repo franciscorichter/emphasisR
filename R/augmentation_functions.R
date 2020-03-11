@@ -3,19 +3,18 @@ augment_tree <- function(brts,pars,model,soc){
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
   missing_branches = data.frame(speciation_time=NULL,extinction_time=NULL)
-  cbt=0
-  
+  cbt = 0
   while(cbt < b){
-    
     tree = data.frame(brts = c(missing_branches$speciation_time,brts,missing_branches$extinction_time),
                       t_ext = c(missing_branches$extinction_time, rep(Inf,length(brts)+nrow(missing_branches))),
                       to = c(rep(1,nrow(missing_branches)),rep(2,length(brts)),rep(0,nrow(missing_branches))))
     tree = tree[order(tree$brts),]
+    next_bt = min(tree$brts[tree$brts>cbt])
+    
     tree$n = sapply(tree$brts,n_from_time,tree=tree,soc=soc)
     tree$pd = sapply(tree$brts,phylodiversity,tree=tree,soc=soc)
-    next_bt = min(tree$brts[tree$brts>cbt])
-   # lambda_max = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
-    lambda_max = lambda_max(cbt,tree,pars,model)
+    lambda_max = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
+   # lambda_max = lambda_max(cbt,tree,pars,model)
     ###
     u1 = runif(1)
     next_speciation_time = cbt - log(x = u1)/lambda_max
@@ -47,9 +46,9 @@ augment_tree <- function(brts,pars,model,soc){
 ##############################################
 
 lambda_max_rpd5c <- function(cbt,tree,pars){
-  
+  brts = tree$brts
   m=min(which(tree$brts>cbt))
-  brts_im1 = c(0,brts_i[-length(brts_i)])[m]
+  brts_im1 = c(0,brts)[m]
   
   n = tree$n[m]; Pt = c(0,tree$pd)[m]
   c2 = pars[4]*((n-1)/n); c3 = exp(-pars[1]*max(tree$brts)); c4 = pars[1]
