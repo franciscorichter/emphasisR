@@ -22,6 +22,6 @@ sum_speciation_rate <- function(cbt, tree, pars, soc) {
 }
 
 augment_cpp <- function(brts_in, pars, model, soc) {
-    invisible(.Call(`_emphasis_augment_cpp`, brts_in, pars, model, soc))
+    .Call(`_emphasis_augment_cpp`, brts_in, pars, model, soc)
 }
 

@@ -59,7 +59,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // sum_speciation_rate
-NumericVector sum_speciation_rate(double cbt, NumericMatrix tree, NumericVector pars, double soc);
+double sum_speciation_rate(double cbt, NumericMatrix tree, NumericVector pars, double soc);
 RcppExport SEXP _emphasis_sum_speciation_rate(SEXP cbtSEXP, SEXP treeSEXP, SEXP parsSEXP, SEXP socSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -73,16 +73,17 @@ BEGIN_RCPP
 END_RCPP
 }
 // augment_cpp
-void augment_cpp(NumericVector brts_in, NumericVector pars, int model, int soc);
+List augment_cpp(NumericVector brts_in, NumericVector pars, int model, int soc);
 RcppExport SEXP _emphasis_augment_cpp(SEXP brts_inSEXP, SEXP parsSEXP, SEXP modelSEXP, SEXP socSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector >::type brts_in(brts_inSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< int >::type model(modelSEXP);
     Rcpp::traits::input_parameter< int >::type soc(socSEXP);
-    augment_cpp(brts_in, pars, model, soc);
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(augment_cpp(brts_in, pars, model, soc));
+    return rcpp_result_gen;
 END_RCPP
 }
 

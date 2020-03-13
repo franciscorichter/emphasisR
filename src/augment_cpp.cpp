@@ -206,10 +206,10 @@ double speciation_r_cpp(const NumericVector& tm,
 
  
 // [[Rcpp::export]]
-NumericVector sum_speciation_rate(double cbt, 
-                           NumericMatrix tree, 
-                           NumericVector pars,
-                           double soc) {
+double sum_speciation_rate(double cbt, 
+                                  NumericMatrix tree, 
+                                  NumericVector pars,
+                                  double soc) {
   NumericVector input_cbt(cbt);
   NumericVector N = n_from_time_cpp3(input_cbt, tree, soc);
   
@@ -231,17 +231,15 @@ double calc_lambda(double cbt,
   return(sum_spec_rate[0] * mult);
 }
 
-
 NumericVector cum_sum_diff(NumericVector input) {
   input.push_back(0);
   auto diff_input = Rcpp::diff(input);
   return(Rcpp::cumsum(diff_input));
 }
 
-
-
 NumericMatrix create_tree(const NumericMatrix& missing_branches,
                           const NumericVector& brts) {
+  
   NumericVector bb(missing_branches(_, 0));
   for(int i = 0; i < brts.size(); ++i) {
     bb.push_back(brts[i]);
@@ -264,22 +262,31 @@ NumericMatrix create_tree(const NumericMatrix& missing_branches,
   }
   
   NumericMatrix output(brts.size(), 3);
-  output(_, 0) = brts;
+  output(_, 0) = bb;
   output(_, 1) = t_ext;
   output(_, 2) = to;
   
   return(output);
 }
 
-
-std::vector< std::vector < double > > sort_tree(std::vector< std::vector< double > > input) {
-  std::vector< std::vector< double > > output = input;
-  std::sort(output.begin(), output.end(), 
-            [](const std::vector< double >& a, 
-               const std::vector< double >& b){ return a[1] > b[1]; } );
+NumericMatrix sort_tree(NumericMatrix input) {
+  
+  NumericVector y = input(_, 0);
+ 
+  IntegerVector idx = seq_along(y) - 1;
+ 
+  std::sort(idx.begin(), idx.end(), [&](int i, int j){return y[i] < y[j];});
+  
+  NumericMatrix output(idx.size(), 3);
+  
+  for(int i = 0; i < 3; ++i) {
+    NumericVector temp = input(_, i);
+    temp = temp[idx];
+    output(_, i) = temp;
+  }
+  
   return output;
 }
-
 
 double get_next_bt(const NumericVector& v, double cbt) {
   double m = 1e10;
@@ -291,8 +298,24 @@ double get_next_bt(const NumericVector& v, double cbt) {
   return(m);
 }
 
+NumericMatrix extend_missing_branches(const NumericMatrix& old,
+                                      double s,
+                                      double e) {
+  
+  NumericMatrix new_matrix(old.nrow() + 1, 2);
+  int i = 0;
+  for(; i < old.nrow(); ++i) {
+    new_matrix(i,_) = old(i, _);
+  }
+  i++;
+  new_matrix(i, 0) = s;
+  new_matrix(i, 1) = e;
+  return(new_matrix);
+}
+
+
 // [[Rcpp::export]]
-void augment_cpp(NumericVector brts_in,
+List augment_cpp(NumericVector brts_in,
                  NumericVector pars,
                  int model,
                  int soc) {
@@ -318,15 +341,6 @@ void augment_cpp(NumericVector brts_in,
     tree = sort_tree(tree);
     double next_bt = get_next_bt(tree(_, brts_), cbt);
     
-    NumericVector tree_n = n_from_time_cpp2(tree(_, brts_),
-                                                 tree,
-                                                 soc);
-    
-    NumericVector tree_pd = speciation_r_cpp(tree(_, brts_),
-                                                tree,
-                                                pars,
-                                                soc);
-
     double lambda_1 = calc_lambda(cbt,     tree, pars, soc, mu, b);
     double lambda_2 = calc_lambda(next_bt, tree, pars, soc, mu, b);
     
@@ -337,10 +351,43 @@ void augment_cpp(NumericVector brts_in,
       
       if(next_speciation_time < next_bt){
         // do something 
-      }
+        double u2 = rndgen.uniform();
+        double mult = (1 - exp( -mu* (b - next_speciation_time))) / lambda_max;
+        double mult2 = sum_speciation_rate(next_speciation_time, tree, pars, soc);
+        double pt =  mult2 * mult; 
+                                          
       
+        if (u2 < pt) {
+            double extinction_time = next_speciation_time + 
+                              rndgen.trunc_exp(0, b - next_speciation_time, mu);
+            
+            missing_branches = extend_missing_branches(missing_branches, 
+                                                       next_speciation_time,
+                                                       extinction_time);
+            if(missing_branches.nrow() > 1000) {
+              stop("Current parameters leds to a large number of species");
+            }
+          }
+      }
+      cbt = next_bt;
+      if(next_speciation_time < next_bt) cbt = next_speciation_time;
   }
-  return;
+  
+  auto tree = create_tree(missing_branches, brts);
+  tree = sort_tree(tree);
+
+  NumericVector tree_n = n_from_time_cpp2(tree(_, brts_),
+                                          tree,
+                                          soc);
+  
+  NumericVector tree_pd = speciation_r_cpp(tree(_, brts_),
+                                           tree,
+                                           pars,
+                                           soc);
+  
+  return List::create( Named("tree") = tree,
+                       Named("tree_n") = tree_n,
+                       Named("tree_pd") = tree_pd);
 }
 
 /*

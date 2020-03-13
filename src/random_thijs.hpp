@@ -31,6 +31,17 @@ struct rnd_t {
   float uniform()    {
     return unif_dist(rndgen_);
   }
+  
+  double trunc_exp(double lower, double upper, double rate) {
+    std::exponential_distribution<double> exp_dist(rate);
+    double result = exp_dist(rndgen_);
+    while(result < lower || result > upper) {
+      result = exp_dist(rndgen_);
+    }
+    return result;
+  }
+  
+  
 };
 
 #endif  // RANDOM_THIJS_H
