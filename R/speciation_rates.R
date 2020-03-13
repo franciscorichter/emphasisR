@@ -15,7 +15,7 @@ sum_speciation_rate <- function(x,tree,pars,model,soc){
 
 lambda.rpd5 <- function(tm,tree,pars,soc){
   
-  pd = sapply(tm,phylodiversity,tree=tree,soc=soc)
+  pd = sapply(tm, phylodiversity,tree=tree,soc=soc)
   N = sapply(tm, n_from_time,tree=tree,soc=soc)
   lambda = max(0, pars[2] + pars[3]*N + pars[4] * (pd/N) )
   return(lambda)

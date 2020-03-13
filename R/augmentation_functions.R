@@ -1,4 +1,8 @@
-augment_tree <- function(brts,pars,model,soc){
+augment_tree <- function(
+  brts,
+  pars,
+  model,
+  soc){
   mu = max(0,pars[1])
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
@@ -13,7 +17,12 @@ augment_tree <- function(brts,pars,model,soc){
     
     tree$n = sapply(tree$brts,n_from_time,tree=tree,soc=soc)
     tree$pd = sapply(tree$brts,phylodiversity,tree=tree,soc=soc)
-    lambda_max = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
+    
+    l1 <-  sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt)))
+    l2 <- sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt)))
+                                                    
+    
+    lambda_max = max(l1, l2)
    # lambda_max = lambda_max(cbt,tree,pars,model)
     ###
     u1 = runif(1)

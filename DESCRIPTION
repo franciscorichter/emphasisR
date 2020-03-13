@@ -8,6 +8,8 @@ Description:  Set of statistical tools for the study of diversification of speci
 License: Creative Commons Public Licenses
 Encoding: UTF-8
 LazyData: false
+Imports: Rcpp (>= 1.0.3)
+LinkingTo: Rcpp
 Depends:
     ape,
     subplex,
