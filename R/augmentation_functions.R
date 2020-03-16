@@ -15,8 +15,6 @@ augment_tree <- function(
     tree = tree[order(tree$brts),]
     next_bt = min(tree$brts[tree$brts>cbt])
     
-    tree$n = sapply(tree$brts,n_from_time,tree=tree,soc=soc)
-    tree$pd = sapply(tree$brts,phylodiversity,tree=tree,soc=soc)
     
     l1 <-  sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt)))
     l2 <- sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt)))
@@ -51,6 +49,24 @@ augment_tree <- function(
   
   return(list(tree=tree))
 }
+
+augment_tree_using_cpp <- function(brts,
+                                   pars,
+                                   model,
+                                   soc) {
+  
+  cpp_output <- emphasis::augment_cpp(brts, pars, soc)
+  
+  tree <- data.frame(brts = cpp_output$tree[, 1],
+                     t_ext = cpp_output$tree[, 2],
+                     to    = cpp_output$tree[, 3],
+                     n     = cpp_output$tree_n,
+                     pd    = cpp_output$tree_pd)
+  
+  tree$t_ext[tree$t_ext > 1e20] <- Inf
+  return(tree)
+}
+
 
 ##############################################
 

@@ -5,45 +5,6 @@
 
 using namespace Rcpp;
 
-// n_from_time_cpp2
-NumericVector n_from_time_cpp2(NumericVector t_input, NumericMatrix tree, int soc);
-RcppExport SEXP _emphasis_n_from_time_cpp2(SEXP t_inputSEXP, SEXP treeSEXP, SEXP socSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type t_input(t_inputSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type tree(treeSEXP);
-    Rcpp::traits::input_parameter< int >::type soc(socSEXP);
-    rcpp_result_gen = Rcpp::wrap(n_from_time_cpp2(t_input, tree, soc));
-    return rcpp_result_gen;
-END_RCPP
-}
-// n_from_time_cpp3
-NumericVector n_from_time_cpp3(NumericVector t_input, NumericMatrix tree, int soc);
-RcppExport SEXP _emphasis_n_from_time_cpp3(SEXP t_inputSEXP, SEXP treeSEXP, SEXP socSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type t_input(t_inputSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type tree(treeSEXP);
-    Rcpp::traits::input_parameter< int >::type soc(socSEXP);
-    rcpp_result_gen = Rcpp::wrap(n_from_time_cpp3(t_input, tree, soc));
-    return rcpp_result_gen;
-END_RCPP
-}
-// phylodiv_cpp
-double phylodiv_cpp(double tm, NumericMatrix tree, double soc);
-RcppExport SEXP _emphasis_phylodiv_cpp(SEXP tmSEXP, SEXP treeSEXP, SEXP socSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type tm(tmSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type tree(treeSEXP);
-    Rcpp::traits::input_parameter< double >::type soc(socSEXP);
-    rcpp_result_gen = Rcpp::wrap(phylodiv_cpp(tm, tree, soc));
-    return rcpp_result_gen;
-END_RCPP
-}
 // speciation_r_cpp
 double speciation_r_cpp(const NumericVector& tm, const NumericMatrix& tree, const NumericVector& pars, double soc);
 RcppExport SEXP _emphasis_speciation_r_cpp(SEXP tmSEXP, SEXP treeSEXP, SEXP parsSEXP, SEXP socSEXP) {
@@ -59,41 +20,37 @@ BEGIN_RCPP
 END_RCPP
 }
 // sum_speciation_rate
-double sum_speciation_rate(double cbt, NumericMatrix tree, NumericVector pars, double soc);
+double sum_speciation_rate(double cbt, const NumericMatrix& tree, const NumericVector& pars, double soc);
 RcppExport SEXP _emphasis_sum_speciation_rate(SEXP cbtSEXP, SEXP treeSEXP, SEXP parsSEXP, SEXP socSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type cbt(cbtSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type tree(treeSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< const NumericMatrix& >::type tree(treeSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< double >::type soc(socSEXP);
     rcpp_result_gen = Rcpp::wrap(sum_speciation_rate(cbt, tree, pars, soc));
     return rcpp_result_gen;
 END_RCPP
 }
 // augment_cpp
-List augment_cpp(NumericVector brts_in, NumericVector pars, int model, int soc);
-RcppExport SEXP _emphasis_augment_cpp(SEXP brts_inSEXP, SEXP parsSEXP, SEXP modelSEXP, SEXP socSEXP) {
+List augment_cpp(NumericVector brts_in, NumericVector pars, int soc);
+RcppExport SEXP _emphasis_augment_cpp(SEXP brts_inSEXP, SEXP parsSEXP, SEXP socSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericVector >::type brts_in(brts_inSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
-    Rcpp::traits::input_parameter< int >::type model(modelSEXP);
     Rcpp::traits::input_parameter< int >::type soc(socSEXP);
-    rcpp_result_gen = Rcpp::wrap(augment_cpp(brts_in, pars, model, soc));
+    rcpp_result_gen = Rcpp::wrap(augment_cpp(brts_in, pars, soc));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_emphasis_n_from_time_cpp2", (DL_FUNC) &_emphasis_n_from_time_cpp2, 3},
-    {"_emphasis_n_from_time_cpp3", (DL_FUNC) &_emphasis_n_from_time_cpp3, 3},
-    {"_emphasis_phylodiv_cpp", (DL_FUNC) &_emphasis_phylodiv_cpp, 3},
     {"_emphasis_speciation_r_cpp", (DL_FUNC) &_emphasis_speciation_r_cpp, 4},
     {"_emphasis_sum_speciation_rate", (DL_FUNC) &_emphasis_sum_speciation_rate, 4},
-    {"_emphasis_augment_cpp", (DL_FUNC) &_emphasis_augment_cpp, 4},
+    {"_emphasis_augment_cpp", (DL_FUNC) &_emphasis_augment_cpp, 3},
     {NULL, NULL, 0}
 };
 

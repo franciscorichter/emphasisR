@@ -19,8 +19,8 @@ struct rnd_t {
     rndgen_ = rndgen_t;
   }
 
-  std::uniform_real_distribution<float> unif_dist =
-    std::uniform_real_distribution<float>(0, 1.0);
+  std::uniform_real_distribution<double> unif_dist =
+                  std::uniform_real_distribution<double>(0, 1.0);
   
   
   int random_number(size_t n)    {
@@ -28,7 +28,7 @@ struct rnd_t {
     return std::uniform_int_distribution<> (0, static_cast<int>(n - 1))(rndgen_);
   }
 
-  float uniform()    {
+  double uniform()    {
     return unif_dist(rndgen_);
   }
   
