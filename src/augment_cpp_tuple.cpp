@@ -62,7 +62,7 @@ int n_from_time_single_std(double bt,
   // we want the species diversity at t = bt
   int n = soc;
   for(auto i : tree) {
-    if (std::get<0>(i) > bt) break;
+    if (std::get<0>(i) >= bt) break;
     
     if(std::get<1>(i) == 0) {
       n--;
@@ -72,6 +72,21 @@ int n_from_time_single_std(double bt,
   }
   return n;
 }
+
+// [[Rcpp::export]]
+int check_n_from_time(double bt,
+                      NumericMatrix input_tree,
+                      double soc) {
+  std::vector < node > tree;
+  for(int i = 0; i < input_tree.nrow(); ++i) {
+    tree.push_back(std::make_tuple(input_tree(i, 0), input_tree(i, 2), input_tree(i, 1)));
+  }
+  int output = n_from_time_single_std(bt, tree, soc);
+  return output;
+}
+
+
+
 
 void cout_single(double val, std::string name) {
   name += ": ";
