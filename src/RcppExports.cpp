@@ -46,11 +46,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// augment_cpp2
+NumericMatrix augment_cpp2(NumericVector brts_in, NumericVector pars, int soc);
+RcppExport SEXP _emphasis_augment_cpp2(SEXP brts_inSEXP, SEXP parsSEXP, SEXP socSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type brts_in(brts_inSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
+    Rcpp::traits::input_parameter< int >::type soc(socSEXP);
+    rcpp_result_gen = Rcpp::wrap(augment_cpp2(brts_in, pars, soc));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_speciation_r_cpp", (DL_FUNC) &_emphasis_speciation_r_cpp, 4},
     {"_emphasis_sum_speciation_rate", (DL_FUNC) &_emphasis_sum_speciation_rate, 4},
     {"_emphasis_augment_cpp", (DL_FUNC) &_emphasis_augment_cpp, 3},
+    {"_emphasis_augment_cpp2", (DL_FUNC) &_emphasis_augment_cpp2, 3},
     {NULL, NULL, 0}
 };
 

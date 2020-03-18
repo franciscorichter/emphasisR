@@ -13,3 +13,7 @@ augment_cpp <- function(brts_in, pars, soc) {
     .Call(`_emphasis_augment_cpp`, brts_in, pars, soc)
 }
 
+augment_cpp2 <- function(brts_in, pars, soc) {
+    .Call(`_emphasis_augment_cpp2`, brts_in, pars, soc)
+}
+

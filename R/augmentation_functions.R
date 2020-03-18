@@ -55,15 +55,15 @@ augment_tree_using_cpp <- function(brts,
                                    model,
                                    soc) {
   
-  cpp_output <- emphasis::augment_cpp(brts, pars, soc)
+  cpp_output <- emphasis::augment_cpp2(brts, pars, soc)
   
-  tree <- data.frame(brts = cpp_output$tree[, 1],
-                     t_ext = cpp_output$tree[, 2],
-                     to    = cpp_output$tree[, 3],
-                     n     = cpp_output$tree_n,
-                     pd    = cpp_output$tree_pd)
+  tree <- data.frame(brts = cpp_output[, 1],
+                     t_ext = cpp_output[, 2],
+                     to    = cpp_output[, 3],
+                     n     = cpp_output[, 4],
+                     pd    = cpp_output[, 5])
   
-  tree$t_ext[tree$t_ext > 1e20] <- Inf
+  tree$t_ext[tree$t_ext == -1e6] <- Inf
   return(tree)
 }
 

@@ -384,6 +384,8 @@ List augment_cpp(NumericVector brts_in,
             }
           }
       }
+      cbt = std::min(next_speciation_time,next_bt);
+      
       cbt = next_bt;
       if(next_speciation_time < next_bt) cbt = next_speciation_time;
   }
