@@ -1,13 +1,27 @@
+speciation_r <- function(tm, tree, pars, soc, N, model) {
+  if(model == "rpd1") {
+    lambda = max(0, pars[2] + pars[3]*N )
+    return(lambda)
+  }
+  pd = sapply(tm, phylodiversity,tree=tree,soc=soc)
+  
+  if(model == "rpd5c") pd <- pd - tm
+  
+  lambda = max(0, pars[2] + pars[3]*N + pars[4] * (pd/N) )
+  return(lambda)
+}
+
+
 speciation_rate <- function(tm,tree,pars,model,soc){
-  speciation_r = get(paste0("lambda.", model))
-  lambda = speciation_r(tm,tree,pars,soc=soc)
+  # speciation_r = get(paste0("lambda.", model))
+  lambda = speciation_r(tm,tree,pars,soc=soc, N, model)
   return(lambda)
 }
 
 sum_speciation_rate <- function(x,tree,pars,model,soc){
   N = sapply(x, n_from_time,tree=tree,soc=soc)
-  speciation_r = get(paste0("lambda.", model))
-  lambda = speciation_r(x,tree,pars,soc=soc)
+  # speciation_r = get(paste0("lambda.", model))
+  lambda = speciation_r(x,tree,pars,soc=soc, N, model)
   return(N*lambda)
 }
 
