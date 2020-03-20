@@ -3,6 +3,7 @@
 #include <numeric>
 #include <tuple>
 #include "random_thijs.hpp"
+#include <string>
 
 using namespace Rcpp;
 
@@ -10,7 +11,6 @@ using namespace Rcpp;
 // This should be parsed in R later on.
 
 using node = std::tuple< double, int, double >; // brts, to, t_ext
-
 
 void cout_vec_sd(const std::vector<double>& v, std::string vec_name) {
   Rcout << vec_name << ": ";
@@ -21,6 +21,10 @@ void cout_vec_sd(const std::vector<double>& v, std::string vec_name) {
   return;
 }
 
+void cout_single(double val, std::string name) {
+  name += ": ";
+  Rcout << name << val << "\n";
+}
 
 std::vector<double> calc_sum_diff_std(std::vector<double> input) {
   //   brts = cumsum(-diff(c(brts,0)))
@@ -87,12 +91,6 @@ int check_n_from_time(double bt,
 
 
 
-
-void cout_single(double val, std::string name) {
-  name += ": ";
-  Rcout << name << val << "\n";
-}
-
 bool check_i3(double t_ext,
               double tm,
               const std::vector< node >& tree) {
@@ -156,24 +154,33 @@ double speciation_r_single_std(double bt,
                                const std::vector<node>& tree,
                                const std::vector<double>& pars,
                                double soc,
-                               double N) {
+                               double N,
+                               std::string model) {
   
   // pd = sapply(tm, phylodiversity,tree=tree,soc=soc)
   //  N = sapply(tm, n_from_time,tree=tree,soc=soc)
   //  lambda = max(0, pars[2] + pars[3]*N + pars[4] * (pd/N) )
   //  return(lambda)
   
-    double pd = calc_pd_std_single(bt, tree, soc);
-    double lambda = pars[1] + pars[2] * N + pars[3] * pd / N;
-    if(lambda < 0) lambda = 0;
+  if(model == "rpd1") {
+    double lambda = pars[1] + pars[3] * N;
     return lambda;
+  } 
+  
+  double pd = calc_pd_std_single(bt, tree, soc);
+  if(model == "rpd5c") pd -= bt;
+  
+  double lambda = pars[1] + pars[2] * N + pars[3] * pd / N;
+  if(lambda < 0) lambda = 0;
+  return lambda;
 }
 
 
 double sum_speciation_rate_std(double bt,
                                const std::vector<node>& tree,
                                const std::vector<double>& pars,
-                               double soc) {
+                               double soc,
+                               std::string model) {
   
   /*
    N = sapply(x, n_from_time,tree=tree,soc=soc)
@@ -183,7 +190,9 @@ double sum_speciation_rate_std(double bt,
    */
   
   double N = n_from_time_single_std(bt, tree, soc);
-  double lambda = speciation_r_single_std(bt, tree, pars, soc, N);
+  double lambda = speciation_r_single_std(bt, tree, pars, soc, 
+                                          N, model);
+
   return(lambda * N);
 }
 
@@ -192,17 +201,19 @@ double calc_lambda_std(double bt,
                        const std::vector<double>& pars,
                        double soc,
                        double mu,
-                       double b) {
+                       double b,
+                       std::string model) {
   
- double sum_specrate = sum_speciation_rate_std(bt, tree, pars, soc); 
+ double sum_specrate = sum_speciation_rate_std(bt, tree, pars, soc, model); 
  double mult = 1 - exp(-mu * (b - bt));
  return sum_specrate * mult;
 }
 
 // [[Rcpp::export]]
 NumericMatrix augment_cpp2(NumericVector brts_in,
-                  NumericVector pars,
-                  int soc) {
+                           NumericVector pars,
+                           std::string model,
+                           int soc) {
   
   rnd_t rndgen;
   
@@ -226,8 +237,8 @@ NumericMatrix augment_cpp2(NumericVector brts_in,
   while(cbt < b) {
     double next_bt = get_next_bt(tree, cbt);
     
-    double lambda1 = calc_lambda_std(cbt, tree, parameters, soc, mu, b);
-    double lambda2 = calc_lambda_std(next_bt, tree, parameters, soc, mu, b);
+    double lambda1 = calc_lambda_std(cbt, tree, parameters, soc, mu, b, model);
+    double lambda2 = calc_lambda_std(next_bt, tree, parameters, soc, mu, b, model);
     double lambda_max = lambda1;
     if(lambda2 > lambda_max) lambda_max = lambda2;
     
@@ -236,7 +247,7 @@ NumericMatrix augment_cpp2(NumericVector brts_in,
     if(next_speciation_time < next_bt) {
       double u2 = rndgen.uniform();
       double pt = calc_lambda_std(next_speciation_time, tree, 
-                                  parameters, soc, mu, b) / lambda_max;
+                                  parameters, soc, mu, b, model) / lambda_max;
       if(u2 < pt) {
         double extinction_time = next_speciation_time + rndgen.trunc_exp(0, 
                                                                          b - next_speciation_time,

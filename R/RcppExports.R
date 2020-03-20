@@ -5,7 +5,7 @@ check_n_from_time <- function(bt, input_tree, soc) {
     .Call(`_emphasis_check_n_from_time`, bt, input_tree, soc)
 }
 
-augment_cpp2 <- function(brts_in, pars, soc) {
-    .Call(`_emphasis_augment_cpp2`, brts_in, pars, soc)
+augment_cpp2 <- function(brts_in, pars, model, soc) {
+    .Call(`_emphasis_augment_cpp2`, brts_in, pars, model, soc)
 }
 
