@@ -11,8 +11,8 @@ augment_tree <- function(brts,pars,model,soc){
     tree = tree[order(tree$brts),]
     next_bt = min(tree$brts[tree$brts>cbt])
     
-    tree$n = sapply(tree$brts,n_from_time,tree=tree,soc=soc)
-    tree$pd = sapply(tree$brts,phylodiversity,tree=tree,soc=soc)
+    #tree$n = sapply(tree$brts,n_from_time,tree=tree,soc=soc)
+    #tree$pd = sapply(tree$brts,phylodiversity,tree=tree,soc=soc)
     lambda_max = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
    # lambda_max = lambda_max(cbt,tree,pars,model)
     ###
@@ -24,7 +24,6 @@ augment_tree <- function(brts,pars,model,soc){
       if(u2<pt){
         extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
         missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
-        ## tree = data.frame(brts=,t_ext=,to=)
         if(nrow(missing_branches)>1000){
           stop("Current parameters leds to a large number of species")
         }
