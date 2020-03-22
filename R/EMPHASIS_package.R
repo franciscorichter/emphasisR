@@ -1,4 +1,33 @@
 ### EMPHASIS functions
+emphasis_temp <- function(brts,soc=2,model="rpd1",maxtime=10){
+  if(model == "rpd1"){
+    init_par = c(0.1,0.2,-0.1/2*lenght(brts))
+  }
+  if(model == "rpd5c"){
+    
+  }
+  init_sampling_size = 1000 + 0.00001 * pars[1]
+  input = list(brts=brts,pars = init_par,sample_size=init_sampling_size,model=model,cores=detectCores(),parallel=T,n_it = 1000,soc=soc)
+  
+#  print(paste("Clade:",DD_est$clade[i]))
+  print(paste("Optimizing the likelihood - this may take a while"))
+  print(paste("Age of the tree: ",max(input$brts)))
+  print(paste("Number of speciations: ",length(input$brts)))
+  print(paste("Diversification model to fit:",input$model))
+  print(paste("initial parameters ",input$pars))  
+  
+  for(i in 1:8){
+    mcEM(input,file=paste("temp","_",input$model,"_",as.character(input$sample_size),".RData",sep=""),n_it=input$n_it,tol = 0.0001)
+    load(file=paste(DD_est$clade[i],"_",input$model,"_",as.character(input$sample_size),".RData",sep=""))
+    input$sample_size = input$sample_size*2
+    ta = tail(mcem,n = floor(nrow(mcem)/2))
+    input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3))
+  }
+  
+}
+
+
+
 emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
   pars = input$pars
   mcem = NULL
