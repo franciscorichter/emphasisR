@@ -47,9 +47,9 @@ mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE
     
  # }
   if(!parallel){
-    st =  lapply(1:sample_size,function(i){augment_tree(brts = brts,pars = pars,model=model,soc=soc)} )
+    st =  lapply(1:sample_size,function(i){augment_tree_tj(brts = brts,pars = pars,model=model,soc=soc)} )
   }else{
-    st = mclapply(1:sample_size,function(i){augment_tree(brts = brts,pars = pars,model=model,soc=soc)},mc.cores = no_cores)
+    st = mclapply(1:sample_size,function(i){augment_tree_tj(brts = brts,pars = pars,model=model,soc=soc)},mc.cores = no_cores)
   }
   trees = lapply(st,function(list) list$tree)
   dim = sapply(st,function(list) nrow(list$tree))
