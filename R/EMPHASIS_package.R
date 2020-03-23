@@ -1,28 +1,28 @@
 ### EMPHASIS functions
-emphasis_temp <- function(brts,soc=2,model="rpd1",maxtime=10){
-  if(model == "rpd1"){
-    init_par = c(0.1,0.2,-0.1/2*lenght(brts))
-  }
-  if(model == "rpd5c"){
-    
-  }
-  init_sampling_size = 1000 + 0.00001 * pars[1]
+emphasis_temp <- function(brts,soc=2,model="rpd1",maxtime=10,init_par,sample_size=1000,name="temp"){
+  #if(model == "rpd1"){
+  #  init_par = c(0.1,0.2,-0.1/(2*length(brts)))
+  #}
+#  init_sampling_size = 1000 + 0.00001 * init_par[1]
+  init_sampling_size = sample_size
   input = list(brts=brts,pars = init_par,sample_size=init_sampling_size,model=model,cores=detectCores(),parallel=T,n_it = 1000,soc=soc)
   
 #  print(paste("Clade:",DD_est$clade[i]))
-  print(paste("Optimizing the likelihood - this may take a while"))
+  print(paste("Optimizing the likelihood - this may take a while. Sampling size: ",input$sample_size))
   print(paste("Age of the tree: ",max(input$brts)))
   print(paste("Number of speciations: ",length(input$brts)))
   print(paste("Diversification model to fit:",input$model))
   print(paste("initial parameters ",input$pars))  
   
-  for(i in 1:8){
-    mcEM(input,file=paste("temp","_",input$model,"_",as.character(input$sample_size),".RData",sep=""),n_it=input$n_it,tol = 0.0001)
-    load(file=paste(DD_est$clade[i],"_",input$model,"_",as.character(input$sample_size),".RData",sep=""))
+  for(i in 1:1){
+    mcEM(input,file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""),n_it=input$n_it,tol = 0.0001,print_process = FALSE)
+    load(file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""))
     input$sample_size = input$sample_size*2
     ta = tail(mcem,n = floor(nrow(mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3))
   }
+  return(list(pars=input$pars,fhat=mean(ta$fhat),sd_fhat=1))
+  
   
 }
 
@@ -49,11 +49,15 @@ emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
       mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=log(st$fhat),E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
     }
     if(print_process){
-      print(paste("Q random estimation: ",M$po$value))
+      print(paste("Q random estimation: ",log(M$po$value)))
       print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
     }
     save(input,mcem,file=file)
-    if(i>10){
+    if((i %% 10) == 0){
+      print( paste("Likelihood estimation",mean(tail(mcem$fhat,10))) ) 
+    }
+    if(i>20){
+      mcem = mcem[floor(nrow(mcem)/2):nrow(mcem),]
       if( abs( mean(mcem$fhat)-mean(mcem$fhat[-nrow(mcem)]) ) < tol){
         key = 1 + key
         if(key==3){
