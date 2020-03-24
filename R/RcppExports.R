@@ -9,3 +9,7 @@ augment_cpp2 <- function(brts_in, pars, model, soc) {
     .Call(`_emphasis_augment_cpp2`, brts_in, pars, model, soc)
 }
 
+loglik_tree_cpp <- function(model, input_pars, input_tree) {
+    .Call(`_emphasis_loglik_tree_cpp`, model, input_pars, input_tree)
+}
+

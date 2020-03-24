@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include <cassert>
 #include <numeric>
+#include <vector>
 #include <tuple>
 #include "random_thijs.hpp"
 #include <string>

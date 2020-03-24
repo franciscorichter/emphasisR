@@ -32,10 +32,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// loglik_tree_cpp
+double loglik_tree_cpp(std::string model, NumericVector input_pars, NumericMatrix input_tree);
+RcppExport SEXP _emphasis_loglik_tree_cpp(SEXP modelSEXP, SEXP input_parsSEXP, SEXP input_treeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type input_pars(input_parsSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type input_tree(input_treeSEXP);
+    rcpp_result_gen = Rcpp::wrap(loglik_tree_cpp(model, input_pars, input_tree));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_emphasis_check_n_from_time", (DL_FUNC) &_emphasis_check_n_from_time, 3},
     {"_emphasis_augment_cpp2", (DL_FUNC) &_emphasis_augment_cpp2, 4},
+    {"_emphasis_loglik_tree_cpp", (DL_FUNC) &_emphasis_loglik_tree_cpp, 3},
     {NULL, NULL, 0}
 };
 

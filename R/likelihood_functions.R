@@ -61,7 +61,7 @@ loglik.tree.rpd1 <- function(pars,tree){
   return(log.lik)
 }
 
-loglik.tree.rpd5c <- function(pars,tree){
+loglik.tree.rpd5c <- function(pars, tree){
   if(pars[4]==0){
     log.lik = loglik.tree.rpd1(pars,tree)
   }else{

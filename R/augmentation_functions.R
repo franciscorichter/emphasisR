@@ -60,8 +60,9 @@ augment_tree_using_cpp <- function(brts,
   tree <- data.frame(brts = cpp_output[, 1],
                      t_ext = cpp_output[, 2],
                      to    = cpp_output[, 3],
-                     n     = cpp_output[, 4],
-                     pd    = cpp_output[, 5])
+                     pd    = cpp_output[, 5],
+                     n     = cpp_output[, 4]
+                     )
   
   tree$t_ext[tree$t_ext == -1e6] <- Inf
   return(tree)
