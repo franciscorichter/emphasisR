@@ -1,7 +1,7 @@
 Package: emphasis
 Type: Package
 Title: Expectation Maximization on PHylogenetic Applications with Simulations and Importance Sampling
-Version: 0.1.1
+Version: 0.1.2
 Author: F. Richter, R. Etienne, E. Wit
 Maintainer: F. Richter <f.richter@rug.nl>
 Description:  Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.
