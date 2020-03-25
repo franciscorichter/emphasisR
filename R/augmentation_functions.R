@@ -24,7 +24,7 @@ augment_tree <- function(brts,pars,model,soc){
       if(u2<pt){
         extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
         missing_branches = rbind(missing_branches,data.frame(speciation_time=next_speciation_time,extinction_time=extinction_time))
-        if(nrow(missing_branches)>1000){
+        if(nrow(missing_branches)>10000){
           stop("Current parameters leds to a large number of species")
         }
       }
@@ -82,7 +82,7 @@ augment_tree_tj <- function(
         tree <- tree[order(tree$brts),]
         
         num_missing_branches <- num_missing_branches + 1
-        if(num_missing_branches>1000){
+        if(num_missing_branches>10000){
           stop("Current parameters leds to a large number of species")
         }
       }

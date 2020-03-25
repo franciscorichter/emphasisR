@@ -1,11 +1,11 @@
 ### EMPHASIS functions
-emphasis_temp <- function(brts,soc=2,model="rpd1",maxtime=10,init_par,sample_size=1000,name="temp"){
+emphasis_temp <- function(brts,soc=2,model="rpd1",maxtime=10,init_par,sample_size=1000,name="temp",parallel=TRUE){
   #if(model == "rpd1"){
   #  init_par = c(0.1,0.2,-0.1/(2*length(brts)))
   #}
 #  init_sampling_size = 1000 + 0.00001 * init_par[1]
   init_sampling_size = sample_size
-  input = list(brts=brts,pars = init_par,sample_size=init_sampling_size,model=model,cores=detectCores(),parallel=T,n_it = 1000,soc=soc)
+  input = list(brts=brts,pars = init_par,sample_size=init_sampling_size,model=model,cores=detectCores(),parallel=parallel,n_it = 1000,soc=soc)
   
 #  print(paste("Clade:",DD_est$clade[i]))
   print(paste("Optimizing the likelihood - this may take a while. Sampling size: ",input$sample_size))
