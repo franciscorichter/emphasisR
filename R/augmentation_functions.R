@@ -96,6 +96,24 @@ augment_tree_tj <- function(
   return(list(tree=tree))
 }
 
+augment_tree_using_cpp <- function(brts,
+                                   pars,
+                                   model,
+                                   soc) {
+  
+  cpp_output <- emphasis::augment_cpp(brts, pars, model, soc)
+  
+  tree <- data.frame(brts = cpp_output[, 1],
+                     t_ext = cpp_output[, 2],
+                     to    = cpp_output[, 3],
+                     pd    = cpp_output[, 5],
+                     n     = cpp_output[, 4]
+  )
+  
+  tree$t_ext[tree$t_ext == -1e6] <- Inf
+  return(tree)
+}
+
 
 ##############################################
 

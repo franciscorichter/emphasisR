@@ -5,22 +5,9 @@
 
 using namespace Rcpp;
 
-// check_n_from_time
-int check_n_from_time(double bt, NumericMatrix input_tree, double soc);
-RcppExport SEXP _emphasis_check_n_from_time(SEXP btSEXP, SEXP input_treeSEXP, SEXP socSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< double >::type bt(btSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type input_tree(input_treeSEXP);
-    Rcpp::traits::input_parameter< double >::type soc(socSEXP);
-    rcpp_result_gen = Rcpp::wrap(check_n_from_time(bt, input_tree, soc));
-    return rcpp_result_gen;
-END_RCPP
-}
-// augment_cpp2
-NumericMatrix augment_cpp2(NumericVector brts_in, NumericVector pars, std::string model, int soc);
-RcppExport SEXP _emphasis_augment_cpp2(SEXP brts_inSEXP, SEXP parsSEXP, SEXP modelSEXP, SEXP socSEXP) {
+// augment_cpp
+NumericMatrix augment_cpp(NumericVector brts_in, NumericVector pars, std::string model, int soc);
+RcppExport SEXP _emphasis_augment_cpp(SEXP brts_inSEXP, SEXP parsSEXP, SEXP modelSEXP, SEXP socSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -28,7 +15,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< NumericVector >::type pars(parsSEXP);
     Rcpp::traits::input_parameter< std::string >::type model(modelSEXP);
     Rcpp::traits::input_parameter< int >::type soc(socSEXP);
-    rcpp_result_gen = Rcpp::wrap(augment_cpp2(brts_in, pars, model, soc));
+    rcpp_result_gen = Rcpp::wrap(augment_cpp(brts_in, pars, model, soc));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -47,8 +34,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_emphasis_check_n_from_time", (DL_FUNC) &_emphasis_check_n_from_time, 3},
-    {"_emphasis_augment_cpp2", (DL_FUNC) &_emphasis_augment_cpp2, 4},
+    {"_emphasis_augment_cpp", (DL_FUNC) &_emphasis_augment_cpp, 4},
     {"_emphasis_loglik_tree_cpp", (DL_FUNC) &_emphasis_loglik_tree_cpp, 3},
     {NULL, NULL, 0}
 };
