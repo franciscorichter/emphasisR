@@ -288,8 +288,6 @@ remove.extinctions <- function(tree){
 
 #' @keywords internal
 multiplot <- function(lp, plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  
   # Make a list from the ... arguments and plotlist
   plots <- c(lp, plotlist)
   
@@ -309,16 +307,17 @@ multiplot <- function(lp, plotlist=NULL, file, cols=1, layout=NULL) {
     
   } else {
     # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    grid::grid.newpage()
+    grid::pushViewport(grid::viewport(layout = grid::grid.layout(nrow(layout), 
+                                                                 ncol(layout))))
     
     # Make each plot, in the correct location
     for (i in 1:numPlots) {
       # Get the i,j matrix positions of the regions that contain this subplot
       matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
       
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
+      print(plots[[i]], vp = grid::viewport(layout.pos.row = matchidx$row,
+                                            layout.pos.col = matchidx$col))
     }
   }
 }

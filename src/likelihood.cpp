@@ -2,7 +2,7 @@
 #include <numeric>
 #include <cmath>  
 
-#include "likelihood.hpp"
+#include "likelihood.h"
 
 
 

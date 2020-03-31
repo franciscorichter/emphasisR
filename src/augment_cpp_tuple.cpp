@@ -3,11 +3,11 @@
 #include <numeric>
 #include <vector>
 #include <tuple>
-#include "random_thijs.hpp"
+#include "random_thijs.h"
 #include <string>
 #include <cmath>
 
-#include "augment_tree.hpp"
+#include "augment_tree.h"
 
 using namespace Rcpp;
 

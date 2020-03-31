@@ -1,6 +1,6 @@
-#include "augment_tree.hpp"
+#include "augment_tree.h"
 #include <cmath>
-#include "random_thijs.hpp"
+#include "random_thijs.h"
 #include <vector>
 
 #include <Rcpp.h>

@@ -4,7 +4,7 @@
 #include <vector>
 #include <math.h>  
 
-#include "likelihood.hpp"
+#include "likelihood.h"
 
 using namespace Rcpp;
 

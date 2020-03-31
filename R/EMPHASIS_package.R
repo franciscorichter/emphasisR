@@ -12,7 +12,7 @@ emphasis_temp <- function(brts,
                pars = init_par,
                sample_size = init_sampling_size,
                model = model,
-               cores = detectCores(),
+               cores = parallel::detectCores(),
                parallel = parallel,
                n_it = 1000, soc = soc)
   

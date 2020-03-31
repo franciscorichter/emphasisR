@@ -40,12 +40,12 @@ sample_dim_prob <- function(d,max){
 #' @keywords internal
 sample.uniform <- function(brts,maxnumspec,single_dimension=NULL){
   if(is.null(single_dimension)){
-    probs = sample_dim_prob(0:maxnumspec,maxnumspec)
+ #   probs = sample_dim_prob(0:maxnumspec,maxnumspec)   not used
     S = sample(0:maxnumspec,1)
   }else{
     S = single_dimension
   }
-  mbts.events = emphasis:::sim.branchingtimes.and.events(S=S ,ct = max(brts),p=0.5)
+  mbts.events = sim.branchingtimes.and.events(S=S ,ct = max(brts),p=0.5)
   df = data.frame(brts = c(brts, mbts.events$brts),
                   to =   c(rep(2, length(brts)), mbts.events$to))
   df = df[order(df$brts),]
