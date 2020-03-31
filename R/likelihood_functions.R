@@ -1,32 +1,33 @@
+#' @keywords internal
 loglik.tree <- function(model){
   log.lik = get(paste0("loglik.tree.", model))
   return(log.lik)
 }
 
 # likelihood functions 
-
+#' @keywords internal
 loglik.tree.rpd5 <- function(pars,tree){
   if(pars[4]==0){
     log.lik = loglik.tree.rpd1(pars,tree)
   }else{
     to = tree$to
-    to = head(to,-1)
+    to = utils::head(to,-1)
     to[to==2] = 1
   
-    mu = max(0,pars[1])
-    wt = diff(c(0,tree$brts))
+    mu = max(0, pars[1])
+    wt = diff(c(0, tree$brts))
   
     n = tree$n
-    Pt = c(0,tree$pd[-nrow(tree)])
+    Pt = c(0, tree$pd[-nrow(tree)])
     pd2 = Pt + n*wt
     
     brts_i = tree$brts
-    brts_im1 = c(0,brts_i[-length(brts_i)])
+    brts_im1 = c(0, brts_i[-length(brts_i)])
     
     lambda = pmax(0,pars[2] + pars[3]*n + pars[4] * pd2/n )
-    rho = pmax(lambda[-length(n)] * to + mu * (1-to),0)
-    c1 = pars[2]+pars[3]*n+(pars[4]/n)*(Pt-brts_im1*n)
-    inte = NULL
+    rho    = pmax(lambda[-length(n)] * to + mu * (1-to),0)
+    c1     = pars[2]+pars[3]*n+(pars[4]/n)*(Pt-brts_im1*n)
+    inte   = NULL
     for(i in 1:nrow(tree)){
       if( (brts_im1[i] > (-c1[i]/pars[4])) & (brts_i[i] < (-c1[i]/pars[4])) ){
         if(pars[4]>0){
@@ -42,13 +43,14 @@ loglik.tree.rpd5 <- function(pars,tree){
   return(log.lik)
 }
 
+#' @keywords internal
 loglik.tree.rpd1 <- function(pars,tree){
   to = tree$to
-  to = head(to,-1)
+  to = utils::head(to,-1)
   to[to==2] = 1
   
-  mu = max(0,pars[1])
-  wt = diff(c(0,tree$brts))
+  mu = max(0, pars[1])
+  wt = diff(c(0, tree$brts))
   
   n = tree$n
   
@@ -61,12 +63,13 @@ loglik.tree.rpd1 <- function(pars,tree){
   return(log.lik)
 }
 
+#' @keywords internal
 loglik.tree.rpd5c <- function(pars,tree){
   if(pars[4]==0){
     log.lik = loglik.tree.rpd1(pars,tree)
   }else{
     to = tree$to
-    to = head(to,-1)
+    to = utils::head(to,-1)
     to[to==2] = 1
     
     mu = max(0,pars[1])
@@ -98,8 +101,3 @@ loglik.tree.rpd5c <- function(pars,tree){
   }
   return(log.lik)
 }
-
-############################################################
-
-
-

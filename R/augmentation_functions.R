@@ -1,3 +1,12 @@
+#' augment a tree with additional branches
+#' @param brts branching times of original tree
+#' @param pars parameters
+#' @param model chosen model [rpd1, rpd5, rpd5c]
+#' @param soc
+#' @return new tree
+#' @examples 
+#' @keywords tree augment
+#' @export
 augment_tree <- function(brts,pars,model,soc){
   mu = max(0,pars[1])
   brts = cumsum(-diff(c(brts,0)))
@@ -16,10 +25,10 @@ augment_tree <- function(brts,pars,model,soc){
     lambda_max = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
    # lambda_max = lambda_max(cbt,tree,pars,model)
     ###
-    u1 = runif(1)
+    u1 = stats::runif(1)
     next_speciation_time = cbt - log(x = u1)/lambda_max
     if(next_speciation_time < next_bt){  ## 
-      u2 = runif(1)
+      u2 = stats::runif(1)
       pt = sum_speciation_rate(next_speciation_time,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_speciation_time)))/lambda_max
       if(u2<pt){
         extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
@@ -42,6 +51,15 @@ augment_tree <- function(brts,pars,model,soc){
   return(list(tree=tree))
 }
 
+#' augment a tree with additional branches, improved version by TJ
+#' @param brts branching times of original tree
+#' @param pars parameters
+#' @param model chosen model [rpd1, rpd5, rpd5c]
+#' @param soc
+#' @return new tree
+#' @examples 
+#' @keywords tree augment
+#' @export
 augment_tree_tj <- function(
   brts,
   pars,
@@ -68,10 +86,10 @@ augment_tree_tj <- function(
     
     lambda_max = max(l1, l2)
     ###
-    u1 = runif(1)
+    u1 = stats::runif(1)
     next_speciation_time = cbt - log(x = u1)/lambda_max
     if(next_speciation_time < next_bt){  ## 
-      u2 = runif(1)
+      u2 = stats::runif(1)
       pt = sum_speciation_rate(next_speciation_time,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_speciation_time)))/lambda_max
       if(u2<pt){
         extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
@@ -96,6 +114,15 @@ augment_tree_tj <- function(
   return(list(tree=tree))
 }
 
+#' augment a tree with additional branches, using C++
+#' @param brts branching times of original tree
+#' @param pars parameters
+#' @param model chosen model [rpd1, rpd5, rpd5c]
+#' @param soc
+#' @return new tree
+#' @examples 
+#' @keywords tree augment
+#' @export
 augment_tree_using_cpp <- function(brts,
                                    pars,
                                    model,
@@ -117,6 +144,7 @@ augment_tree_using_cpp <- function(brts,
 
 ##############################################
 
+#' @keywords internal
 lambda_max_rpd5c <- function(cbt,tree,pars){
   brts = tree$brts
   m=min(which(tree$brts>cbt))
@@ -135,14 +163,17 @@ lambda_max_rpd5c <- function(cbt,tree,pars){
   d2 = -c3 * c4 * exp(c4 * bt2) *(c1 + c2 * bt2) + c2* (-c3) * exp(c4* bt2) + c2
   
   
+  # MODEL is undefined here!!
+  # MU is undefined here!
+  # SOC is undefined here!
   if(d1>0 & d2>0){
-    max_lambda = sum_speciation_rate(bt2,tree,pars,model,soc=soc)*(1-exp(-mu*(b-bt2)))
+    max_lambda = sum_speciation_rate(bt2, tree, pars, model, soc = soc)*(1-exp(-mu*(b-bt2)))
   }
   if(d1<0 & d2<0){
     max_lambda =  sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt)))
   }
   if((d1>0 & d2<0)){
-    max_lambda = (-c2 - c1*c4 + c2* lambertWp((e^(1 + (c1*c4)/c2))/c))/(c2*c4)
+    max_lambda = (-c2 - c1*c4 + c2* pracma::lambertWp((e^(1 + (c1*c4)/c2))/c))/(c2*c4)
     if(max_lambda<bt1 | max_lambda>bt2){
       stop("maximum out of boundaries")
     }else{
@@ -150,23 +181,27 @@ lambda_max_rpd5c <- function(cbt,tree,pars){
     }
   }
   if((d1<0 & d2>0)){
-    max_lambda = max( sum_speciation_rate(cbt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , sum_speciation_rate(next_bt,tree,pars,model,soc=soc)*(1-exp(-mu*(b-next_bt))))
+    max_lambda = max( 
+      sum_speciation_rate(cbt, tree,pars,model,soc=soc)*(1-exp(-mu*(b-cbt))) , 
+      sum_speciation_rate(next_bt, tree, pars,  model,soc = soc) * 
+        (1-exp(-mu*(b-next_bt))))
   }
   return(max_lambda)
   
 }
 
+#' @keywords internal
 lambda_max <- function(tm,tree,pars,model){
-  lambda_max = get(paste0("lambda_max_", model))
-  lm = lambda_max(tm,tree,pars)
+  lambda_max_func = get(paste0("lambda_max_", model))
+  lm = lambda_max_func(tm, tree, pars)
   return(lm)
 }
 
+#' @keywords internal
 lambda_max_rpd1 <- function(cbt,tree,pars){
   m=min(which(tree$brts>cbt))
-  brts_im1 = c(0,brts_i[-length(brts_i)])[m]
+  brts_im1 = c(0, brts_i[-length(brts_i)])[m]  # what is brts_i ??
   n = tree$n[m]
-  max_lambda = max(0,pars[2]+pars[3]*n)
+  max_lambda = max(0, pars[2] + pars[3] * n)
   return(max_lambda)
-  
 }

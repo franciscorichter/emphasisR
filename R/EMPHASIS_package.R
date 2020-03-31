@@ -1,33 +1,56 @@
-### EMPHASIS functions
-emphasis_temp <- function(brts,soc=2,model="rpd1",maxtime=10,init_par,sample_size=1000,name="temp",parallel=TRUE){
-  #if(model == "rpd1"){
-  #  init_par = c(0.1,0.2,-0.1/(2*length(brts)))
-  #}
-#  init_sampling_size = 1000 + 0.00001 * init_par[1]
+#' @keywords internal
+emphasis_temp <- function(brts,
+                          soc = 2,
+                          model = "rpd1",
+                          maxtime = 10,
+                          init_par,
+                          sample_size = 1000,
+                          name = "temp",
+                          parallel = TRUE){
   init_sampling_size = sample_size
-  input = list(brts=brts,pars = init_par,sample_size=init_sampling_size,model=model,cores=detectCores(),parallel=parallel,n_it = 1000,soc=soc)
+  input = list(brts = brts,
+               pars = init_par,
+               sample_size = init_sampling_size,
+               model = model,
+               cores = detectCores(),
+               parallel = parallel,
+               n_it = 1000, soc = soc)
   
-#  print(paste("Clade:",DD_est$clade[i]))
-  print(paste("Optimizing the likelihood - this may take a while. Sampling size: ",input$sample_size))
+  print(paste("Optimizing the likelihood - this may take a while. 
+              Sampling size: ", input$sample_size))
   print(paste("Age of the tree: ",max(input$brts)))
   print(paste("Number of speciations: ",length(input$brts)))
   print(paste("Diversification model to fit:",input$model))
   print(paste("initial parameters ",input$pars))  
   
   for(i in 1:1){
-    mcEM(input,file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""),n_it=input$n_it,tol = 0.0001,print_process = FALSE)
-    load(file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""))
+    # what package is mcEM from?
+    mcEM(input,   
+         file = paste(name, "_", input$model, "_", 
+                      as.character(input$sample_size), 
+                      ".RData", sep=""),
+         n_it = input$n_it, 
+         tol = 0.0001,
+         print_process = FALSE)
+    load(file = paste(name,"_", input$model, "_",
+                      as.character(input$sample_size), ".RData", sep = ""))
     input$sample_size = input$sample_size*2
-    ta = tail(mcem,n = floor(nrow(mcem)/2))
-    input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3))
+    # here, there is no object called 'mcem'??
+    ta = utils::tail(mcem, n = floor(nrow(mcem) / 2))
+    input$pars = c(mean(ta$par1), mean(ta$par2), mean(ta$par3))
   }
-  return(list(pars=input$pars,fhat=mean(ta$fhat),sd_fhat=1))
-  
-  
+  return(list(pars = input$pars, fhat = mean(ta$fhat), sd_fhat = 1))
 }
 
 
-
+#' perform an emphasis analysis
+#' @param input
+#' @param file
+#' @param print_process
+#' @param n_it
+#' @param tol
+#' @return parameters
+#' @export
 emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
   pars = input$pars
   mcem = NULL
@@ -52,9 +75,9 @@ emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
       print(paste("Q random estimation: ",log(M$po$value)))
       print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
     }
-    save(input,mcem,file=file)
+    save(input, mcem, file=file)
     if((i %% 10) == 0){
-      print( paste("Likelihood estimation",mean(tail(mcem$fhat,10))) ) 
+      print( paste("Likelihood estimation", mean( utils::tail(mcem$fhat, 10))) ) 
     }
     if(i>20){
       mcem = mcem[floor(nrow(mcem)/2):nrow(mcem),]
@@ -73,6 +96,7 @@ emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
 ##############################
 ####### E-step 
 
+#' @keywords internal
 mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE,soc=2,printprocess=TRUE){
   if(seed>0) set.seed(seed)
   time = proc.time()
@@ -82,7 +106,7 @@ mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE
   if(!parallel){
     st =  lapply(1:sample_size,function(i){augment_tree_tj(brts = brts,pars = pars,model=model,soc=soc)} )
   }else{
-    st = mclapply(1:sample_size,function(i){augment_tree_tj(brts = brts,pars = pars,model=model,soc=soc)},mc.cores = no_cores)
+    st = parallel::mclapply(1:sample_size,function(i){augment_tree_tj(brts = brts,pars = pars,model=model,soc=soc)},mc.cores = no_cores)
   }
   trees = lapply(st,function(list) list$tree)
   dim = sapply(st,function(list) nrow(list$tree))
@@ -94,36 +118,43 @@ mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE
   log_weights = logf-logg
   w = exp(log_weights)
   ####
-  En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
+  En = list(weights = w,
+            trees = trees,
+            fhat = mean(w),
+            logf = logf,
+            logg = logg,
+            dim = dim,
+            E_time = E_time)
   return(En)
-
 }
 
 ##############################
 ####### M-step 
 
-M_step <-function(st,init_par,model,reltol=0.001){
+#' @keywords internal
+M_step <-function(st, init_par, model, reltol = 0.001){
   
   time0 = proc.time()
   
   sub_st = get_contributing_trees(st)
   
-  po = subplex(par = init_par, fn = Q_approx,st = sub_st, loglik = get(paste0("loglik.tree.", model)), hessian = FALSE,control=list(reltol=reltol))
+  po = subplex::subplex(par = init_par, fn = Q_approx,st = sub_st, loglik = get(paste0("loglik.tree.", model)), hessian = FALSE,control=list(reltol=reltol))
 
   M_time = get.time(time0)
   return(list(po=po,M_time=M_time))
 }
 
-
+#' @keywords internal
 get_contributing_trees <- function(st, exclude_proportion_trees=0){
   w = st$weights/sum(st$weights)
   contributing_trees = (w > exclude_proportion_trees)
   sub_trees = st$trees[contributing_trees]
-  effective_sample_size = sum(contributing_trees)
+#  effective_sample_size = sum(contributing_trees)
   sub_st = list(trees = sub_trees, weights = st$weights[contributing_trees])
   return(sub_st)
 }
 
+#' @keywords internal
 Q_approx = function(pars,st,loglik){
   
   l = sapply(st$trees, loglik, pars=pars)
@@ -133,7 +164,3 @@ Q_approx = function(pars,st,loglik){
 }
 
 ####
-  
-  
-
-

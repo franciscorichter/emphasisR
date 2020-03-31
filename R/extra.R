@@ -1,14 +1,15 @@
 # more utilities
-
+#' @keywords internal
 n_from_time <- function(tm,tree,soc){
   # return N at tm.
-  to = head(tree$to,-1)
+  to = utils::head(tree$to,-1)
   to[to==2] = 1
   n = c(soc,soc+cumsum(to)+cumsum(to-1))
   N = n[max(which(c(-1,tree$brts) < tm))]
   return(N)
 } 
 
+#' @keywords internal
 phylodiversity <- function(tm,tree,soc){
   i1<-tree$brts<=tm 
   i2<-tree$to==0&i1
@@ -17,71 +18,103 @@ phylodiversity <- function(tm,tree,soc){
   return(sum(dt*(soc:(length(dt)+soc-1))))
 }
 
+#' @keywords internal
 emphasis_bootstrap <- function(input,n_it=100,print=FALSE,file="bootstrap_temp.RData"){
   P=NULL
   for(i in 1:n_it){
-    st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=FALSE,soc=input$soc)
+    st = mcE_step(brts = input$brts, 
+                  pars = input$pars,
+                  sample_size=input$sample_size,
+                  model=input$model,
+                  no_cores=input$cores,
+                  parallel=FALSE,
+                  soc=input$soc)
     if(print==TRUE){
       print(paste("iteration",i))
       print(paste("log-lik: ",log(st$fhat),sep=""))
       print(paste("took: ",st$E_time,sep=""))
     }
-    P = rbind(P,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
-    save(P,input,file=file)
+    P = rbind(P,
+              data.frame(fhat = log(st$fhat),
+                         eitme=st$E_time,
+                         ss=input$sample_size))
+    save(P, input, file = file)
   }
 return(P)
 }
 
-data_to_table <- function(df,replicant,left,right){
-  df = df[df$rep==replicant,]
+#' @keywords internal
+data_to_table <- function(df, replicant, left, right ){
+  df = df[df$rep==replicant, ]
   df = df[df$iteration %in% left:right,]
-  summ = data.frame(lfhat = mean(df$fhat),sd_fhat=sd(df$fhat),mad_fhat=mad(df$fhat),replicant=replicant,par1=median(df$par1),par2=median(df$par2),par3=median(df$par3),par4=median(df$par4),E_time = sum(df$E_time)/60, M_time = sum(df$M_time)/60, sample_size=mean(df$sample_size))
+  summ = data.frame(lfhat        = mean(df$fhat),
+                    sd_fhat      = stats::sd(df$fhat),
+                    mad_fhat     = stats::mad(df$fhat),
+                    replicant    = replicant,
+                    par1         = stats::median(df$par1),
+                    par2         = stats::median(df$par2),
+                    par3         = stats::median(df$par3),
+                    par4         = stats::median(df$par4),
+                    E_time       = sum(df$E_time)/60, 
+                    M_time       = sum(df$M_time)/60, 
+                    sample_size  = mean(df$sample_size))
   return(summ)
 }
 
+#' @keywords internal
 AIC <- function(LogLik,k){
-  aic <- (2*k)-(2*LogLik)
+  aic <- (2 * k) - (2 * LogLik)
   return(aic)
 }
 
+#' @keywords internal
 AICweights <- function(LogLik,k){
-  IC <- AIC(LogLik,k)
+  IC <- AIC(LogLik, k)
   bestmodelIC <- min(IC)
-  weights <- exp(-0.5*(IC-bestmodelIC))
-  weights <- weights/sum(weights)
+  weights <- exp(-0.5 * (IC - bestmodelIC))
+  weights <- weights / sum(weights)
   return(weights)
 }
 
-AICw <- function(l1,l2,k1,k2){
-  IC <- AIC(c(l1,l2),c(k1,k2))
+#' @keywords internal
+AICw <- function(l1, l2, k1, k2){
+  IC <- AIC(c(l1, l2), c(k1, k2))
   bestmodelIC <- min(IC)
-  weights <- exp(-0.5*(IC-bestmodelIC))
-  weights <- weights/sum(weights)
+  weights <- exp(-0.5 * (IC - bestmodelIC))
+  weights <- weights / sum(weights)
   return(weights[1])
 }
+
+#' @keywords internal
 vectors2phylo <- function(list){
-  t=list$wt
-  n=list$n
-  E=list$E
-  S=list$S
-  ct=sum(t)
-  newick = paste(sl[1],";",sep="")
+  t = list$wt
+  # n = list$n  # not used
+  E = list$E
+  S = list$S
+  ct = sum(t)
+  newick = paste(sl[1], ";", sep = "")
   N=1
-  identf = data.frame(Spec="aa",Time=0) # Labels of species
+  identf = data.frame(Spec = "aa", Time = 0) # Labels of species
   for (i in 1:(length(t)-1)){
     # speciation
     sumt = sum(t[1:i])
     if( is.null(S)){
-      BD = sample(1:N,1)
-      species = as.character(identf[BD,1])
+      BD = sample(1:N, 1)
+      species = as.character(identf[BD, 1])
     }else{
       species = S[i]
     }
     if (E[i] == 1){
-      ind = regexpr(species,newick)[1]-1
+      ind = regexpr(species,newick)[1] - 1
       atm = sumt-identf[which(identf[,1]==species),2]
-      newick = paste(substr(newick,1,ind),"(",substr(newick,ind+1,ind+4),",",sl[i+1],"):",as.character(atm),substring(newick,ind+5),sep="")
-      identf = rbind(identf,data.frame(Spec=substr(sl[i+1],1,2),Time=sumt))
+      newick = paste(substr(newick, 1, ind),
+                     "(", substr(newick, ind + 1, ind + 4),
+                     ",", sl[i + 1], "):",
+                     as.character(atm),
+                     substring(newick, ind + 5),
+                     sep = "")
+      identf = rbind(identf, data.frame(Spec = substr(sl[i + 1], 1, 2),
+                                        Time = sumt))
       identf[identf$Spec == species,2] = sumt
       N = N+1
     }
@@ -95,15 +128,14 @@ vectors2phylo <- function(list){
     }
   }
   newick = compphyl(newi=newick,identf=identf,ct=ct)
-  newick = read.tree(text=newick)
+  newick = ape::read.tree(text=newick)
   return(newick)
 }
 
-
-
+#' @keywords internal
 phylo2tree <- function(tree){
   # to map newick trees into ther xxxx format
-  ltt = ltt.plot.coords(tree)
+  ltt = ape::ltt.plot.coords(tree)
   t = diff(ltt[,1])
   ltt = ltt[-1,]
   n = ltt[,2]
@@ -112,6 +144,7 @@ phylo2tree <- function(tree){
   return(list(wt=t,to=E))
 }
 
+#' @keywords internal
 tree2phylo <- function(tree,initspec=1){
   wt=-diff(c(0,tree$brts))
   to=tree$to
@@ -143,10 +176,11 @@ tree2phylo <- function(tree,initspec=1){
     }
   }
   newick = compphyl(newi=newick,identf=identf,ct=ct)
-  newick = read.tree(text=newick)
+  newick = ape::read.tree(text=newick)
   return(newick)
 }
 
+#' @keywords internal
 compphyl <- function(newi,identf,ct){
   #set to extant species to the present time
   identf[,1] = as.character(identf[,1])
@@ -165,20 +199,22 @@ for (i in 2:26){
 }
 
 # time calculation
-get.time <- function(time,mode='sec'){
+#' @keywords internal
+get.time <- function(time, 
+                     mode = 'sec'){
   dif = proc.time()-time
   ti = as.numeric(dif[3])
-  if(mode == 'min')  ti = ti/60
-  if(mode == 'hou') ti = ti/3600
+  if(mode == 'min')  ti = ti / 60
+  if(mode == 'hou')  ti = ti / 3600
   return(ti)
 }
 
+#' @keywords internal
 get.topologies <- function(M){
-  if(M == 0)
-  {
+  if(M == 0) {
     return(NULL)
   }
-  TO = matrix(nrow=2*M,ncol=1)
+  TO = matrix(nrow=2 * M, ncol = 1)
   TO[1,1] = 1
   for(i in 2:(2*M)){
     comb = ncol(TO)
@@ -202,8 +238,7 @@ get.topologies <- function(M){
 }
 
 
-### simulation of trees 
-
+#' @keywords internal
 sim.tree <- function(pars, model,ct,soc){
   tree = data.frame(brts=0,to=1,t_ext=Inf, parent=0, child = 1)
   cbt = 0 
@@ -245,12 +280,13 @@ sim.tree <- function(pars, model,ct,soc){
   return(tree)
 }
 
-
+#' @keywords internal
 remove.extinctions <- function(tree){
   extant_brts = tree$brts[tree$to==1 & is.infinite(tree$t_ext)]
   return(extant_brts)
 }
 
+#' @keywords internal
 multiplot <- function(lp, plotlist=NULL, file, cols=1, layout=NULL) {
   library(grid)
   
@@ -286,5 +322,3 @@ multiplot <- function(lp, plotlist=NULL, file, cols=1, layout=NULL) {
     }
   }
 }
-
-

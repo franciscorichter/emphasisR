@@ -1,5 +1,5 @@
 # augmentaion (sampling) probability 
-
+#' @keywords internal
 sampling_prob <- function(tree,pars,model,numerical=FALSE){
 
   if(numerical){
@@ -11,13 +11,13 @@ sampling_prob <- function(tree,pars,model,numerical=FALSE){
   
   missing_speciations = (tree$to == 1)
   if(sum(missing_speciations)>0){
-    top = head(tree$to,-1)
+    top = utils::head(tree$to,-1)
     N = tree$n
     soc = N[1]
     
     nb = N[missing_speciations]
-    No = c(soc,soc+cumsum(top==2))[missing_speciations]
-    Ne = c(0,cumsum(top==1)-cumsum(top==0))[missing_speciations]
+    No = c(soc, soc+cumsum(top==2))[missing_speciations]
+    Ne = c(0, cumsum(top==1)-cumsum(top==0))[missing_speciations]
     
     brts_miss = tree$brts[missing_speciations]
     lambda_b = sapply(brts_miss,speciation_rate,tree = tree,pars = pars,model = model,soc=soc)
@@ -30,8 +30,7 @@ sampling_prob <- function(tree,pars,model,numerical=FALSE){
   return(logg)
 }
 
-
-
+#' @keywords internal
 intensity.rpd1 <- function(tree, pars){
   
   mu = max(0,pars[1])
@@ -46,7 +45,7 @@ intensity.rpd1 <- function(tree, pars){
 }
 
 
-
+#' @keywords internal
 intensity.numerical <- function(tree, pars, model){
   nh_rate <- function(x){
     sum_speciation_rate(x=x,tree = tree,pars = pars,model = model,soc=tree$n[1])*(1-exp(-(max(tree$brts)-x)*pars[1]))
@@ -62,7 +61,7 @@ intensity.numerical <- function(tree, pars, model){
 
 
 ### intensity rpd5
-
+#' @keywords internal
 intensity.rpd5 <- function(tree,pars){
   n = tree$n; Pt = c(0,tree$pd)
   c2 = pars[4]; c3 = exp(-pars[1]*max(tree$brts)); c4 = pars[1]
@@ -89,11 +88,13 @@ intensity.rpd5 <- function(tree,pars){
   return(inte)
 }
 
+#' @keywords internal
 ind.rpd5 <- function(x,c1,c2,c3,c4){
   r = (c2 * x^2)/2 + c1*x - (c3*exp(c4*x)*(c2*(c4*x-1)+c1*c4))/(c4^2) 
   return(r)
 }
 
+#' @keywords internal
 intensity.rpd5c <- function(tree,pars){
   n = tree$n; Pt = c(0,tree$pd)
   c2 = pars[4]*((n-1)/n); c3 = exp(-pars[1]*max(tree$brts)); c4 = pars[1]
@@ -117,5 +118,3 @@ intensity.rpd5c <- function(tree,pars){
   }
   return(inte)
 }
-
-

@@ -1,7 +1,6 @@
 # log-likelihood of full tree
 
-
-
+#' @keywords internal
 brts2tree <- function(brts,brts_exts){
   if(brts[1]<0){ 
     wt = diff(c(brts,0))

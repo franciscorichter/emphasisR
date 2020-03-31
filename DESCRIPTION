@@ -2,15 +2,16 @@ Package: emphasis
 Type: Package
 Title: Expectation Maximization on PHylogenetic Applications with Simulations and Importance Sampling
 Version: 0.1.1
-Author: F. Richter, R. Etienne, E. Wit
-Maintainer: F. Richter <f.richter@rug.nl>
+Authors@R: c(person("Francisco","Richter", email = "f.richter@rug.nl", role = c("aut", "cre")),
+                person("Thijs","Janzen", email = "thijsjanzen@gmail.com", role=c("ctb")),
+                person("Hanno","Hildenbrandt", email = "h.hildenbrandt@rug.nl", role = c("ctb")))
 Description:  Set of statistical tools for the study of diversification of species and ecological drivers of macro-evolution.
 License: Creative Commons Public Licenses
 Encoding: UTF-8
 LazyData: false
-Imports: Rcpp (>= 1.0.3)
 LinkingTo: Rcpp
-Depends:
+Imports:
+    Rcpp (>= 1.0.3),
     ape,
     subplex,
     ggplot2,
@@ -23,5 +24,3 @@ Depends:
     pracma,
     DT,
     stringr
-    
-    
