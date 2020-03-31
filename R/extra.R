@@ -1,4 +1,6 @@
 # more utilities
+#' @rawNamespace useDynLib(emphasis)
+#' @rawNamespace import(Rcpp)
 #' @keywords internal
 n_from_time <- function(tm, tree, soc) {
   # return N at tm.
@@ -277,28 +279,28 @@ sim.tree <- function(pars,
   ## sim waiting time,
   spec.cnt <- soc
   while ((cbt < ct) & (n > 0)) {
-    tmp.tree <- rbind(tree[-1, ],
+    tmp_tree <- rbind(tree[-1, ],
                       data.frame(brts = ct,
                                  to = 1,
                                  t_ext = Inf,
                                  parent = NA,
                                  child = NA))
-    rate_max <- max(sum_speciation_rate(cbt, tmp.tree, pars, model, soc = soc),
-                    sum_speciation_rate(ct, tmp.tree, pars, model, soc = soc)) +
+    rate_max <- max(sum_speciation_rate(cbt, tmp_tree, pars, model, soc = soc),
+                    sum_speciation_rate(ct, tmp_tree, pars, model, soc = soc)) +
                     mu * n
-    u1 <- runif(1)
+    u1 <- stats::runif(1)
     next_event_time <- cbt - log(x = u1) / rate_max
 
     if (next_event_time < ct) {
-      u2 <- runif(1)
+      u2 <- stats::runif(1)
       pt <- (sum_speciation_rate(next_event_time,
-                                 tmp.tree,
+                                 tmp_tree,
                                  pars, model,
                                  soc = soc) + 
                mu * n) / rate_max
       if (u2 < pt) {
         l1 <- speciation_rate(next_event_time,
-                              tmp.tree,
+                              tmp_tree,
                               pars = pars,
                               model = model,
                               soc = soc)

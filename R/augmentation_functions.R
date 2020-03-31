@@ -2,7 +2,7 @@
 #' @param brts branching times of original tree
 #' @param pars parameters
 #' @param model chosen model [rpd1, rpd5, rpd5c]
-#' @param soc
+#' @param soc number of species at root (??)
 #' @return new tree
 #' @keywords tree augment
 #' @export
@@ -114,9 +114,8 @@ augment_tree <- function(brts, pars, model, soc) {
 #' @param brts branching times of original tree
 #' @param pars parameters
 #' @param model chosen model [rpd1, rpd5, rpd5c]
-#' @param soc
+#' @param soc number of species at root (???)
 #' @return new tree
-#' @examples
 #' @keywords tree augment
 #' @export
 augment_tree_tj <- function(
@@ -186,16 +185,15 @@ augment_tree_tj <- function(
 #' @param brts branching times of original tree
 #' @param pars parameters
 #' @param model chosen model [rpd1, rpd5, rpd5c]
-#' @param soc
+#' @param soc number of species at root (??)
 #' @return new tree
-#' @examples
 #' @keywords tree augment
 #' @export
 augment_tree_using_cpp <- function(brts,
                                    pars,
                                    model,
                                    soc) {
-  cpp_output <- emphasis::augment_cpp(brts, pars, model, soc)
+  cpp_output <- augment_cpp(brts, pars, model, soc)
 
   tree <- data.frame(
     brts = cpp_output[, 1],

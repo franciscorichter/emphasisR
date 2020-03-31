@@ -51,11 +51,11 @@ emphasis_temp <- function(brts,
 
 
 #' perform an emphasis analysis
-#' @param input
-#' @param file
-#' @param print_process
-#' @param n_it
-#' @param tol
+#' @param input input object
+#' @param file input file
+#' @param print_process verbose output?
+#' @param n_it number of iterations
+#' @param tol tolerance
 #' @return parameters
 #' @export
 emphasis <- function(input,
