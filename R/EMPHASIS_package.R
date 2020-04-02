@@ -1,39 +1,38 @@
 ### EMPHASIS functions
-emphasis_temp <- function(brts,soc=2,model="rpd1",maxtime=10,init_par,sample_size=1000,name="temp",parallel=TRUE){
-  #if(model == "rpd1"){
-  #  init_par = c(0.1,0.2,-0.1/(2*length(brts)))
-  #}
-#  init_sampling_size = 1000 + 0.00001 * init_par[1]
+emphasis <- function(brts,soc=2,model="rpd1",n_up_ss=3,init_par,sample_size=1000,name="temp",parallel=TRUE){
   init_sampling_size = sample_size
   input = list(brts=brts,pars = init_par,sample_size=init_sampling_size,model=model,cores=detectCores(),parallel=parallel,n_it = 1000,soc=soc)
   
-#  print(paste("Clade:",DD_est$clade[i]))
-  print(paste("Optimizing the likelihood - this may take a while. Sampling size: ",input$sample_size))
+  print(paste("Optimizing the likelihood - this may take a while."))
   print(paste("Age of the tree: ",max(input$brts)))
   print(paste("Number of speciations: ",length(input$brts)))
   print(paste("Diversification model to fit:",input$model))
-  print(paste("initial parameters ",input$pars))  
+  print(paste("initial parameters. ","mu: ",input$pars[1],"lambda: ",input$pars[2],"beta: ",input$pars[3]))  
   
-  for(i in 1:1){
-    mcEM(input,file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""),n_it=input$n_it,tol = 0.0001,print_process = FALSE)
+  MCEM=NULL
+  for(i in 1:n_up_ss){
+    print(paste("Sampling size: ",input$sample_size))
+    mc = mcEM(input,file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""),n_it=input$n_it,print_process = FALSE)
     load(file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""))
     input$sample_size = input$sample_size*2
-    ta = tail(mcem,n = floor(nrow(mcem)/2))
+    ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3))
+    MCEM = rbind(MCEM,mc$mcem)
   }
-  return(list(pars=input$pars,fhat=mean(ta$fhat),sd_fhat=1))
+  return(list(mc=mc,MCEM=MCEM))
   
   
 }
 
-
-
-emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
+mcEM <- function(input,file=".RData",print_process=FALSE,n_it=NULL,tol=0.01,burnin=20){
   pars = input$pars
   mcem = NULL
   sample_size = input$sample_size
   key = 0
-  for(i in 1:n_it){
+  sde=mde=10; i=0
+  times=NULL
+  while(sde > tol){
+    i = i+1
     if(print_process){
       print(paste("Performing E step, iteration",i))
       print(pars)
@@ -53,21 +52,22 @@ emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
       print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
     }
     save(input,mcem,file=file)
-    if((i %% 10) == 0){
-      print( paste("Likelihood estimation",mean(tail(mcem$fhat,10))) ) 
-    }
-    if(i>20){
-      mcem = mcem[floor(nrow(mcem)/2):nrow(mcem),]
-      if( abs( mean(mcem$fhat)-mean(mcem$fhat[-nrow(mcem)]) ) < tol){
-        key = 1 + key
-        if(key==3){
-          break
-        }
-      }else{
-        key=0
-      }
+    if(i>burnin){
+      mcem_est = mcem[floor(nrow(mcem)/2):nrow(mcem),]
+      sde = sd(mcem_est$fhat)/nrow(mcem_est)
+      mde = mean(mcem_est$fhat)
+      msg1 = paste("Iteration:",i,"Time per iteration:",round(st$E_time+M$M_time,digits = 2))
+      msg2 = paste("loglikelihood estimation:",mde,"Standard Error:",sde)
+      cat("\r",msg1, msg2, sep="\n")
+      #cat(msg2)
+    }else{
+      times = c(times,st$E_time+M$M_time)
+      time_p_it = mean(times)
+      msg = paste("Remining time for burn-in: ",round(time_p_it*(burnin-i),digits = 0),"sec")
+      cat("\r",msg) 
     }
   }
+  return(list(mcem=mcem,st=st,M=M))
 }
 
 ##############################
@@ -76,9 +76,6 @@ emphasis <- function(input,file=".RData",print_process=TRUE,n_it=NULL,tol=0.01){
 mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE,soc=2,printprocess=TRUE){
   if(seed>0) set.seed(seed)
   time = proc.time()
- # if(printprocess){
-    
- # }
   if(!parallel){
     st =  lapply(1:sample_size,function(i){augment_tree_tj(brts = brts,pars = pars,model=model,soc=soc)} )
   }else{

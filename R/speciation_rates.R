@@ -4,12 +4,6 @@ speciation_rate <- function(tm,tree,pars,model,soc,sum_lambda=FALSE){
   return(lambda)
 }
 
-sum_speciation_rate <- function(x,tree,pars,model,soc){
-  N = sapply(x, n_from_time,tree=tree,soc=soc)
-  speciation_r = get(paste0("lambda.", model))
-  lambda = speciation_r(x,tree,pars,soc=soc)
-  return(N*lambda)
-}
 
 # Speciations rates 
 
@@ -32,5 +26,18 @@ lambda.rpd5c <- function(tm,tree,pars,soc,sum_lambda=FALSE){
   
 }
 
-#############################
+##########################################################
+##### lineages dependent speciation rate #################
+##########################################################
+
+
+lambda.ldpd <- function(tm,tree,pars,soc,sum_lambda=FALSE){
+  gpd = GPD2(tm,tree)
+  lambdas = colSums(gpd)
+  if(sum_lambda) lambdas = sum(lambdas)
+  return(lambdas)
+}
+
+
+
 
