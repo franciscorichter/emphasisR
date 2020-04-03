@@ -1,22 +1,27 @@
 ### EMPHASIS functions
-emphasis <- function(brts,soc=2,model="rpd1",n_up_ss=3,init_par,sample_size=1000,name="temp",parallel=TRUE){
-  init_sampling_size = sample_size
-  input = list(brts=brts,pars = init_par,sample_size=init_sampling_size,model=model,cores=detectCores(),parallel=parallel,n_it = 1000,soc=soc)
+emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,name="temp",parallel=TRUE){
+
+  input = list(brts=brts,pars = init_par,sample_size=sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
   
-  print(paste("Optimizing the likelihood - this may take a while."))
-  print(paste("Age of the tree: ",max(input$brts)))
-  print(paste("Number of speciations: ",length(input$brts)))
-  print(paste("Diversification model to fit:",input$model))
-  print(paste("initial parameters. ","mu: ",input$pars[1],"lambda: ",input$pars[2],"beta: ",input$pars[3]))  
+  cat(paste("Initializing emphasis..."))
+  cat(paste("Age of the tree: ",max(input$brts)))
+  cat(paste("Number of speciations: ",length(input$brts)))
+  cat(paste("Diversification model to fit:",input$model))
+  cat(paste("initial parameters. ","mu: ",input$pars[1],"lambda: ",input$pars[2],"beN: ",input$pars[3],"beP: ",input$pars[4]))  
   
-  MCEM=NULL
-  for(i in 1:n_up_ss){
-    print(paste("Sampling size: ",input$sample_size))
-    mc = mcEM(input,file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""),n_it=input$n_it,print_process = FALSE)
-    load(file=paste(name,"_",input$model,"_",as.character(input$sample_size),".RData",sep=""))
+  
+  cat( "Performing burn-in phase")
+  mc = mcEM(input,n_it=20,print_process = FALSE,tol = 0.01)
+  MCEM=mc$mcem
+  input$pars = c(mean(tail(mc$mcem$par1,n = 10)),mean(tail(mc$mcem$par2,n = 10)),mean(tail(mc$mcem$par3,n = 10)),mean(tail(mc$mcem$par4,n = 10)))
+  cat( "Assesing required MC sampling size - this may take a while")
+  MC = list()
+  for(i in 1:2){
+    print(paste("Sampling size: ",as.character(input$sample_size*i)))
+    MC[[i]] = mcEM(input,print_process = FALSE,burnin = 0)
     input$sample_size = input$sample_size*2
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
-    input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3))
+    input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
     MCEM = rbind(MCEM,mc$mcem)
   }
   return(list(mc=mc,MCEM=MCEM))
@@ -24,13 +29,12 @@ emphasis <- function(brts,soc=2,model="rpd1",n_up_ss=3,init_par,sample_size=1000
   
 }
 
-mcEM <- function(input,file=".RData",print_process=FALSE,n_it=NULL,tol=0.01,burnin=20){
+mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save_file=FALSE){
   pars = input$pars
   mcem = NULL
   sample_size = input$sample_size
-  key = 0
-  sde=mde=10; i=0
-  times=NULL
+  sde = 10; i=0
+  times = NULL
   while(sde > tol){
     i = i+1
     if(print_process){
@@ -51,7 +55,7 @@ mcEM <- function(input,file=".RData",print_process=FALSE,n_it=NULL,tol=0.01,burn
       print(paste("Q random estimation: ",log(M$po$value)))
       print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
     }
-    save(input,mcem,file=file)
+    #save(input,mcem,file=file)
     if(i>burnin){
       mcem_est = mcem[floor(nrow(mcem)/2):nrow(mcem),]
       sde = sd(mcem_est$fhat)/nrow(mcem_est)
