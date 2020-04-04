@@ -91,8 +91,9 @@ sim.tree_rpd5c <- function(pars,ct,soc,drop_extinct=TRUE){
             ext_spec = sample(which(tree$to == 1 & tree$t_ext == Inf),1)
             tree$t_ext[ext_spec] = next_event_time
             removed_branch_length = tree$t_ext[ext_spec] - tree$brts[ext_spec]
+            P = P - removed_branch_length
           }
-          P = P - removed_branch_length
+          
         }
         tree = rbind(tree,data.frame(brts=next_event_time,to=to,t_ext=Inf))
         
