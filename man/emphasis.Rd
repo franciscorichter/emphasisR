@@ -57,12 +57,12 @@ F. Richter M.
 
 #load data
 data(branching_times)
-#find good initial parameter with DDD package (we could try our own parameters too)
-pars = DDD:::dd_ML(brts=brts,cond=0,soc=2)
-#perform emphasis
-mc = emphasis(brts,model="rpd5c",init_par=c(pars$mu,pars$lambda,(pars$mu-pars$lambda)/pars$K,0),soc=2,sample_size=200,parallel=TRUE)
 
+clade = "Bucconidae"
+brts =  get(paste0("brts_",clade))
+pars = as.numeric(DD_est[DD_est$clade==clade,5:7])
 
+mc = emphasis(brts,model="rpd5c",init_par=c(pars,0),soc=2,sample_size=300,parallel=F)
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.

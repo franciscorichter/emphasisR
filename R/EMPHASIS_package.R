@@ -15,6 +15,8 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   mc = mcEM(input,print_process = FALSE,tol = 0.1,burnin = 20)
   MCEM=mc$mcem
   input$pars = c(mean(tail(mc$mcem$par1,n = 10)),mean(tail(mc$mcem$par2,n = 10)),mean(tail(mc$mcem$par3,n = 10)),mean(tail(mc$mcem$par4,n = 10)))
+  
+  cat(msg5,sep="\n")
   cat( "Phase 2: Assesing required MC sampling size")
   MC = list()
   for(i in 1:2){
@@ -36,10 +38,11 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   f.r<-ab[1]-.05
   n.r<-ceiling(ab[2]/(f.r-ab[1]))
   cat(paste0("Required sampling size: ",n.r)) 
-  cat("Performing last phase. Inferring parameters") 
+  cat(msg5,sep="\n")
+  cat("Inferring parameters") 
   input$sample_size = n.r
   mc = mcEM(input,print_process = print_process,burnin = 10,tol = 0.01)
-  
+  cat("Done") 
   return(list(mc=mc,MCEM=MCEM))
   
   
