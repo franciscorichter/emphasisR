@@ -43,7 +43,8 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   input$sample_size = n.r
   mc = mcEM(input,print_process = print_process,burnin = 10,tol = 0.01)
   cat("Done") 
-  return(list(mc=mc,MCEM=MCEM))
+  pars = as.numeric(colMeans(mc$MCEM)[1:4])
+  return(list(pars,mc=mc,MCEM=MCEM))
   
   
 }
