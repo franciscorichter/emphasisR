@@ -21,7 +21,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   MC = list()
   for(i in 1:2){
     print(paste("Sampling size: ",as.character(input$sample_size*i)))
-    MC[[i]] = mc = mcEM(input,print_process = print_process,burnin = 1,tol = 0.01)
+    MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 1,tol = 0.01)
     input$sample_size = input$sample_size*2
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
@@ -37,14 +37,14 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
 
   f.r<-ab[1]-.05
   n.r<-ceiling(ab[2]/(f.r-ab[1]))
-  cat(paste0("Required sampling size: ",n.r)) 
-  cat(msg5,sep="\n")
-  cat("Inferring parameters") 
+  msg6 = paste0("Required sampling size: ",n.r)
+  msg7 = "Inferring parameters"
+  cat(msg5,msg6,msg7,sep="\n")
   input$sample_size = n.r
   mc = mcEM(input,print_process = print_process,burnin = 10,tol = 0.01)
   cat("Done") 
   pars = as.numeric(colMeans(mc$mcem)[1:4])
-  return(list(pars,mc=mc,MCEM=MCEM))
+  return(list(pars=pars,mc=mc,MCEM=MCEM,required_sample_size=))
   
   
 }
