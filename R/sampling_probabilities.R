@@ -30,8 +30,6 @@ sampling_prob <- function(tree,pars,model,numerical=FALSE){
   return(logg)
 }
 
-
-
 intensity.rpd1 <- function(tree, pars){
   
   mu = max(0,pars[1])
@@ -45,11 +43,9 @@ intensity.rpd1 <- function(tree, pars){
   return(sigma_over_tree)
 }
 
-
-
 intensity.numerical <- function(tree, pars, model){
   nh_rate <- function(x){
-    sum_speciation_rate(x=x,tree = tree,pars = pars,model = model,soc=tree$n[1])*(1-exp(-(max(tree$brts)-x)*pars[1]))
+    speciation_rate(x=x,tree = tree,pars = pars,model = model,soc=tree$n[1],sum_lambda = TRUE)*(1-exp(-(max(tree$brts)-x)*pars[1]))
   }
   brts_i = tree$brts
   brts_im1 = c(0,brts_i[-length(brts_i)])
@@ -59,10 +55,6 @@ intensity.numerical <- function(tree, pars, model){
   }
   return(inte)
 }
-
-
-### intensity rpd5
-
 
 intensity.rpd5c <- function(tree,pars){
   n = tree$n; Pt = c(0,tree$pd)
@@ -88,4 +80,7 @@ intensity.rpd5c <- function(tree,pars){
   return(inte)
 }
 
-
+ind.rpd5 <- function(x,c1,c2,c3,c4){
+  r = (c2 * x^2)/2 + c1*x - (c3*exp(c4*x)*(c2*(c4*x-1)+c1*c4))/(c4^2) 
+  return(r)
+}

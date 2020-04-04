@@ -38,7 +38,7 @@ augment_tree <- function(
         tree <- tree[order(tree$brts),]
         
         num_missing_branches <- num_missing_branches + 1
-        if(num_missing_branches>10000){
+        if(num_missing_branches>3000){
           stop("Current parameters leds to a large number of species")
         }
       }

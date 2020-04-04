@@ -1,5 +1,5 @@
-\name{MCEM.phylo}
-\alias{MCEM.phylo}
+\name{emphasis}
+\alias{emphasis}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{MCEM routine for parameters inference under diversity-dependance model
 %%  ~~function to do ... ~~
@@ -8,7 +8,7 @@
 We performs...
 }
 \usage{
-MCEM.phylo(tree, init_par, cutTime = 10, printpar = TRUE, impsam = FALSE, parallel = F, ips = 20, n_trees = 50)
+emphasis(brts,model="rpd1",init_par,soc=2,sample_size=200,parallel=TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
