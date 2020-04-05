@@ -62,7 +62,7 @@ clade = "Bucconidae"
 brts =  get(paste0("brts_",clade))
 pars = as.numeric(DD_est[DD_est$clade==clade,5:7])
 
-mc = emphasis(brts,model="rpd5c",init_par=c(pars,0),soc=2,sample_size=500,parallel=F,print_process=FALSE)
+mc = emphasis(brts,model="rpd5c",init_par=c(pars,0),soc=2,sample_size=500,parallel=F)
 
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
