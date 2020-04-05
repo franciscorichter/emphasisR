@@ -3,7 +3,7 @@ augment_tree <- function(
   pars,
   model,
   soc){
-  
+#  setTimeLimit(elapse=500, trans=T)
   mu = max(0,pars[1])
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
@@ -24,6 +24,10 @@ augment_tree <- function(
     
     lambda_max = max(l1, l2)
     ###
+    if(lambda_max>100){
+      stop("Current parameters leds to a huge speciation rate")
+    }
+    ####
     u1 = runif(1)
     next_speciation_time = cbt - log(x = u1)/lambda_max
     if(next_speciation_time < next_bt){  ## 
@@ -37,10 +41,11 @@ augment_tree <- function(
         tree <- rbind(tree, to_add_1, to_add_2)
         tree <- tree[order(tree$brts),]
         
-        num_missing_branches <- num_missing_branches + 1
-        if(num_missing_branches>3000){
-          stop("Current parameters leds to a large number of species")
-        }
+        
+      }
+      num_missing_branches <- num_missing_branches + 1
+      if(num_missing_branches>10000){
+        stop("Current parameters leds to a large number of species")
       }
     }
     cbt = min(next_speciation_time, next_bt)

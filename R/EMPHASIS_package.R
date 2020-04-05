@@ -29,24 +29,35 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   }
   
   M<-rbind(MC[[1]]$mcem,MC[[2]]$mcem)
+  input$sample_size = n.r = get_required_sampling_size(M)
+  msg6 = paste0("Required sampling size: ",n.r)
+  msg7 = "Phase 3: First estimation"
+  cat(msg5,msg7,msg6,sep="\n")
+  mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
+  M<-rbind(M,mc$mcem)
+  input$sample_size = n.r = get_required_sampling_size(M)
+  msg6 = paste0("Required sampling size: ",n.r)
+  msg7 = "Last phase: Second estimation"
+  cat(msg5,msg7,msg6,sep="\n")
+  mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
+  cat("Done") 
+  pars = as.numeric(colMeans(mc$mcem)[1:4])
+  cat(pars)
+  return(list(pars=pars,mc=mc,MCEM=MCEM,required_sample_size=n.r))
+  
+  
+}
+
+get_required_sampling_size <- function(M){
   n <- M$sample_size
   f<-  M$fhat
   
   hlp<-lm(f~I(1/n),weights = n)
   ab<-coef(hlp)
-
+  
   f.r<-ab[1]-.05
   n.r<-ceiling(ab[2]/(f.r-ab[1]))
-  msg6 = paste0("Required sampling size: ",n.r)
-  msg7 = "Inferring parameters"
-  cat(msg5,msg6,msg7,sep="\n")
-  input$sample_size = n.r
-  mc = mcEM(input,print_process = print_process,burnin = 10,tol = 0.01)
-  cat("Done") 
-  pars = as.numeric(colMeans(mc$mcem)[1:4])
-  return(list(pars=pars,mc=mc,MCEM=MCEM,required_sample_size=n.r))
-  
-  
+  return(n.r)
 }
 
 mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save_file=FALSE){
@@ -57,14 +68,11 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
   times = NULL
   while(sde > tol){
     i = i+1
-    if(print_process){
-      print(paste("Performing E step, iteration",i))
-      print(pars)
-    }
+    msg=paste("Performing E step, iteration",i)
+    cat("\r",msg) 
     st = mcE_step(brts = input$brts, pars = pars,sample_size=sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
-    if(print_process){
-      print(paste("Performing M step, iteration",i))
-    }
+    msg=paste("Performing M step, iteration",i)
+    cat("\r",msg) 
     M = M_step(st = st, init_par = pars, model = input$model)
     if(!is.infinite(M$po$value) & !is.na(log(st$fhat))){ 
       pars = M$po$par
@@ -77,10 +85,12 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
     if(i>burnin){
       mcem_est = mcem[floor(nrow(mcem)/2):nrow(mcem),]
       sde = sd(mcem_est$fhat)/nrow(mcem_est)
+      param = mean(mcem_est$par1)
       mde = mean(mcem_est$fhat)
       msg1 = paste("Iteration:",i,"Time per iteration:",round(st$E_time+M$M_time,digits = 2))
-      msg2 = paste("loglikelihood estimation:",mde,"Standard Error:",sde)
-      cat("\r",msg1, msg2, sep="\n")
+      msg2 = paste("loglikelihood estimation:",round(mde,digits = 3),"Standard Error:",round(sde,digits = 3))
+      msg3 = paste("parameter estimation:",round(pars,digits = 3))
+      cat("\r",msg1, msg2, msg3,sep="\n")
       #cat(msg2)
     }else{
       times = c(times,st$E_time+M$M_time)
