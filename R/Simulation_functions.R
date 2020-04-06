@@ -26,7 +26,7 @@ sim.tree_rpd1 <- function(pars,ct,soc,drop_extinct=TRUE){
   N = soc
   mu = max(0,pars[1])
   while((cbt < ct)  &  (N >= soc)){
-    lambda_ct = pars[2] + pars[3]*N  # diversity dependence only 
+    lambda_ct = max(0,pars[2] + pars[3]*N)  # diversity dependence only 
     rate_max = (lambda_ct+mu)*N
     u1 = runif(1)
     next_event_time = cbt-log(x = u1)/rate_max
@@ -71,18 +71,18 @@ sim.tree_rpd5c <- function(pars,ct,soc,drop_extinct=TRUE){
   mu = max(0,pars[1])
   P = 0
   while((cbt < ct)  &  (N >= soc)){
-    lambda_mx = max(0,pars[2] + pars[3]*N  +  ((P + N*(ct-cbt))/N -cbt)*pars[4])
+    lambda_mx = max(0,pars[2] + pars[3]*N  +  ((P + N*(ct-cbt)-cbt)/N )*pars[4])
     rate_max = (lambda_mx+mu)*N 
     u1 = runif(1)
     next_event_time = cbt-log(x = u1)/rate_max
-    
+    P = P + N*(next_event_time-cbt)
     if(next_event_time < ct){
       u2 = runif(1)
-      lambda_ct = max(0,pars[2] + pars[3]*N  +  ((P+N*(next_event_time-cbt))/N - next_event_time)*pars[4])
+      lambda_ct = max(0,pars[2] + pars[3]*N  +  ((P+N*(next_event_time-cbt) - next_event_time)/N)*pars[4])
       pt =( (lambda_ct+mu)*N )/rate_max  
+      
       if(u2<pt){
         to = sample(c(1,0),size=1,prob=c(lambda_ct,mu)/(lambda_ct+mu))
-        P = P + N*(next_event_time-cbt)
         if(to == 1){
           N = N + 1
         }else{
