@@ -35,15 +35,19 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   cat(msg5,msg7,msg6,sep="\n")
   mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
   M<-rbind(M,mc$mcem)
-  input$sample_size = n.r = get_required_sampling_size(M)
-  msg6 = paste0("Required sampling size: ",n.r)
-  msg7 = "Last phase: Second estimation"
-  cat(msg5,msg7,msg6,sep="\n")
-  mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
+  n.r = get_required_sampling_size(M)
+  if(n.r>input$sample_size){
+    input$sample_size = n.r
+    msg6 = paste0("Required sampling size: ",n.r)
+    msg7 = "Last phase: Second estimation"
+    cat(msg5,msg7,msg6,sep="\n")
+    mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
+    M<-rbind(M,mc$mcem)
+  }
   cat("Done") 
   pars = as.numeric(colMeans(mc$mcem)[1:4])
   cat(pars)
-  return(list(pars=pars,mc=mc,MCEM=MCEM,required_sample_size=n.r))
+  return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r))
   
   
 }
@@ -69,10 +73,10 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
   while(sde > tol){
     i = i+1
     msg=paste("Performing E step, iteration",i)
-    cat("\r",msg) 
+   # cat("\r",msg) 
     st = mcE_step(brts = input$brts, pars = pars,sample_size=sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
     msg=paste("Performing M step, iteration",i)
-    cat("\r",msg) 
+  #  cat("\r",msg) 
     M = M_step(st = st, init_par = pars, model = input$model)
     if(!is.infinite(M$po$value) & !is.na(log(st$fhat))){ 
       pars = M$po$par
@@ -89,8 +93,8 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       mde = mean(mcem_est$fhat)
       msg1 = paste("Iteration:",i,"Time per iteration:",round(st$E_time+M$M_time,digits = 2))
       msg2 = paste("loglikelihood estimation:",round(mde,digits = 3),"Standard Error:",round(sde,digits = 3))
-      msg3 = paste("parameter estimation:",round(pars,digits = 3))
-      cat("\r",msg1, msg2, msg3,sep="\n")
+      #msg3 = paste("parameter estimation:",round(pars,digits = 3))
+      cat("\r",msg1, msg2, sep="\n")
       #cat(msg2)
     }else{
       times = c(times,st$E_time+M$M_time)
