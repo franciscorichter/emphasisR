@@ -45,7 +45,7 @@ intensity.rpd1 <- function(tree, pars){
 
 intensity.numerical <- function(tree, pars, model){
   nh_rate <- function(x){
-    speciation_rate(x=x,tree = tree,pars = pars,model = model,soc=tree$n[1],sum_lambda = TRUE)*(1-exp(-(max(tree$brts)-x)*pars[1]))
+    speciation_rate(tm = x,tree = tree,pars = pars,model = model,soc=tree$n[1],sum_lambda = TRUE)*(1-exp(-(max(tree$brts)-x)*pars[1]))
   }
   brts_i = tree$brts
   brts_im1 = c(0,brts_i[-length(brts_i)])
