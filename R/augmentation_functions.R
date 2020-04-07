@@ -34,6 +34,10 @@ augment_tree <- function(
       u2 = runif(1)
       pt = speciation_rate(next_speciation_time,tree,pars,model,soc=soc,sum_lambda = TRUE)*(1-exp(-mu*(b-next_speciation_time)))/lambda_max
       if(u2<pt){
+        ###
+        # here a calculation of the proper limit b should be calculated, otherwise the sampler might provide trees with likelihood zero.
+        
+        ###
         extinction_time = next_speciation_time + truncdist::rtrunc(1,"exp",a = 0, b = (b-next_speciation_time),rate=mu)
         
         to_add_1 <- c(next_speciation_time, extinction_time, 1)
