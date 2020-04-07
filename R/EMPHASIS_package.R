@@ -99,10 +99,10 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       #cat("\r",msg1, msg2, sep="\n")
       #cat(msg2)
       msg = paste("Remining time (convergence): ",round(time_p_it*(sde-0.1)/(sde0-sde),digits = 0),"sec")
-      cat("\r",msg) 
+      cat("\r",msg,sep="\n") 
     }else{
       msg = paste("Remining time (burn-in): ",round(time_p_it*(burnin-i),digits = 0),"sec")
-      cat("\r",msg) 
+      cat("\r",msg,) 
     }
   }
   return(list(mcem=mcem,st=st,M=M))

@@ -11,8 +11,9 @@ expectedLTT <- function(pars, ct=15, model, n_it= 100,color="blue",g=ggplot(),al
   for (i in 1:(n_it)){
     
     s = sim_brts(pars = pars,model = model,ct = ct)
-    df = data.frame(time=-s$brts,n=2:(length(s$brts)+1))
+    
     if(all_trees){
+      df = data.frame(time=-s$brts,n=2:(length(s$brts)+1))
       g = g+geom_line(data=df,aes(x=time,y=n),colour=color,alpha=0.1)
     }
     NE = c(NE,s$number_of_empty_trees)

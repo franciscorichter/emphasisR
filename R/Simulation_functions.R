@@ -1,26 +1,23 @@
-sim_brts = function(pars,model="rpd5c",ct,summary_sims=TRUE){
+sim_brts <- function(pars,model="rpd5c",ct){
   sim=0
   number_of_empty_trees=-1
   sim_tree = get(paste0("sim.tree_",model))
   while(length(sim)==1){
-    sim = sim_tree(pars = pars,ct=ct,soc=2,drop_extinct=TRUE)
+    sim = sim_tree(pars = pars,ct=ct,soc=2)
     number_of_empty_trees = number_of_empty_trees + 1 
   }
+  tree = sim$tree
+  sim = sim$brts
   brts = max(sim)-c(0,sim)
   sim = brts[-length(brts)]
-  if(summary_sims){
-    fwt = sim[length(sim)]
-    length_s = length(sim)
-    li = list(dim = length_s,fwt = fwt,brts=sim,number_of_empty_trees=number_of_empty_trees)
-  }else{
-    li = list(brts=sim,number_of_empty_trees=number_of_empty_trees)
-  }
-  return(li)
+  return(list(tree=tree,brts=sim,number_of_empty_trees=number_of_empty_trees))
 }
+
+
 
 ### simulation of trees 
 
-sim.tree_rpd1 <- function(pars,ct,soc,drop_extinct=TRUE){
+sim.tree_rpd1 <- function(pars,ct,soc){
   tree = NULL
   cbt = 0 
   N = soc
@@ -55,16 +52,13 @@ sim.tree_rpd1 <- function(pars,ct,soc,drop_extinct=TRUE){
     tree = 0
   }else{
     tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf))
-    if(drop_extinct){
-      brts = tree$brts[is.infinite(tree$t_ext) & tree$to==1]
-      tree = brts
-    }
+    brts = tree$brts[is.infinite(tree$t_ext) & tree$to==1]
   }
-  return(tree)
+  return(list(tree=tree,brts=brts))
 }
 
 
-sim.tree_rpd5c <- function(pars,ct,soc,drop_extinct=TRUE){
+sim.tree_rpd5c <- function(pars,ct,soc){
   tree = NULL
   cbt = 0 
   N = soc
@@ -95,7 +89,7 @@ sim.tree_rpd5c <- function(pars,ct,soc,drop_extinct=TRUE){
           }
           
         }
-        tree = rbind(tree,data.frame(brts=next_event_time,to=to,t_ext=Inf))
+        tree = rbind(tree,data.frame(brts=next_event_time,to=to,t_ext=Inf,lambda=lambda_ct))
         
       }
     }
@@ -103,13 +97,11 @@ sim.tree_rpd5c <- function(pars,ct,soc,drop_extinct=TRUE){
   }
   if(N==(soc-1)){
     tree = 0
+    brts = 0
   }else{
-    tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf))
-    if(drop_extinct){
-      brts = tree$brts[is.infinite(tree$t_ext) & tree$to==1]
-      tree = brts
-    }
+    tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf,lambda=lambda_ct))
+    brts = tree$brts[is.infinite(tree$t_ext) & tree$to==1]
   }
-  return(tree)
+  return(list(tree=tree,brts=brts))
 }
 
