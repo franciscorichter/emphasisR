@@ -16,11 +16,11 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   MCEM=mc$mcem
   input$pars = c(mean(tail(mc$mcem$par1,n = 10)),mean(tail(mc$mcem$par2,n = 10)),mean(tail(mc$mcem$par3,n = 10)),mean(tail(mc$mcem$par4,n = 10)))
   
-  cat(msg5,sep="\n")
+  cat("\n",msg5,sep="\n")
   cat( "Phase 2: Assesing required MC sampling size")
   MC = list()
   for(i in 1:2){
-    print(paste("Sampling size: ",as.character(input$sample_size*i)))
+    cat(paste("\n Sampling size: ",as.character(input$sample_size*i)))
     MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 1,tol = 0.01)
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
@@ -68,7 +68,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
   mcem = NULL
   sample_size = input$sample_size
   sde = 10; i=0
-  times = NULL
+  times = diffsd = NULL
   while(sde > tol){
     i = i+1
    # msg=paste("Performing E step, iteration",i)
@@ -91,6 +91,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       mcem_est = mcem[floor(nrow(mcem)/2):nrow(mcem),]
       sde0 = sde
       sde = sd(mcem_est$fhat)/nrow(mcem_est)
+      diffsd = c(diffdsd,sde-sde0)
       param = mean(mcem_est$par1)
       mde = mean(mcem_est$fhat)
       #msg1 = paste("Iteration:",i,"Time per iteration:",round(st$E_time+M$M_time,digits = 2))
@@ -98,7 +99,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       #msg3 = paste("parameter estimation:",round(pars,digits = 3))
       #cat("\r",msg1, msg2, sep="\n")
       #cat(msg2)
-      msg = paste("Remining time (convergence): ",round(time_p_it*(sde-0.1)/(sde0-sde),digits = 0),"sec")
+      msg = paste("Remining time (convergence): ",round(time_p_it*(sde-0.1)/(mean(diffsd)),digits = 0),"sec")
       cat("\r",msg) 
     }else{
       msg = paste("Remining time (burn-in): ",round(time_p_it*(burnin-i),digits = 0),"sec")
