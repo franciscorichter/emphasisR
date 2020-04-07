@@ -102,7 +102,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       cat("\r",msg,sep="\n") 
     }else{
       msg = paste("Remining time (burn-in): ",round(time_p_it*(burnin-i),digits = 0),"sec")
-      cat("\r",msg,) 
+      cat("\r",msg,sep="\n") 
     }
   }
   return(list(mcem=mcem,st=st,M=M))
