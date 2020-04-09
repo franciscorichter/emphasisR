@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 sim_brts <- function(pars,model="rpd5c",ct){
   sim=0
   number_of_empty_trees=-1
@@ -15,7 +14,6 @@ sim_brts <- function(pars,model="rpd5c",ct){
 }
 
 
-=======
 sim_brts_bootstrap <- function(pars,model="rpd5c",ct,bootstrap_n=1){
   
   sim_tree = get(paste0("sim.tree_",model))
@@ -35,7 +33,6 @@ sim_brts_bootstrap <- function(pars,model="rpd5c",ct,bootstrap_n=1){
   return(SIMS)
 }
 
->>>>>>> Stashed changes
 
 ### simulation of trees 
 
@@ -64,7 +61,7 @@ sim.tree_rpd1 <- function(pars,ct,soc){
             tree$t_ext[ext_spec] = next_event_time
           }
         }
-        tree = rbind(tree,data.frame(brts=next_event_time,to=to,t_ext=Inf))
+        tree = rbind(tree,data.frame(brts=next_event_time,to=to,t_ext=Inf,lambda=lambda_ct))
         
       }
     }
@@ -73,7 +70,7 @@ sim.tree_rpd1 <- function(pars,ct,soc){
   if(N==(soc-1)){
     tree = 0
   }else{
-    tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf))
+    tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf,lambda=lambda_ct))
     brts = tree$brts[is.infinite(tree$t_ext) & tree$to==1]
   }
   return(list(tree=tree,brts=brts))
