@@ -91,7 +91,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       mcem_est = mcem[floor(nrow(mcem)/2):nrow(mcem),]
       sde0 = sde
       sde = sd(mcem_est$fhat)/nrow(mcem_est)
-      diffsd = c(diffdsd,sde-sde0)
+      diffsd = c(diffsd,sde-sde0)
       param = mean(mcem_est$par1)
       mde = mean(mcem_est$fhat)
       #msg1 = paste("Iteration:",i,"Time per iteration:",round(st$E_time+M$M_time,digits = 2))
