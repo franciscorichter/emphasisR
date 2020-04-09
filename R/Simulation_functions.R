@@ -1,8 +1,8 @@
 sim_brts <- function(pars,model="rpd5c",ct){
-  sim=0
-  number_of_empty_trees=-1
+  sim = 0
+  number_of_empty_trees = -1
   sim_tree = get(paste0("sim.tree_",model))
-  while(length(sim)==1){
+  while(length(sim) == 1){
     sim = sim_tree(pars = pars,ct=ct,soc=2)
     number_of_empty_trees = number_of_empty_trees + 1 
   }
@@ -13,6 +13,25 @@ sim_brts <- function(pars,model="rpd5c",ct){
   return(list(tree=tree,brts=sim,number_of_empty_trees=number_of_empty_trees))
 }
 
+
+sim_brts_bootstrap <- function(pars,model="rpd5c",ct,bootstrap_n=1){
+  
+  sim_tree = get(paste0("sim.tree_",model))
+  SIMS = vector(mode = "list",length = bootstrap_n)
+  sim = NULL
+  for(i in 1:bootstrap_n){
+    sim$brts = 0
+    number_of_empty_trees = -1
+    while(length(sim$brts) == 1){
+      sim = sim_tree(pars = pars,ct=ct,soc=2)
+      number_of_empty_trees = number_of_empty_trees + 1 
+    }
+    SIMS[[i]] = c(sim,list(number_of_empty_trees=number_of_empty_trees))
+
+  }
+    
+  return(SIMS)
+}
 
 
 ### simulation of trees 
@@ -42,7 +61,7 @@ sim.tree_rpd1 <- function(pars,ct,soc){
             tree$t_ext[ext_spec] = next_event_time
           }
         }
-        tree = rbind(tree,data.frame(brts=next_event_time,to=to,t_ext=Inf))
+        tree = rbind(tree,data.frame(brts=next_event_time,to=to,t_ext=Inf,lambda=lambda_ct))
         
       }
     }
@@ -50,8 +69,9 @@ sim.tree_rpd1 <- function(pars,ct,soc){
   }
   if(N==(soc-1)){
     tree = 0
+    brts = 0
   }else{
-    tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf))
+    tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf,lambda=lambda_ct))
     brts = tree$brts[is.infinite(tree$t_ext) & tree$to==1]
   }
   return(list(tree=tree,brts=brts))

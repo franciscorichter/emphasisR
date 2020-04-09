@@ -4,28 +4,27 @@ n_spec <- function(cutime,brts){
 
 ##  Ltt expected plots 
 
-expectedLTT <- function(pars, ct=15, model, n_it= 100,color="blue",g=ggplot(),all_trees=TRUE){ # it should also include model
-  BT = vector("list", n_it)
-  NE=ne=NULL
-  MEANS_N = matrix(nrow=n_it,ncol=length(input$brts))
+simulation_analysis <- function(pars,model,ct,n_it=100,expectedLTT=TRUE,divers_rate=TRUE,gLTT = ggplot(),ggLA = ggplot()){
+  S = sim_brts_bootstrap(pars = pars,model = model,ct = ct, bootstrap_n = n_it)
+  MEANS_N = MEANS_l = matrix(nrow=n_it,ncol=100)
+  if(model=="rpd1") color = "blue"
+  if(model=="rpd5c") color = "Darkgreen"
   for (i in 1:(n_it)){
+    s = S[[i]]
+    df = data.frame(time=s$brts,n=2:(length(s$brts)+1))
+    df$time = -(max(df$time)-c(0,df$time[-nrow(df)]))
+    gLTT = gLTT+geom_line(data=df,aes(x=time,y=n),colour=color,alpha=0.1)
+    MEANS_N[i,] = sapply(seq(-ct,0,length=100), n_spec,brts=df$time)
+    df = data.frame(time = seq(-ct,0,length=100), mean=colMeans(MEANS_N))
+    gLTT = gLTT + geom_line(data = df, aes(x=time,y=mean),colour=color)
+    df = s$tree
+    ggLA = ggLA + geom_line(data=df,aes(x=brts,y=lambda),colour=color,alpha=0.1)
+    MEANS_l[i,] = sapply(seq(0,ct,length=100), speciation_rate,tree=df,pars=pars,model=model,soc=2)
+    df = data.frame(time = seq(0,ct,length=100), mean=colMeans(MEANS_l))
+    ggLA = ggLA + geom_line(data = df, aes(x=time,y=mean),colour=color)
     
-    s = sim_brts(pars = pars,model = model,ct = ct)
-    
-    if(all_trees){
-      df = data.frame(time=-s$brts,n=2:(length(s$brts)+1))
-      g = g+geom_line(data=df,aes(x=time,y=n),colour=color,alpha=0.1)
-    }
-    NE = c(NE,s$number_of_empty_trees)
-    BT[[i]] = s$brts
-    ne = c(ne,length(s$brts))
-    MEANS_N[i,] = sapply(-input$brts, n_spec,brts=-s$brts)
   }
-  
-  expect = colMeans(MEANS_N)
-  df = data.frame(time=-input$brts,n=expect)
-  g = g+geom_line(data=df,aes(x=time,y=n),colour=color,alpha=0.9)
-  g  + geom_line(data=data.frame(time=-input$brts,n=1:(length(input$brts))),aes(x=time,y=n) )
-  return(g)
+  return(list(gLTT=gLTT,ggLA=ggLA))
 }
+
 
