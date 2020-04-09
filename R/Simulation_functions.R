@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 sim_brts <- function(pars,model="rpd5c",ct){
   sim=0
   number_of_empty_trees=-1
@@ -14,6 +15,27 @@ sim_brts <- function(pars,model="rpd5c",ct){
 }
 
 
+=======
+sim_brts_bootstrap <- function(pars,model="rpd5c",ct,bootstrap_n=1){
+  
+  sim_tree = get(paste0("sim.tree_",model))
+  SIMS = vector(mode = "list",length = bootstrap_n)
+  sim = NULL
+  for(i in 1:bootstrap_n){
+    sim$brts = 0
+    number_of_empty_trees = -1
+    while(length(sim$brts) == 1){
+      sim = sim_tree(pars = pars,ct=ct,soc=2)
+      number_of_empty_trees = number_of_empty_trees + 1 
+    }
+    SIMS[[i]] = c(sim,list(number_of_empty_trees=number_of_empty_trees))
+
+  }
+    
+  return(SIMS)
+}
+
+>>>>>>> Stashed changes
 
 ### simulation of trees 
 

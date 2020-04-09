@@ -20,18 +20,19 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   cat( "Phase 2: Assesing required MC sampling size")
   MC = list()
   for(i in 1:2){
-    cat(paste("\n Sampling size: ",as.character(input$sample_size*i)))
+    cat(paste("\n Sampling size: ",as.character(input$sample_size)))
     MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 1,tol = 0.01)
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
     MCEM = rbind(MCEM,mc$mcem)
+    input$sample_size = input$sample_size*2
   }
   
   M<-rbind(MC[[1]]$mcem,MC[[2]]$mcem)
   input$sample_size = n.r = get_required_sampling_size(M)
   msg6 = paste0("Required sampling size: ",n.r)
   msg7 = "Phase 3: First estimation"
-  cat(msg5,msg7,msg6,sep="\n")
+  cat("\n",msg5,msg7,msg6,sep="\n")
   mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
   M<-rbind(M,mc$mcem)
   n.r = get_required_sampling_size(M)
