@@ -100,7 +100,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       mcem_est = mcem[floor(nrow(mcem)/2):nrow(mcem),]
       sde0 = sde
       sde = sd(mcem_est$fhat)/nrow(mcem_est)
-      diffsd = c(diffsd,sde-sde0)
+      diffsd = c(diffsd,min(0,sde-sde0))
       param = mean(mcem_est$par1)
       mde = mean(mcem_est$fhat)
       #msg1 = paste("Iteration:",i,"Time per iteration:",round(st$E_time+M$M_time,digits = 2))
@@ -108,7 +108,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       #msg3 = paste("parameter estimation:",round(pars,digits = 3))
       #cat("\r",msg1, msg2, sep="\n")
       #cat(msg2)
-      msg = paste("Remining time (convergence): ",round(time_p_it*(sde-0.1)/(mean(diffsd)),digits = 0),"sec")
+      msg = paste("Iteration:",i," Remining time (convergence): ",round(time_p_it*(sde-0.1)/(mean(diffsd)),digits = 0),"sec")
       cat("\r",msg) 
     }else{
       msg = paste("Remining time (burn-in): ",round(time_p_it*(burnin-i),digits = 0),"sec")
