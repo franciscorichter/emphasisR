@@ -12,15 +12,15 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   cat(msg1,msg2,msg3,msg4,msg5,sep="\n")
   
   cat( "Performing Phase 1: burn-in",sep= "\n")
-  mc = mcEM(input,print_process = FALSE,tol = 0.1,burnin = 20)
+  mc = mcEM(input,print_process = F,tol = 0.1,burnin = 20)
   MCEM=mc$mcem
   input$pars = c(mean(tail(mc$mcem$par1,n = 10)),mean(tail(mc$mcem$par2,n = 10)),mean(tail(mc$mcem$par3,n = 10)),mean(tail(mc$mcem$par4,n = 10)))
   
   cat("\n",msg5,sep="\n")
-  cat( "Phase 2: Assesing required MC sampling size \n")
+  cat( "Phase 2: Assesing required MC sampling size")
   MC = list()
   for(i in 1:2){
-    cat(paste("Sampling size: ",as.character(input$sample_size),"\n"))
+    cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
     MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 1,tol = 0.01)
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
@@ -36,19 +36,20 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   cat("\n",msg5,msg7,msg6,sep="\n")
   mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
   M<-rbind(M,mc$mcem)
-  n.r = get_required_sampling_size(M)
+  n.r = get_required_sampling_size(M,tol=0.01)
   if(n.r>input$sample_size){
     input$sample_size = n.r
     msg6 = paste0("Required sampling size: ",n.r)
     msg7 = "Last phase: Second estimation"
-    cat(msg5,msg7,msg6,sep="\n")
+    cat("\n",msg5,msg7,msg6,sep="\n")
     mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
     M<-rbind(M,mc$mcem)
   }
-  cat("Done") 
+  cat("\n Done \n") 
   pars = as.numeric(colMeans(mc$mcem)[1:4])
   cat(pars)
-  return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r))
+  sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = 0.01)
+  return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,diag1=sp))
   
   
 }
@@ -108,7 +109,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       #msg3 = paste("parameter estimation:",round(pars,digits = 3))
       #cat("\r",msg1, msg2, sep="\n")
       #cat(msg2)
-      msg = paste("Iteration:",i," Remining time (convergence): ",round(time_p_it*(sde-0.1)/(mean(diffsd)),digits = 0),"sec")
+      msg = paste("Iteration:",i," Remining time (convergence): ",round(time_p_it*(sde-tol)/(mean(diffsd)),digits = 0),"sec")
       cat("\r",msg) 
     }else{
       msg = paste("Remining time (burn-in): ",round(time_p_it*(burnin-i),digits = 0),"sec")
@@ -137,10 +138,10 @@ mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE
   logg = sapply(trees,sampling_prob, pars=pars,model=model)
   E_time = get.time(time)
   log_weights = logf-logg
-  log_weights = log_weights - max(log_weights)
-  w = exp(log_weights)
+  log_weights_norm = log_weights - max(log_weights)
+  w = exp(log_weights_norm)
   ####
-  En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
+  En = list(weights=w,trees=trees,fhat=mean(exp(log_weights)),logf=logf,logg=logg,dim=dim,E_time=E_time)
   return(En)
 
 }
