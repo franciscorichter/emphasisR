@@ -4,28 +4,54 @@ n_spec <- function(cutime,brts){
 
 ##  Ltt expected plots 
 
-expectedLTT <- function(pars, ct=15, model, n_it= 100,color="blue",g=ggplot(),all_trees=TRUE){ # it should also include model
-  BT = vector("list", n_it)
-  NE=ne=NULL
-  MEANS_N = matrix(nrow=n_it,ncol=length(input$brts))
+simulation_analysis <- function(pars,model,ct,n_it=100,expectedLTT=TRUE,divers_rate=TRUE,gLTT = ggplot(),ggLA = ggplot()){
+  S = sim_brts_bootstrap(pars = pars,model = model,ct = ct, bootstrap_n = n_it)
+  MEANS_N = MEANS_l = matrix(nrow=n_it,ncol=100)
+  if(model=="rpd1") color = "blue"
+  if(model=="rpd5c") color = "Darkgreen"
   for (i in 1:(n_it)){
+    s = S[[i]]
+    df = data.frame(time=s$brts,n=2:(length(s$brts)+1))
+    df$time = -(max(df$time)-c(0,df$time[-nrow(df)]))
+    gLTT = gLTT+geom_line(data=df,aes(x=time,y=n),colour=color,alpha=0.1)
+    MEANS_N[i,] = sapply(seq(-ct,0,length=100), n_spec,brts=df$time)
+    df = data.frame(time = seq(-ct,0,length=100), mean=colMeans(MEANS_N))
+    gLTT = gLTT + geom_line(data = df, aes(x=time,y=mean),colour=color)
+    df = s$tree
+    ggLA = ggLA + geom_line(data=df,aes(x=brts,y=lambda),colour=color,alpha=0.1)
+    MEANS_l[i,] = sapply(seq(0,ct,length=100), speciation_rate,tree=df,pars=pars,model=model,soc=2)
+    df = data.frame(time = seq(0,ct,length=100), mean=colMeans(MEANS_l))
+    ggLA = ggLA + geom_line(data = df, aes(x=time,y=mean),colour=color)
     
-    s = sim_brts(pars = pars,model = model,ct = ct)
-    
-    if(all_trees){
-      df = data.frame(time=-s$brts,n=2:(length(s$brts)+1))
-      g = g+geom_line(data=df,aes(x=time,y=n),colour=color,alpha=0.1)
-    }
-    NE = c(NE,s$number_of_empty_trees)
-    BT[[i]] = s$brts
-    ne = c(ne,length(s$brts))
-    MEANS_N[i,] = sapply(-input$brts, n_spec,brts=-s$brts)
   }
-  
-  expect = colMeans(MEANS_N)
-  df = data.frame(time=-input$brts,n=expect)
-  g = g+geom_line(data=df,aes(x=time,y=n),colour=color,alpha=0.9)
-  g  + geom_line(data=data.frame(time=-input$brts,n=1:(length(input$brts))),aes(x=time,y=n) )
-  return(g)
+  return(list(gLTT=gLTT,ggLA=ggLA))
 }
 
+
+sample_size_determination <- function(f,n,tol=0.05){    
+  
+  fs = c(median(f[n==min(n)]),median(f[n==max(n)]))
+  ns = c(min(n),max(n))
+  hlp<-lm(fs~I(1/ns),weights = ns)
+  ab<-coef(hlp)
+  df1 = data.frame(n=n,f=f)
+  f.r <- ab[1]-tol
+  n.r <- ab[2]/(f.r-ab[1])
+  
+  nn <- min(n):2000
+  ff <- ab[1]+ab[2]/nn
+  df2 = data.frame(nn=nn,ff=ff)
+  
+  theme_set(theme_minimal())
+  ggbp = ggplot()+geom_boxplot(data=df1,aes(x=n,y=f,group=n,fill=n))+
+    geom_line(data=df2,aes(x=nn,y=ff),colour="Darkgreen",size=1)+
+    geom_hline(yintercept = ab[1],colour="purple")+
+    # theme(legend.position = "none",panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    theme(legend.position = "none")+
+    xlab("Monte Carlo Sample Size")+
+    ylab("loglikelihood Estimation")+
+    #  annotate(geom="text",x=2200, y=-62, label="Required Sample Size")+
+    # geom_segment(data=data.frame(x=2300, y=-63, vx=2300, vy=-76), mapping=aes(x=x, y=y, xend=vx, yend=vy), arrow=arrow(), size=1, color="blue") + 
+    geom_point(data=data.frame(x=n.r, y=f.r), mapping=aes(x=x, y=y), size=1, shape=21, fill="white")
+  return(list(plot=ggbp,n.r=n.r))
+}

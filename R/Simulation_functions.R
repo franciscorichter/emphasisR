@@ -1,19 +1,3 @@
-sim_brts <- function(pars,model="rpd5c",ct){
-  sim=0
-  number_of_empty_trees=-1
-  sim_tree = get(paste0("sim.tree_",model))
-  while(length(sim)==1){
-    sim = sim_tree(pars = pars,ct=ct,soc=2)
-    number_of_empty_trees = number_of_empty_trees + 1 
-  }
-  tree = sim$tree
-  sim = sim$brts
-  brts = max(sim)-c(0,sim)
-  sim = brts[-length(brts)]
-  return(list(tree=tree,brts=sim,number_of_empty_trees=number_of_empty_trees))
-}
-
-
 sim_brts_bootstrap <- function(pars,model="rpd5c",ct,bootstrap_n=1){
   
   sim_tree = get(paste0("sim.tree_",model))

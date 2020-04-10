@@ -17,10 +17,10 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   input$pars = c(mean(tail(mc$mcem$par1,n = 10)),mean(tail(mc$mcem$par2,n = 10)),mean(tail(mc$mcem$par3,n = 10)),mean(tail(mc$mcem$par4,n = 10)))
   
   cat("\n",msg5,sep="\n")
-  cat( "Phase 2: Assesing required MC sampling size")
+  cat( "Phase 2: Assesing required MC sampling size \n")
   MC = list()
   for(i in 1:2){
-    cat(paste("\n Sampling size: ",as.character(input$sample_size)))
+    cat(paste("Sampling size: ",as.character(input$sample_size),"\n"))
     MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 1,tol = 0.01)
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
@@ -29,6 +29,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   }
   
   M<-rbind(MC[[1]]$mcem,MC[[2]]$mcem)
+  #ss = sample_size_determination(f=M$fhat,n=M$sample_size)
   input$sample_size = n.r = get_required_sampling_size(M)
   msg6 = paste0("Required sampling size: ",n.r)
   msg7 = "Phase 3: First estimation"
@@ -52,14 +53,17 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   
 }
 
-get_required_sampling_size <- function(M){
+get_required_sampling_size <- function(M,median=TRUE,tol=.05){
   n <- M$sample_size
   f<-  M$fhat
-  
+  if(median){
+    f = c(median(f[n==min(n)]),median(f[n==max(n)]))
+    n = c(min(n),max(n))
+  }
   hlp<-lm(f~I(1/n),weights = n)
   ab<-coef(hlp)
   
-  f.r<-ab[1]-.05
+  f.r<-ab[1]-tol
   n.r<-ceiling(ab[2]/(f.r-ab[1]))
   return(n.r)
 }
@@ -77,6 +81,10 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
     st = mcE_step(brts = input$brts, pars = pars,sample_size=sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
    # msg=paste("Performing M step, iteration",i)
   #  cat("\r",msg) 
+    if(max(st$weight)==0){
+      print(st)
+      stop("Only zero likelihood trees, maybe there is underflow")
+    }
     M = M_step(st = st, init_par = pars, model = input$model)
     if(!is.infinite(M$po$value) & !is.na(log(st$fhat))){ 
       pars = M$po$par
@@ -129,6 +137,7 @@ mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE
   logg = sapply(trees,sampling_prob, pars=pars,model=model)
   E_time = get.time(time)
   log_weights = logf-logg
+  log_weights = log_weights - max(log_weights)
   w = exp(log_weights)
   ####
   En = list(weights=w,trees=trees,fhat=mean(w),logf=logf,logg=logg,dim=dim,E_time=E_time)
