@@ -29,17 +29,22 @@ simulation_analysis <- function(pars,model,ct,n_it=100,expectedLTT=TRUE,divers_r
 
 
 sample_size_determination <- function(f,n,tol=0.05,median=TRUE){    
-  sn = unique(n)
-  sn = sort(sn,decreasing = T)[1:2]
-  fs = c(median(f[n==min(sn)]),median(f[n==max(sn)]))
-  ns = c(min(sn),max(sn))
-  hlp<-lm(fs~I(1/ns),weights = ns)
+  
+  if(median){
+    sn = unique(n)
+    sn = sort(sn,decreasing = T)[1:2]
+    fs = c(median(f[n==min(sn)]),median(f[n==max(sn)]))
+    ns = c(min(sn),max(sn))
+    hlp<-lm(fs~I(1/ns),weights = ns)
+  }else{
+    hlp<-lm(f~I(1/n),weights = n)
+  }
   ab<-coef(hlp)
   df1 = data.frame(n=n,f=f)
   f.r <- ab[1]-tol
   n.r <- ab[2]/(f.r-ab[1])
   
-  nn <- min(n):2000
+  nn <- min(n):max(n)
   ff <- ab[1]+ab[2]/nn
   df2 = data.frame(nn=nn,ff=ff)
   
