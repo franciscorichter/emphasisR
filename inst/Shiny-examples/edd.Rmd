@@ -1,4 +1,0 @@
-
-Model Selected: Exponential Diverity dependence (EDD) 
-
-$$ log(\lambda_t) = \lambda_0 + \beta n_t, \qquad \mu_t = \mu_0 $$
