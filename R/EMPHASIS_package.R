@@ -1,5 +1,5 @@
 ### EMPHASIS functions
-emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=TRUE){
+emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,tol=0.01,parallel=TRUE){
 
   input = list(brts=brts,pars = init_par,sample_size=sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
   
@@ -21,7 +21,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   MC = list()
   for(i in 1:2){
     cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
-    MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 1,tol = 0.005)
+    MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 5,tol = tol)
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
     MCEM = rbind(MCEM,mc$mcem)
@@ -36,15 +36,15 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   msg6 = paste0("Required sampling size: ",n.r)
   msg7 = "Phase 3: First estimation"
   cat("\n",msg5,msg7,msg6,sep="\n")
-  mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.005)
+  mc = mcEM(input,print_process = FALSE,burnin = 10,tol = tol)
   M<-rbind(M,mc$mcem)
-  n.r = get_required_sampling_size(M,tol=0.01)
+  n.r = get_required_sampling_size(M,tol=tol)
   if(n.r>input$sample_size){
     input$sample_size = n.r
     msg6 = paste0("Required sampling size: ",n.r)
     msg7 = "Last phase: Second estimation"
     cat("\n",msg5,msg7,msg6,sep="\n")
-    mc = mcEM(input,print_process = FALSE,burnin = 10,tol = 0.01)
+    mc = mcEM(input,print_process = FALSE,burnin = 10,tol = tol)
     M<-rbind(M,mc$mcem)
   }
   msg6 = paste0("Required sampling size: ",n.r)
@@ -52,7 +52,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,parallel=T
   cat("\n",msg5,msg7,msg6,sep="\n")
   pars = as.numeric(colMeans(mc$mcem)[1:4])
   cat(pars)
-  sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = 0.01)
+  sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol)
   return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,diag1=sp))
 }
 
