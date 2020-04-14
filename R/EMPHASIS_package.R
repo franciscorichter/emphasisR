@@ -1,9 +1,10 @@
 ### EMPHASIS functions
-emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,tol=0.01,parallel=TRUE){
+emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,tol=0.01,parallel=TRUE,name="NN"){
 
   input = list(brts=brts,pars = init_par,sample_size=sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
   
   msg1 = paste("Initializing emphasis...")
+  msg2 = paste("Name of the clade: ",name)
   msg2 = paste("Age of the tree: ",max(input$brts))
   msg3 = paste("Number of speciations: ",length(input$brts))
   msg4 = paste("Diversification model to fit:",input$model)
@@ -53,7 +54,8 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,tol=0.01,p
   pars = as.numeric(colMeans(mc$mcem)[1:4])
   cat(pars)
   sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol)
-  return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,diag1=sp))
+  sp$plot = sp$plot + title(name) + theme_bw()
+  return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,diag1=sp,clade=name,sample_size_completition=(sp$n.r<input$sample_size)))
 }
 
 get_required_sampling_size <- function(M,median=FALSE,tol=.05){

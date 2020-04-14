@@ -53,6 +53,7 @@ sim.tree_rpd1 <- function(pars,ct,soc){
   }
   if(N==(soc-1)){
     tree = 0
+    brts = 0
   }else{
     tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf,lambda=lambda_ct))
     brts = tree$brts[is.infinite(tree$t_ext) & tree$to==1]
