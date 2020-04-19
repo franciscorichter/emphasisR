@@ -56,7 +56,6 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   pars = as.numeric(colMeans(mc$mcem)[1:4])
   cat(pars)
   sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol)
-  sp$plot = sp$plot + title(name) + theme_bw()
   return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,diag1=sp,clade=name,sample_size_completition=(sp$n.r<input$sample_size)))
 }
 
