@@ -1,9 +1,14 @@
-speciation_rate <- function(tm,tree,pars,model,soc,sum_lambda=FALSE){
+speciation_rate <- function(tm,tree,pars,model,sum_lambda=FALSE,soc=2){
+  #soc = tree$n[1]
   speciation_r = get(paste0("lambda.", model))
   lambda = speciation_r(tm,tree,pars,soc=soc,sum_lambda=sum_lambda)
   return(lambda)
 }
 
+extinction_rate <- function(pars,tm=NULL,tree=NULL,model=NULL,sum_mu=FALSE){
+  mu = max(0,pars[1])
+  return(mu)
+}
 
 # Speciations rates 
 

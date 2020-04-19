@@ -59,7 +59,7 @@ loglik.tree.rpd5c <- function(pars,tree){
     }
     log.lik = -sum(inte) + sum(log(rho))
   }
-  return
+  return(log.lik)
   
 }
 

@@ -1,7 +1,7 @@
 ### EMPHASIS functions
 emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,name="NN",burnin_sample_size=200,pilot_sample_size1=1000,pilot_sample_size2=1500){
 
-  input = list(brts=brts,pars = init_par,sample_size=sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
+  input = list(brts=brts,pars = init_par,sample_size=burnin_sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
   
   msg1 = paste("Initializing emphasis...")
   msg2 = paste("Name of the clade: ",name)
@@ -20,6 +20,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   cat("\n",msg5,sep="\n")
   cat( "Phase 2: Assesing required MC sampling size")
   MC = list()
+  
   input$sample_size = pilot_sample_size1
   
   for(i in 1:2){
@@ -46,7 +47,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
     msg6 = paste0("Required sampling size: ",n.r)
     msg7 = "Last phase: Second estimation"
     cat("\n",msg5,msg7,msg6,sep="\n")
-    mc = mcEM(input,print_process = FALSE,burnin = 10,tol = tol)
+    mc = mcEM(input,print_process = FALSE,burnin = 5,tol = tol)
     M<-rbind(M,mc$mcem)
   }
   msg6 = paste0("Required sampling size: ",n.r)
