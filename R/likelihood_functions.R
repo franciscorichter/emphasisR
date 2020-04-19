@@ -59,10 +59,35 @@ loglik.tree.rpd5c <- function(pars,tree){
     }
     log.lik = -sum(inte) + sum(log(rho))
   }
-  return(log.lik)
+  return
+  
 }
 
 ############################################################
 
+loglik.tree.numerical <- function(pars, tree, model){
+  to = tree$to
+  to = head(to,-1)
+  to[to!=0] = 1
+  #
+  speciations = sapply(spec_times, speciation_rate,pars=pars,model=model,soc=tree$n[1])
+  extinctions = pars[1]*sum(to==0)
+  # 
+  inte = intensity()
+  loglik = 
+  return(loglik)
+}
 
 
+intensity.numerical2 <- function(tree, pars, model){
+  nh_rate <- function(x){
+    nh_rate_T(x,model,pars,tree)
+  }
+  brts_i = tree$brts
+  brts_im1 = c(0,brts_i[-length(brts_i)])
+  inte = vector(mode="numeric",length = length(brts_i))
+  for(i in 1:length(brts_i)){
+    inte[i] = pracma:::quad(f = Vectorize(nh_rate),xa = brts_im1[i]+0.00000000001,xb = brts_i[i])
+  }
+  return(inte)
+}

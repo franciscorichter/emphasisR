@@ -1,5 +1,5 @@
 ### EMPHASIS functions
-emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,tol=0.01,parallel=TRUE,name="NN"){
+emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,name="NN",burnin_sample_size=200,pilot_sample_size1=1000,pilot_sample_size2=1500){
 
   input = list(brts=brts,pars = init_par,sample_size=sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
   
@@ -20,19 +20,20 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,tol=0.01,p
   cat("\n",msg5,sep="\n")
   cat( "Phase 2: Assesing required MC sampling size")
   MC = list()
+  input$sample_size = pilot_sample_size1
+  
   for(i in 1:2){
     cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
     MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 5,tol = tol)
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
     MCEM = rbind(MCEM,mc$mcem)
-    input$sample_size = input$sample_size*2
+    input$sample_size = pilot_sample_size2
   }
   
   M<-rbind(MC[[1]]$mcem,MC[[2]]$mcem)
-  #ss = sample_size_determination(f=M$fhat,n=M$sample_size)
-  n.r = get_required_sampling_size(M,tol = 0.005)
-  if(n.r<0) n.r = get_required_sampling_size(M,tol = 0.005,median = TRUE)
+  n.r = get_required_sampling_size(M,tol = tol)
+  if(n.r<0) n.r = get_required_sampling_size(M,tol = tol,median = TRUE)
   input$sample_size = n.r
   msg6 = paste0("Required sampling size: ",n.r)
   msg7 = "Phase 3: First estimation"
@@ -56,23 +57,6 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,sample_size=200,tol=0.01,p
   sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol)
   sp$plot = sp$plot + title(name) + theme_bw()
   return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,diag1=sp,clade=name,sample_size_completition=(sp$n.r<input$sample_size)))
-}
-
-get_required_sampling_size <- function(M,median=FALSE,tol=.05){
-  n <- M$sample_size
-  f<-  M$fhat
-  if(median){
-    sn = unique(n)
-    sn = sort(sn,decreasing = T)[1:2]
-    f = c(median(f[n==min(sn)]),median(f[n==max(sn)]))
-    n = c(min(sn),max(sn))
-  }
-  hlp<-lm(f~I(1/n),weights = n)
-  ab<-coef(hlp)
-  
-  f.r<-ab[1]-tol
-  n.r<-ceiling(ab[2]/(f.r-ab[1]))
-  return(n.r)
 }
 
 mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save_file=FALSE){
@@ -115,7 +99,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20,file=".RData",save
       #msg3 = paste("parameter estimation:",round(pars,digits = 3))
       #cat("\r",msg1, msg2, sep="\n")
       #cat(msg2)
-      msg = paste("Iteration:",i," Remining time (convergence): ",round(time_p_it*(sde-tol)/(mean(diffsd)),digits = 0),"sec")
+      msg = paste("Iteration:",i," SE of the loglikelihood: ",sde)
       cat("\r",msg) 
     }else{
       msg = paste("Remining time (burn-in): ",round(time_p_it*(burnin-i),digits = 0),"sec")

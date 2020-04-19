@@ -1,9 +1,10 @@
 augment_tree <- function(
   brts,
-  pars,
+#  pars,
   model,
   soc){
 #  setTimeLimit(elapse=500, trans=T)
+  pars = model$pars
   mu = max(0,pars[1])
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
@@ -23,8 +24,9 @@ augment_tree <- function(
     l2 <- speciation_rate(tm = next_bt,tree = tree,pars = pars,model = model,soc = soc,sum_lambda = TRUE)*(1-exp(-mu*(b-next_bt)))
     
     lambda_max = max(l1, l2)
+    
     ###
-    if(lambda_max>100){
+    if(lambda_max>500){
       stop("Current parameters leds to a huge speciation rate")
     }
     ####

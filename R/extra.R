@@ -17,8 +17,6 @@ phylodiversity <- function(tm,tree,soc){
   return(sum(dt*(soc:(length(dt)+soc-1))))
 }
 
-
-
 data_to_table <- function(df,replicant,left,right){
   df = df[df$rep==replicant,]
   df = df[df$iteration %in% left:right,]

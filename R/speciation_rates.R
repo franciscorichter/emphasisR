@@ -26,6 +26,11 @@ lambda.rpd5c <- function(tm,tree,pars,soc,sum_lambda=FALSE){
   
 }
 
+
+nh_rate_T <- function(x,model,pars,tree){
+  speciation_rate(tm=x,tree = tree,pars = pars,model = model,soc=tree$n[1],sum_lambda = TRUE)*(1-exp(-(max(tree$brts)-x)*pars[1]))
+}
+
 ##########################################################
 ##### lineages dependent speciation rate #################
 ##########################################################
