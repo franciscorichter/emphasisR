@@ -12,7 +12,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   cat(msg1,msg2,msg3,msg4,msg5,sep="\n")
   
   cat( "Performing Phase 1: burn-in",sep= "\n")
-  mc = mcEM(input,print_process = F,tol = 0.1,burnin = 20)
+  mc = mcEM(input,print_process = F,tol = tol,burnin = 20)
   MCEM=mc$mcem
   input$pars = c(mean(tail(mc$mcem$par1,n = 10)),mean(tail(mc$mcem$par2,n = 10)),mean(tail(mc$mcem$par3,n = 10)),mean(tail(mc$mcem$par4,n = 10)))
   
@@ -20,7 +20,6 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   cat( "Phase 2: Assesing required MC sampling size")
   MC = list()
   
-  input$sample_size = pilot_sample_size1
   M = NULL
   for(i in 1:length(pilot_sample_size)){
     input$sample_size = pilot_sample_size[i]
