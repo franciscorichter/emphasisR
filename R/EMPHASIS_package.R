@@ -8,7 +8,6 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   msg2 = paste("Age of the tree: ",max(input$brts))
   msg3 = paste("Number of speciations: ",length(input$brts))
   msg4 = paste("Diversification model to fit:",input$model)
-  #msg5 = paste("initial parameters. ","mu: ",input$pars[1],"lambda: ",input$pars[2],"beN: ",input$pars[3],"beP: ",input$pars[4])  
   msg5 = "######################################"
   cat(msg1,msg2,msg3,msg4,msg5,sep="\n")
   
@@ -34,7 +33,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   
   M<-rbind(MC[[1]]$mcem,MC[[2]]$mcem)
   n.r = get_required_sampling_size(M,tol = tol*10)
-  if(n.r<0) n.r = get_required_sampling_size(M,tol = tol*10,median = TRUE)
+  if(n.r<0) n.r = input$sample_size*2
   input$sample_size = n.r
   msg6 = paste0("Required sampling size: ",n.r)
   msg7 = "Phase 3: First estimation"
