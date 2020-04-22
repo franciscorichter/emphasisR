@@ -12,7 +12,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   cat(msg1,msg2,msg3,msg4,msg5,sep="\n")
   
   cat( "Performing Phase 1: burn-in",sep= "\n")
-  mc = mcEM(input,print_process = F,tol = tol,burnin = 20)
+  mc = mcEM(input,print_process = T,tol = tol,burnin = 20)
   MCEM=mc$mcem
   input$pars = c(mean(tail(mc$mcem$par1,n = 10)),mean(tail(mc$mcem$par2,n = 10)),mean(tail(mc$mcem$par3,n = 10)),mean(tail(mc$mcem$par4,n = 10)))
   
@@ -24,7 +24,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   for(i in 1:length(pilot_sample_size)){
     input$sample_size = pilot_sample_size[i]
     cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
-    MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 5,tol = tol)
+    MC[[i]] = mc = mcEM(input,print_process = T,burnin = 5,tol = tol)
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
     MCEM = rbind(MCEM,mc$mcem)
@@ -71,9 +71,9 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20){
       stop("Only zero likelihood trees, maybe there is underflow")
     }
     M = M_step(st = st, init_par = pars, model = input$model)
-    if(!is.infinite(M$po$value) & !is.na(log(st$fhat))){ 
+    if(!is.infinite(M$po$value) & !is.na(st$fhat)){ 
       pars = M$po$par
-      mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$logf,E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
+      mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
     }
     if(print_process){
       print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
@@ -86,7 +86,6 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20){
       sde0 = sde
       sde = sd(mcem_est$fhat)/sqrt(nrow(mcem_est))
       diffsd = c(diffsd,min(0,sde-sde0))
-      param = mean(mcem_est$par1)
       mde = mean(mcem_est$fhat)
       msg = paste("Iteration:",i," SE of the loglikelihood: ",sde)
       cat("\r",msg) 
@@ -117,10 +116,12 @@ mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE
   logg = sapply(trees,sampling_prob, pars=pars,model=model)
   E_time = get.time(time)
   log_weights = logf-logg
-  log_weights_norm = log_weights - max(log_weights)
+  prop_const = max(log_weights)
+  log_weights_norm = log_weights - prop_const
   w = exp(log_weights_norm)
+  log_fhat = log(mean(w)) + prop_const
   ####
-  En = list(weights=w,trees=trees,fhat=mean(exp(log_weights)),logf=logf,logg=logg,dim=dim,E_time=E_time)
+  En = list(weights=w,trees=trees,fhat=log_fhat,logf=logf,logg=logg,dim=dim,E_time=E_time)
   return(En)
 
 }
