@@ -1,5 +1,5 @@
 ### EMPHASIS functions
-emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,name="NN",burnin_sample_size=200,pilot_sample_size1=1000,pilot_sample_size2=1500){
+emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,name="NN",burnin_sample_size=200,pilot_sample_size=c(200,400,600)){
 
   input = list(brts=brts,pars = init_par,sample_size=burnin_sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
   
@@ -21,17 +21,17 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   MC = list()
   
   input$sample_size = pilot_sample_size1
-  
-  for(i in 1:2){
+  M = NULL
+  for(i in 1:length(pilot_sample_size)){
+    input$sample_size = pilot_sample_size[i]
     cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
     MC[[i]] = mc = mcEM(input,print_process = FALSE,burnin = 5,tol = tol)
     ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
     MCEM = rbind(MCEM,mc$mcem)
-    input$sample_size = pilot_sample_size2
+    M = rbind(M,mc$mcem)
   }
   
-  M<-rbind(MC[[1]]$mcem,MC[[2]]$mcem)
   n.r = get_required_sampling_size(M,tol = tol*10)
   if(n.r<0) n.r = input$sample_size*2
   input$sample_size = n.r
@@ -83,6 +83,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20){
     time_p_it = mean(times)
     if(i>burnin){
       mcem_est = mcem[floor(nrow(mcem)/2):nrow(mcem),]
+      mcem_est = mcem_est[is.finite(mcem_est$fhat),]
       sde0 = sde
       sde = sd(mcem_est$fhat)/sqrt(nrow(mcem_est))
       diffsd = c(diffsd,min(0,sde-sde0))
