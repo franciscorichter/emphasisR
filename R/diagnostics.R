@@ -89,13 +89,13 @@ sample_size_determination <- function(f,n,tol=0.05){
 
 
 # Diagnostics function which recives an "emph object", which is the output of the emphasis function. 
-emphasis_diagnostics <- function(MC,brts){
+emphasis_diagnostics <- function(MC){
   pars = MC$pars
   clade = MC$clade
   data(branching_times)
   ct = DDD_estimations[DDD_estimations$clade==clade,]$age
-  sim = simulation_analysis(pars=pars,model="rpd5c",ct=ct,brts=brts)
   brts = get(paste0("brts_",clade))
+  sim = simulation_analysis(pars=pars,model="rpd5c",ct=ct,brts=brts)
   G = sim$gLTT + geom_step(data=data.frame(time=cumsum(c(0,-diff(brts))),n=2:(length(brts)+1)),aes(x=time,y=n))
   sim_ddd = simulation_analysis(pars=as.numeric(DDD_estimations[DDD_estimations$clade==clade,5:7]),model="rpd1",ct=ct,gLTT = G,ggLA = sim$ggLA,brts=brts)
   ltt_plot = sim_ddd$gLTT  + theme_classic() + ggtitle(clade) + ylab("Number of lineages (log)") + xlab("Time") + scale_y_log10()

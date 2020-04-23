@@ -31,7 +31,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
     M = rbind(M,mc$mcem)
   }
   
-  n.r = get_required_sampling_size(M,tol = tol*10)
+  n.r = get_required_sampling_size(M,tol = tol)
   if(n.r<0) n.r = input$sample_size*2
   input$sample_size = n.r
   msg6 = paste0("Required sampling size: ",n.r)
@@ -39,7 +39,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   cat("\n",msg5,msg7,msg6,sep="\n")
   mc = mcEM(input,print_process = FALSE,burnin = 10,tol = tol)
   M<-rbind(M,mc$mcem)
-  n.r = get_required_sampling_size(M,tol=tol*10)
+  n.r = get_required_sampling_size(M,tol=tol)
   if(n.r>input$sample_size){
     input$sample_size = n.r
     msg6 = paste0("Required sampling size: ",n.r)
@@ -53,7 +53,7 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   cat("\n",msg5,msg7,msg6,sep="\n")
   pars = as.numeric(colMeans(mc$mcem)[1:4])
   cat(pars)
-  sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol*10)
+  sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol)
   return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,diag1=sp,clade=name,sample_size_completition=(sp$n.r<input$sample_size)))
 }
 
@@ -66,7 +66,7 @@ mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20){
   while(sde > tol){
     i = i+1
     st = mcE_step(brts = input$brts, pars = pars,sample_size=sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
-    if(max(st$weight)==0){
+    if(max(st$weight[!is.na(st$weight)])==0){
       print(st)
       stop("Only zero likelihood trees, maybe there is underflow")
     }
