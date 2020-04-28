@@ -1,5 +1,5 @@
 ### EMPHASIS functions
-emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,name="NN",burnin_sample_size=200,pilot_sample_size=c(200,400,600)){
+emphasis <- function(brts,soc=2,model="rpd1",init_par,em_tol=0.25,sample_size_tol=0.005,parallel=TRUE,name="NN",burnin_sample_size=200,pilot_sample_size=c(200,600),burnin_iterations = 20){
 
   input = list(brts=brts,pars = init_par,sample_size=burnin_sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
   
@@ -12,49 +12,48 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,tol=0.01,parallel=TRUE,nam
   cat(msg1,msg2,msg3,msg4,msg5,sep="\n")
   
   cat( "Performing Phase 1: burn-in",sep= "\n")
-  mc = mcEM(input,print_process = T,tol = tol,burnin = 20)
-  MCEM=mc$mcem
-  input$pars = c(mean(tail(mc$mcem$par1,n = 10)),mean(tail(mc$mcem$par2,n = 10)),mean(tail(mc$mcem$par3,n = 10)),mean(tail(mc$mcem$par4,n = 10)))
+  mc = mcEM(input,print_process = T,tol = em_tol,burnin = burnin_iterations)
+  
+  M = mc$mcem
+  input$pars = c(mean(tail(M$par1,n = burnin_iterations/2)),mean(tail(M$par2,n = burnin_iterations/2)),mean(tail(M$par3,n = burnin_iterations/2)),mean(tail(M$par4,n = burnin_iterations/2)))
   
   cat("\n",msg5,sep="\n")
-  cat( "Phase 2: Assesing required MC sampling size")
-  MC = list()
-  
-  M = NULL
+  cat( "Phase 2: Assesing required MC sampling size \n")
+
+
   for(i in 1:length(pilot_sample_size)){
     input$sample_size = pilot_sample_size[i]
     cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
-    MC[[i]] = mc = mcEM(input,print_process = T,burnin = 5,tol = tol)
-    ta = tail(mc$mcem,n = floor(nrow(mc$mcem)/2))
+    mc = mcEM(input,print_process = T,tol = em_tol,burnin = 10)
+    ta = tail(mc$mcem,n = ceiling(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
-    MCEM = rbind(MCEM,mc$mcem)
     M = rbind(M,mc$mcem)
   }
-  
-  n.r = get_required_sampling_size(M,tol = tol)
-  if(n.r<0) n.r = input$sample_size*2
-  input$sample_size = n.r
-  msg6 = paste0("Required sampling size: ",n.r)
-  msg7 = "Phase 3: First estimation"
-  cat("\n",msg5,msg7,msg6,sep="\n")
-  mc = mcEM(input,print_process = FALSE,burnin = 10,tol = tol)
-  M<-rbind(M,mc$mcem)
-  n.r = get_required_sampling_size(M,tol=tol)
-  if(n.r>input$sample_size){
+  n.r = get_required_sampling_size(M[-(1:burnin_iterations),],tol = sample_size_tol)
+  if(n.r<0){ 
+    input$sample_size = n.r = input$sample_size*2
+  }else{
     input$sample_size = n.r
-    msg6 = paste0("Required sampling size: ",n.r)
-    msg7 = "Last phase: Second estimation"
-    cat("\n",msg5,msg7,msg6,sep="\n")
-    mc = mcEM(input,print_process = FALSE,burnin = 5,tol = tol)
-    M<-rbind(M,mc$mcem)
   }
-  msg6 = paste0("Required sampling size: ",n.r)
-  msg7 = "Last phase: Second estimation"
-  cat("\n",msg5,msg7,msg6,sep="\n")
-  pars = as.numeric(colMeans(mc$mcem)[1:4])
+  n.r_old = -10000
+  j=1
+  while(n.r_old < n.r){
+    msg6 = paste0("Required sampling size: ",n.r)
+    msg7 = paste0("Phase 3: Performing metaiteration: ",j)
+    cat("\n",msg5,msg7,msg6,sep="\n")
+    mc = mcEM(input,print_process = FALSE,burnin = 10,tol = em_tol)
+    M <- rbind(M,mc$mcem)
+    n.r_old = n.r
+    j = j+1
+    n.r = get_required_sampling_size(M[-(1:burnin_iterations),],tol = sample_size_tol)
+    input$pars = as.numeric(colMeans(mc$mcem)[1:4])
+    input$sample_size = n.r
+  }
+
+  pars = input$pars
   cat(pars)
-  sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol)
-  return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,diag1=sp,clade=name,sample_size_completition=(sp$n.r<input$sample_size)))
+  #sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol)
+  return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,clade=name))
 }
 
 mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20){

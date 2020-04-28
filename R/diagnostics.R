@@ -84,12 +84,14 @@ sample_size_determination <- function(f,n,tol=0.05){
     #  annotate(geom="text",x=2200, y=-62, label="Required Sample Size")+
     # geom_segment(data=data.frame(x=2300, y=-63, vx=2300, vy=-76), mapping=aes(x=x, y=y, xend=vx, yend=vy), arrow=arrow(), size=1, color="blue") + 
     geom_point(data=data.frame(x=n.r, y=f.r), mapping=aes(x=x, y=y), size=1, shape=21, fill="white")
-  return(list(plot=ggbp,n.r=n.r))
+  return(list(plot=ggbp,n.r=n.r,fhat=ab[1]))
 }
 
 
 # Diagnostics function which recives an "emph object", which is the output of the emphasis function. 
 emphasis_diagnostics <- function(MC){
+  sp=sample_size_determination(f = MC$MCEM$fhat,n = MC$MCEM$sample_size,tol = tol)
+  
   pars = MC$pars
   clade = MC$clade
   data(branching_times)
@@ -108,8 +110,8 @@ emphasis_diagnostics <- function(MC){
   
   test1 = mean(mcem[mcem$sample_size==max(mcem$sample_size),]$fhat) > DDD_estimations[DDD_estimations$clade==clade,]$fhat
   
-  cat("AIC for PD model:",AIC_p)
-  cat("AIC for DD model:",AIC_d)
+  #cat("AIC for PD model:",AIC_p)
+  #cat("AIC for DD model:",AIC_d)
   test2 = AIC_p < AIC_d
   
   AICw = AICw(mean(mcem[mcem$sample_size==max(mcem$sample_size),]$fhat),DDD_estimations[DDD_estimations$clade==clade,]$fhat,4,3)
@@ -130,6 +132,11 @@ emphasis_diagnostics <- function(MC){
   #n2 = qqnorm(diffs_fhat);qqline(diffs_fhat, col = 2)
   n2 = ggplot(df, aes(sample = diffs_fhat)) +  stat_qq() + stat_qq_line() + theme_bw()
   sht = shapiro.test(diffs_fhat)$p.value > 0.05
+  
+  test1 = mean(mcem[mcem$sample_size==max(mcem$sample_size),]$fhat) > DDD_estimations[DDD_estimations$clade==clade,]$fhat
+  test2 = AIC_p < AIC_d
   test3 = sim$ltt_stat<sim_ddd$ltt_stat
+  
+  
   return(list(ltt_plot=ltt_plot,sr_plot=sr_plot,test1=test1,test2=test2,AICw=AICw,normality_test=sht,hist_norm=n1,qqplot=n2,ltt_PD=sim$ltt_stat,ltt_DD=sim_ddd$ltt_stat,test3=test3))
 }

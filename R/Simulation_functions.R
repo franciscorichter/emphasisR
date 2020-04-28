@@ -62,7 +62,7 @@ sim.tree_rpd1 <- function(pars,ct,soc){
 }
 
 
-sim.tree_rpd5c <- function(pars,ct,soc){
+sim.tree_rpd5c <- function(pars,ct,soc=2){
   tree = NULL
   cbt = 0 
   N = soc
@@ -103,6 +103,7 @@ sim.tree_rpd5c <- function(pars,ct,soc){
     tree = 0
     brts = 0
   }else{
+    lambda_ct = max(0,pars[2] + pars[3]*N  +  ((P+N*(ct-cbt) - ct)/N)*pars[4])
     tree = rbind(tree,data.frame(brts=ct,to=1,t_ext=Inf,lambda=lambda_ct))
     brts = tree$brts[is.infinite(tree$t_ext) & tree$to==1]
   }
