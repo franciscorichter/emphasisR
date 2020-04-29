@@ -1,9 +1,14 @@
-speciation_rate <- function(tm,tree,pars,model,soc,sum_lambda=FALSE){
+speciation_rate <- function(tm,tree,pars,model,sum_lambda=FALSE,soc=2){
+  #soc = tree$n[1]
   speciation_r = get(paste0("lambda.", model))
   lambda = speciation_r(tm,tree,pars,soc=soc,sum_lambda=sum_lambda)
   return(lambda)
 }
 
+extinction_rate <- function(pars,tm=NULL,tree=NULL,model=NULL,sum_mu=FALSE){
+  mu = max(0,pars[1])
+  return(mu)
+}
 
 # Speciations rates 
 
@@ -24,6 +29,11 @@ lambda.rpd5c <- function(tm,tree,pars,soc,sum_lambda=FALSE){
   if(sum_lambda) lambda <- lambda*N
   return(lambda)
   
+}
+
+
+nh_rate_T <- function(x,model,pars,tree){
+  speciation_rate(tm=x,tree = tree,pars = pars,model = model,soc=tree$n[1],sum_lambda = TRUE)*(1-exp(-(max(tree$brts)-x)*pars[1]))
 }
 
 ##########################################################

@@ -9,17 +9,11 @@ License: Creative Commons Public Licenses
 Encoding: UTF-8
 LazyData: false
 Depends:
-    ape,
     subplex,
     ggplot2,
-    GGally,
     truncdist,
     doParallel,
-    parallel,
-    mgcv,
-    shiny,
-    pracma,
-    DT,
-    stringr
+    parallel
+
     
     

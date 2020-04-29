@@ -17,21 +17,6 @@ phylodiversity <- function(tm,tree,soc){
   return(sum(dt*(soc:(length(dt)+soc-1))))
 }
 
-emphasis_bootstrap <- function(input,n_it=100,print=FALSE,file="bootstrap_temp.RData"){
-  P=NULL
-  for(i in 1:n_it){
-    st = mcE_step(brts = input$brts, pars = input$pars,sample_size=input$sample_size,model=input$model,no_cores=input$cores,parallel=FALSE,soc=input$soc)
-    if(print==TRUE){
-      print(paste("iteration",i))
-      print(paste("log-lik: ",log(st$fhat),sep=""))
-      print(paste("took: ",st$E_time,sep=""))
-    }
-    P = rbind(P,data.frame(fhat=log(st$fhat),eitme=st$E_time,ss=input$sample_size))
-    save(P,input,file=file)
-  }
-return(P)
-}
-
 data_to_table <- function(df,replicant,left,right){
   df = df[df$rep==replicant,]
   df = df[df$iteration %in% left:right,]

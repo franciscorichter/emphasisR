@@ -1,10 +1,2 @@
-^Rplots\.pdf$
-^cv_4\.pdf$
-^Methodology\.pdf$
-^Methodology\.Rmd$
-^bibliography\.bib$
-^Methodology_cache$
-^Methodology_files$
-^Meetings$
 ^.*\.Rproj$
 ^\.Rproj\.user$

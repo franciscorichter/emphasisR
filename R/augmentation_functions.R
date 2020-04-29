@@ -2,9 +2,9 @@ augment_tree <- function(
   brts,
   pars,
   model,
-  soc){
-#  setTimeLimit(elapse=500, trans=T)
-  mu = max(0,pars[1])
+  optim_nhpp = FALSE,
+  soc){  # soc parameter is in this version of emphasis but not in the next one.
+
   brts = cumsum(-diff(c(brts,0)))
   b = max(brts)
   cbt = 0
@@ -15,16 +15,20 @@ augment_tree <- function(
   tree = tree[order(tree$brts),]
   
   num_missing_branches <- 0
-  
+  mu = extinction_rate(pars)
   while(cbt < b){
     next_bt = min(tree$brts[tree$brts>cbt])
     
-    l1 <- speciation_rate(tm = cbt,tree = tree,pars = pars,model = model,soc = soc,sum_lambda = TRUE)*(1-exp(-mu*(b-cbt)))
-    l2 <- speciation_rate(tm = next_bt,tree = tree,pars = pars,model = model,soc = soc,sum_lambda = TRUE)*(1-exp(-mu*(b-next_bt)))
+    if(optim_nhpp){
+      #### optim step 
+      lambda_max = optim(cbt,fn=speciation_rate,pars=pars,tree=tree,model=model,sum_lambda=TRUE,lower = cbt,upper = next_bt,method="L-BFGS-B")$value
+    }else{
+      l1 <- speciation_rate(tm = cbt,tree = tree,pars = pars,model = model,soc = soc,sum_lambda = TRUE)*(1-exp(-mu*(b-cbt)))
+      l2 <- speciation_rate(tm = next_bt,tree = tree,pars = pars,model = model,soc = soc,sum_lambda = TRUE)*(1-exp(-mu*(b-next_bt)))
+      lambda_max = max(l1, l2)
+    }
     
-    lambda_max = max(l1, l2)
-    ###
-    if(lambda_max>100){
+    if(lambda_max>500){
       stop("Current parameters leds to a huge speciation rate")
     }
     ####
