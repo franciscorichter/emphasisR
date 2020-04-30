@@ -24,13 +24,13 @@ data_to_table <- function(df,replicant,left,right){
   return(summ)
 }
 
-AIC <- function(LogLik,k){
+AIC_llik <- function(LogLik,k){
   aic <- (2*k)-(2*LogLik)
   return(aic)
 }
 
 AICw <- function(l1,l2,k1,k2){
-  IC <- AIC(c(l1,l2),c(k1,k2))
+  IC <- AIC_llik(c(l1,l2),c(k1,k2))
   bestmodelIC <- min(IC)
   weights <- exp(-0.5*(IC-bestmodelIC))
   weights <- weights/sum(weights)

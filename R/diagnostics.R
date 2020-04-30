@@ -130,8 +130,8 @@ emphasis_diagnostics <- function(MC){
                    fill = "white") +
     stat_function(fun = dnorm, args = list(mean = mean(df$diffs_fhat), sd = sd(df$diffs_fhat))) + theme_bw()
   #n2 = qqnorm(diffs_fhat);qqline(diffs_fhat, col = 2)
-  n2 = ggplot(df, aes(sample = diffs_fhat)) +  stat_qq() + stat_qq_line() + theme_bw()
-  sht = shapiro.test(diffs_fhat)$p.value > 0.05
+  n2 = ggplot2:::ggplot(df, aes(sample = diffs_fhat)) +  stat_qq() + stat_qq_line() + theme_bw()
+  sht = stats:::shapiro.test(diffs_fhat)$p.value > 0.05
   
   test1 = mean(mcem[mcem$sample_size==max(mcem$sample_size),]$fhat) > DDD_estimations[DDD_estimations$clade==clade,]$fhat
   test2 = AIC_p < AIC_d
@@ -140,3 +140,26 @@ emphasis_diagnostics <- function(MC){
   
   return(list(ltt_plot=ltt_plot,sr_plot=sr_plot,test1=test1,test2=test2,AICw=AICw,normality_test=sht,hist_norm=n1,qqplot=n2,ltt_PD=sim$ltt_stat,ltt_DD=sim_ddd$ltt_stat,test3=test3))
 }
+
+
+
+### non-tested
+
+
+corr_pars <- function(mcem){
+  
+  MP = mcem[,c("par1","par2","par3")]
+  
+  
+  #ggpairs(data=MP, palette = "RdYlGn", name = "rho", 
+  #      label = FALSE, label_color = "black")
+  
+  data=MP
+  data$K = (data$par1-data$par2)/data$par3
+  names(data) = c("mu","lambda","beta","K")
+  GGally:::ggpairs(data, columns = 1:ncol(data), title = "",  
+                   axisLabels = "show")
+}
+
+
+

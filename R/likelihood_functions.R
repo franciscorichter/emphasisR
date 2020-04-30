@@ -69,19 +69,21 @@ loglik.tree.numerical <- function(pars, tree, model){
   to = tree$to
   to = head(to,-1)
   to[to!=0] = 1
+  spec_times = tree$brts[c(to,0)==1]
   #
-  speciations = sapply(spec_times, speciation_rate,pars=pars,model=model,soc=tree$n[1])
-  extinctions = pars[1]*sum(to==0)
+  speciations = sapply(spec_times, speciation_rate,tree=tree,pars=pars,model=model,soc=tree$n[1])
+  extinctions = rep(pars[1],sum(to==0))
   # 
-  inte = intensity()
-  loglik = 
+  inte = intensity.numerical2(tree, pars, model)
+  loglik = sum(log(speciations)) + sum(log(extinctions)) - sum(inte)
   return(loglik)
 }
 
 
+
 intensity.numerical2 <- function(tree, pars, model){
   nh_rate <- function(x){
-    nh_rate_T(x,model,pars,tree)
+    speciation_rate(tm=x,tree = tree,pars = pars,model = model,soc=tree$n[1],sum_lambda = TRUE)+extinction_rate(tm=x,tree = tree,pars = pars,model = model,soc=tree$n[1],sum_rate = TRUE)
   }
   brts_i = tree$brts
   brts_im1 = c(0,brts_i[-length(brts_i)])
