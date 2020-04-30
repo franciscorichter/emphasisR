@@ -1,10 +1,17 @@
 ### EMPHASIS functions
-emphasis <- function(brts,soc=2,model="rpd1",init_par,em_tol=0.25,sample_size_tol=0.005,parallel=TRUE,name="NN",burnin_sample_size=200,pilot_sample_size=c(200,600),burnin_iterations = 20){
+emphasis <- function(brts,
+                     soc=2,
+                     model="rpd1",
+                     init_par,
+                     em_tol=0.25,
+                     sample_size_tol=0.005,
+                     burnin_sample_size=200,
+                     pilot_sample_size=c(200,600),
+                     burnin_iterations = 20){
 
-  input = list(brts=brts,pars = init_par,sample_size=burnin_sample_size,model=model,cores=detectCores()-2,parallel=parallel,soc=soc)
+  input = list(brts=brts,pars = init_par,sample_size=burnin_sample_size,model=model,cores=parallel:::detectCores()-2,parallel=TRUE,soc=soc)
   
   msg1 = paste("Initializing emphasis...")
-  msg2 = paste("Name of the clade: ",name)
   msg2 = paste("Age of the tree: ",max(input$brts))
   msg3 = paste("Number of speciations: ",length(input$brts))
   msg4 = paste("Diversification model to fit:",input$model)
@@ -12,14 +19,13 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,em_tol=0.25,sample_size_to
   cat(msg1,msg2,msg3,msg4,msg5,sep="\n")
   
   cat( "Performing Phase 1: burn-in",sep= "\n")
-  mc = mcEM(input,print_process = T,tol = em_tol,burnin = burnin_iterations)
+  mc = mcEM(input,print_process = FALSE,tol = em_tol,burnin = burnin_iterations)
   
   M = mc$mcem
   input$pars = c(mean(tail(M$par1,n = burnin_iterations/2)),mean(tail(M$par2,n = burnin_iterations/2)),mean(tail(M$par3,n = burnin_iterations/2)),mean(tail(M$par4,n = burnin_iterations/2)))
   
   cat("\n",msg5,sep="\n")
   cat( "Phase 2: Assesing required MC sampling size \n")
-
 
   for(i in 1:length(pilot_sample_size)){
     input$sample_size = pilot_sample_size[i]
@@ -52,11 +58,10 @@ emphasis <- function(brts,soc=2,model="rpd1",init_par,em_tol=0.25,sample_size_to
 
   pars = input$pars
   cat(pars)
-  #sp=sample_size_determination(f = M$fhat,n = M$sample_size,tol = tol)
-  return(list(pars=pars,mc=mc,MCEM=M,required_sample_size=n.r,clade=name))
+  return(list(pars=pars,MCEM=M))
 }
 
-mcEM <- function(input,print_process=FALSE,tol=0.01,burnin=20){
+mcEM <- function(input,tol=0.01,burnin=20,print_process=FALSE){
   pars = input$pars
   mcem = NULL
   sample_size = input$sample_size
