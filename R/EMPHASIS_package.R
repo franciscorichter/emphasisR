@@ -10,71 +10,113 @@ emphasis <- function(brts,
                      burnin_iterations = 20,
                      parallel=TRUE){
 
-  input = list(brts=brts,pars = init_par,sample_size=burnin_sample_size,model=model,cores=parallel:::detectCores()-2,parallel=parallel,soc=soc)
   
   msg1 = paste("Initializing emphasis...")
-  msg2 = paste("Age of the tree: ",max(input$brts))
-  msg3 = paste("Number of speciations: ",length(input$brts))
-  msg4 = paste("Diversification model to fit:",input$model)
+  msg2 = paste("Age of the tree: ",max(brts))
+  msg3 = paste("Number of speciations: ",length(brts))
+  msg4 = paste("Diversification model to fit:",model)
   msg5 = "######################################"
   cat(msg1,msg2,msg3,msg4,msg5,sep="\n")
   
   cat( "Performing Phase 1: burn-in",sep= "\n")
-  mc = mcEM(input,print_process = FALSE,tol = em_tol,burnin = burnin_iterations)
+  mc = mcEM(brts = brts,
+            pars = init_par,
+            sample_size = burnin_sample_size,
+            model = model,
+            soc = soc,
+            parallel = parallel,
+            print_process = FALSE,
+            tol = em_tol,
+            burnin = burnin_iterations)
   
   M = mc$mcem
-  input$pars = c(mean(tail(M$par1,n = burnin_iterations/2)),mean(tail(M$par2,n = burnin_iterations/2)),mean(tail(M$par3,n = burnin_iterations/2)),mean(tail(M$par4,n = burnin_iterations/2)))
+  pars = c(mean(tail(M$par1,n = nrow(M)/2)),
+           mean(tail(M$par2,n = nrow(M)/2)),
+           mean(tail(M$par3,n = nrow(M)/2)),
+           mean(tail(M$par4,n = nrow(M)/2)))
   
   cat("\n",msg5,sep="\n")
   cat( "Phase 2: Assesing required MC sampling size \n")
 
   for(i in 1:length(pilot_sample_size)){
-    input$sample_size = pilot_sample_size[i]
     cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
-    mc = mcEM(input,print_process = F,tol = em_tol,burnin = 10)
-    ta = tail(mc$mcem,n = ceiling(nrow(mc$mcem)/2))
-    input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
+    mc = mcEM(brts = brts,
+              pars = pars,
+              sample_size = pilot_sample_size[i],
+              model = model,
+              soc = soc,
+              parallel = parallel,
+              print_process = FALSE,
+              tol = em_tol,
+              burnin = 10)
+    ta = tail(mc$mcem,n = nrow(M)/2)
+    pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
     M = rbind(M,mc$mcem)
   }
   n.r = get_required_sampling_size(M[-(1:burnin_iterations),],tol = sample_size_tol)
-  input$sample_size = max(input$sample_size+2,n.r)
-  n.r_old = -10000
-  j=1
+  sample_size = max(input$sample_size+2,n.r)
+  n.r_old = -1
+  j = 1
   while(n.r_old < n.r){
     msg6 = paste0("Required sampling size: ",n.r)
     msg7 = paste0("Phase 3: Performing metaiteration: ",j)
     cat("\n",msg5,msg7,msg6,sep="\n")
-    mc = mcEM(input,print_process = FALSE,burnin = 10,tol = em_tol)
+    mc = mcEM(brts = brts,
+              pars = pars,
+              sample_size = sample_size,
+              model = model,
+              soc = soc,
+              parallel = parallel,
+              print_process = FALSE,
+              tol = em_tol,
+              burnin = 2)
     M <- rbind(M,mc$mcem)
     n.r_old = n.r
     j = j+1
     n.r = get_required_sampling_size(M[-(1:burnin_iterations),],tol = sample_size_tol)
-    input$pars = as.numeric(colMeans(mc$mcem)[1:4])
-    input$sample_size = n.r
+    pars = as.numeric(colMeans(mc$mcem)[1:4])
+    sample_size = n.r
   }
 
-  pars = input$pars
   cat(pars)
   return(list(pars=pars,MCEM=M))
 }
 
-mcEM <- function(input,tol=0.01,burnin=20,print_process=FALSE){
-  pars = input$pars
+mcEM <- function(brts, 
+                 pars, 
+                 sample_size, 
+                 model, 
+                 soc, 
+                 tol=0.01,
+                 burnin=20,
+                 print_process=FALSE,
+                 parallel=TRUE,
+                 cores=(parallel::detectCores()-1)){
   mcem = NULL
-  sample_size = input$sample_size
   sde = 10; i=0
-  times = diffsd = NULL
+  times = NULL
   while(sde > tol){
     i = i+1
-    st = mcE_step(brts = input$brts, pars = pars,sample_size=sample_size,model=input$model,no_cores=input$cores,parallel=input$parallel,soc=input$soc)
+    st = mcE_step(brts = brts, 
+                  pars = pars, 
+                  sample_size = sample_size, 
+                  model = model, 
+                  no_cores = cores, 
+                  parallel = parallel,
+                  soc = soc)
     if(max(st$weight[!is.na(st$weight)])==0){
       print(st)
       stop("Only zero likelihood trees, maybe there is underflow")
     }
-    M = M_step(st = st, init_par = pars, model = input$model)
+    M = M_step(st = st, init_par = pars, model = model)
     if(!is.infinite(M$po$value) & !is.na(st$fhat)){ 
       pars = M$po$par
-      mcem = rbind(mcem,data.frame(par1=pars[1],par2=pars[2],par3=pars[3],par4=pars[4],fhat=st$fhat,E_time=st$E_time,M_time=M$M_time,sample_size=sample_size))
+      mcem = rbind(mcem,data.frame(par1=pars[1],
+                                   par2=pars[2],
+                                   par3=pars[3],
+                                   par4=pars[4],
+                                   fhat=st$fhat,
+                                   sample_size=sample_size))
     }
     if(print_process){
       print(paste("(mean of) loglikelihood estimation: ",mean(mcem$fhat)))
@@ -86,7 +128,6 @@ mcEM <- function(input,tol=0.01,burnin=20,print_process=FALSE){
       mcem_est = mcem_est[is.finite(mcem_est$fhat),]
       sde0 = sde
       sde = sd(mcem_est$fhat)/sqrt(nrow(mcem_est))
-      diffsd = c(diffsd,min(0,sde-sde0))
       mde = mean(mcem_est$fhat)
       msg = paste("Iteration:",i," SE of the loglikelihood: ",sde)
       cat("\r",msg) 
@@ -95,7 +136,7 @@ mcEM <- function(input,tol=0.01,burnin=20,print_process=FALSE){
       cat("\r",msg) 
     }
   }
-  return(list(mcem=mcem,st=st,M=M))
+  return(list(mcem=mcem))
 }
 
 ##############################
