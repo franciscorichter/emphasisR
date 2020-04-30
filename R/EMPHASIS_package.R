@@ -39,7 +39,7 @@ emphasis <- function(brts,
   cat( "Phase 2: Assesing required MC sampling size \n")
 
   for(i in 1:length(pilot_sample_size)){
-    cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
+    cat(paste("\n Sampling size: ",as.character(pilot_sample_size[i]),"\n"))
     mc = mcEM(brts = brts,
               pars = pars,
               sample_size = pilot_sample_size[i],
@@ -54,7 +54,7 @@ emphasis <- function(brts,
     M = rbind(M,mc$mcem)
   }
   n.r = get_required_sampling_size(M[-(1:burnin_iterations),],tol = sample_size_tol)
-  sample_size = max(input$sample_size+2,n.r)
+  sample_size = max(pilot_sample_size+2,n.r)
   n.r_old = -1
   j = 1
   while(n.r_old < n.r){
