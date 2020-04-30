@@ -7,9 +7,10 @@ emphasis <- function(brts,
                      sample_size_tol=0.005,
                      burnin_sample_size=200,
                      pilot_sample_size=c(200,600),
-                     burnin_iterations = 20){
+                     burnin_iterations = 20,
+                     parallel=TRUE){
 
-  input = list(brts=brts,pars = init_par,sample_size=burnin_sample_size,model=model,cores=parallel:::detectCores()-2,parallel=TRUE,soc=soc)
+  input = list(brts=brts,pars = init_par,sample_size=burnin_sample_size,model=model,cores=parallel:::detectCores()-2,parallel=parallel,soc=soc)
   
   msg1 = paste("Initializing emphasis...")
   msg2 = paste("Age of the tree: ",max(input$brts))

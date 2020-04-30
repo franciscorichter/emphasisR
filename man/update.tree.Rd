@@ -1,18 +1,18 @@
-\name{update.tree}
-\alias{update.tree}
+\name{mcEM}
+\alias{mcEM}
 %- Also NEED an '\alias' for EACH other topic documented here.
-\title{Update phylogenetic tree by adding 1 missing species
+\title{Monte-Carlo Expectation Maximization algorithm for phylogenetic trees
 %%  ~~function to do ... ~~
 }
-\description{Given a vectorial form of the markovian sequence that characterizes the tree, and the speciation and extinction rate of the added missings species, it will return the new vectors of the new tree.
+\description{MCEM routine with fixed sampling size
 %%  ~~ A concise (1-5 lines) description of what the function does. ~~
 }
 \usage{
-update.tree(tree,t_spe,t_ext)
+mcEM(input,tol=0.01,burnin=20,print_process=FALSE){
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
-  \item{tree}{phylo object to be updated}
+  \item{input}{phylo object to be updated}
   \item{t_spe}{speciation time of the added missing species}
   \item{t_ext}{extinction time of the added missing species}
 }
