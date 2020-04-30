@@ -15,7 +15,7 @@ augment_tree <- function(
   tree = tree[order(tree$brts),]
   
   num_missing_branches <- 0
-  mu = extinction_rate(pars)
+  mu = extinction_rate(tm = NULL,pars = pars,model = NULL,sum_rate = FALSE,soc = NULL,tree = NULL) #constant extinction rate case
   while(cbt < b){
     next_bt = min(tree$brts[tree$brts>cbt])
     

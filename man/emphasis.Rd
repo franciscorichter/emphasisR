@@ -58,7 +58,8 @@ emphasis(brts,
 \value{
 %%  ~Describe the value returned
 %%  If it is a LIST, use
-  \item{comp1 }{Description of 'comp1'}
+  \item{pars}{Estimated parameters}
+  \item{MCEM}{MCEM chain in a matrix form}
 %%  \item{comp2 }{Description of 'comp2'}
 %% ...
 }

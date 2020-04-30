@@ -90,8 +90,7 @@ sample_size_determination <- function(f,n,tol=0.05){
 
 # Diagnostics function which recives an "emph object", which is the output of the emphasis function. 
 emphasis_diagnostics <- function(MC){
-  sp=sample_size_determination(f = MC$MCEM$fhat,n = MC$MCEM$sample_size,tol = tol)
-  
+
   pars = MC$pars
   clade = MC$clade
   data(branching_times)

@@ -31,17 +31,13 @@ emphasis <- function(brts,
   for(i in 1:length(pilot_sample_size)){
     input$sample_size = pilot_sample_size[i]
     cat(paste("\n Sampling size: ",as.character(input$sample_size),"\n"))
-    mc = mcEM(input,print_process = T,tol = em_tol,burnin = 10)
+    mc = mcEM(input,print_process = F,tol = em_tol,burnin = 10)
     ta = tail(mc$mcem,n = ceiling(nrow(mc$mcem)/2))
     input$pars = c(mean(ta$par1),mean(ta$par2),mean(ta$par3),mean(ta$par4))
     M = rbind(M,mc$mcem)
   }
   n.r = get_required_sampling_size(M[-(1:burnin_iterations),],tol = sample_size_tol)
-  if(n.r<0){ 
-    input$sample_size = n.r = input$sample_size*2
-  }else{
-    input$sample_size = n.r
-  }
+  input$sample_size = max(input$sample_size+2,n.r)
   n.r_old = -10000
   j=1
   while(n.r_old < n.r){
