@@ -1,5 +1,5 @@
-\name{nllik.tree}
-\alias{nllik.tree}
+\name{loglik.tree}
+\alias{loglik.tree}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
 log-likelihood of a phylogenetic tree
@@ -41,8 +41,22 @@ F. Richter M.
 %% ~~objects to See Also as \code{\link{help}}, ~~~
 }
 \examples{
-s= sim.tree()
-llik(c(0.8,0.1,40),s$tree)
+##   compare log likelihoods 
+
+#dd
+tree = data.frame(brts=c(2,3,5,6),to=c(1,0,2,2),t_ext=c(3,Inf,Inf,Inf))
+tree$n = sapply(tree$brts,n_from_time,tree=tree,soc=2)
+pars = c(0.2,0.6,-0.005)
+loglik.tree.rpd1(pars,tree)
+
+loglik.tree.numerical(pars,tree,"rpd1")
+
+
+## pd
+tree$pd <- sapply(tree$brts, phylodiversity, tree=tree,soc=2)
+pars = c(0.2,0.6,-0.01,0.01)
+loglik.tree.rpd5c(pars,tree)
+loglik.tree.numerical(pars,tree,"rpd5c")
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory.
