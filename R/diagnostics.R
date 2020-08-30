@@ -93,7 +93,7 @@ emphasis_diagnostics <- function(MC){
 
   pars = MC$pars
   clade = MC$clade
-  data(branching_times)
+  data(branching_times,package = emphasis)
   ct = DDD_estimations[DDD_estimations$clade==clade,]$age
   brts = get(paste0("brts_",clade))
   sim = simulation_analysis(pars=pars,model="rpd5c",ct=ct,brts=brts)

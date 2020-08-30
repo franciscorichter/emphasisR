@@ -1,3 +1,18 @@
+limit_bt <- function(tree,cbt,model,pars){
+  brts = tree$brts[tree$brts > cbt]
+  tree = rbind(tree[tree$brts <= cbt,],
+               data.frame(brts=cbt+0.000000001,to=1,t_ext=max(tree$brts)),
+               tree[tree$brts > cbt,])
+  sp = sapply(brts,speciation_rate, pars=pars, tree=tree, model=model)
+  s0 = which(sp==0)
+  if(any(s0)){
+    max_bt = min(brts[s0])
+  }else{
+    max_bt = max(brts)
+  }
+  return(max_bt)
+}
+
 # more utilities
 
 n_from_time <- function(tm,tree,soc){

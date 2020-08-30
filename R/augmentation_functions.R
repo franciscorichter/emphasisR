@@ -6,7 +6,7 @@ augment_tree <- function(
   soc){  # soc parameter is in this version of emphasis but not in the next one.
 
   brts = cumsum(-diff(c(brts,0)))
-  b = max(brts)
+  ct = max(brts)
   cbt = 0
   
   tree = data.frame(brts = brts,
@@ -16,9 +16,10 @@ augment_tree <- function(
   
   num_missing_branches <- 0
   mu = extinction_rate(tm = NULL,pars = pars,model = NULL,sum_rate = FALSE,soc = NULL,tree = NULL) #constant extinction rate case
-  while(cbt < b){
+  while(cbt < ct){
     next_bt = min(tree$brts[tree$brts>cbt])
-    
+    b = ct
+ #  b = limit_bt(cbt=cbt,model=model,tree=tree,pars=pars)
     if(optim_nhpp){
       #### optim step 
       lambda_max = optim(cbt,fn=speciation_rate,pars=pars,tree=tree,model=model,sum_lambda=TRUE,lower = cbt,upper = next_bt,method="L-BFGS-B")$value
