@@ -93,12 +93,12 @@ emphasis_diagnostics <- function(MC){
 
   pars = MC$pars
   clade = MC$clade
-  data(branching_times,package = emphasis)
+  data(branching_times,package = "emphasis")
   ct = DDD_estimations[DDD_estimations$clade==clade,]$age
-  brts = get(paste0("brts_",clade))
+  brts = MC$brts
   sim = simulation_analysis(pars=pars,model="rpd5c",ct=ct,brts=brts)
   G = sim$gLTT + geom_step(data=data.frame(time=cumsum(c(0,-diff(brts))),n=2:(length(brts)+1)),aes(x=time,y=n))
-  sim_ddd = simulation_analysis(pars=as.numeric(DDD_estimations[DDD_estimations$clade==clade,5:7]),model="rpd1",ct=ct,gLTT = G,ggLA = sim$ggLA,brts=brts)
+  sim_ddd = simulation_analysis(pars=MC$pars_dd,model="rpd1",ct=ct,gLTT = G,ggLA = sim$ggLA,brts=brts)
   ltt_plot = sim_ddd$gLTT  + theme_classic() + ggtitle(clade) + ylab("Number of lineages (log)") + xlab("Time") + scale_y_log10()
   sr_plot = sim_ddd$ggLA  + theme_classic() + ggtitle(clade) + ylab("Speciation Rate") + xlab("Time") #+ geom_hline(yintercept = pars[1])
   
