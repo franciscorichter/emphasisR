@@ -110,3 +110,34 @@ sim.tree_rpd5c <- function(pars,ct,soc=2){
   return(list(tree=tree,brts=brts))
 }
 
+
+
+#### simulation conditional to n extant species
+ 
+sim_cond_tree <- function(pars,ct){
+  
+  lambda = pars[2]
+  mu = pars[1]
+  
+  reject = 0
+  while(reject==0){
+    brts=n=NULL
+    N = 1
+    cbt = 0 
+    while(cbt<ct & N>0){
+      sigma = N*(lambda+mu)
+      cbt = cbt + rexp(1,sigma)
+      if(cbt < ct){
+        a = sample(c(-1,1),size=1,prob=c(mu,lambda)/(mu+lambda))      
+        N = N+a
+        n = c(n,N)
+        brts = c(brts,cbt)
+      }else{
+        if(N==1){
+          reject=1
+        }
+      }
+    }
+  }
+  return(data.frame(brts=c(brts,ct),n=c(1,n)))
+}
