@@ -2,10 +2,10 @@ augment_tree <- function(
   brts,
   pars,
   model,
-  soc = 2,
+  soc,
   max_species = 100000,
   sampler_spe,
-  sampler_ext = "emph"){  
+  sampler_ext = "emph2"){  
   
   ### input set-up
   time = proc.time()
@@ -40,7 +40,6 @@ augment_tree <- function(
                                        cbt=next_speciation_time,
                                        ct=ct,
                                        pars = pars,
-                                       next_bt=ct,
                                        model = model,
                                        soc = soc,
                                        sampler = sampler_ext)
@@ -69,7 +68,7 @@ augment_tree <- function(
 
 #######
 
-draw_speciation <- function(tree,cbt,ct,pars,next_bt,model,soc=2,sampler="emph"){
+draw_speciation <- function(tree,cbt,ct,pars,next_bt,model,soc,sampler="emph"){
   
   key = 0
   if(sampler == "emph"){ 
@@ -80,6 +79,21 @@ draw_speciation <- function(tree,cbt,ct,pars,next_bt,model,soc=2,sampler="emph")
   }
   if(sampler == "kendall"){
     nsr = nh_speciation_rate_kendall
+  }
+  if(sampler == "fullprocess"){
+    spec_rates = speciation_rate(tm = next_event_time,
+                                 tree = temp_tree,
+                                 pars = pars,
+                                 model = model,
+                                 sum_lambda = FALSE)
+    
+    ext_rates =  extinction_rate(tm = next_event_time,
+                                 tree = temp_tree,
+                                 pars = pars,
+                                 model = model,
+                                 sum_rate = FALSE)
+    
+    nsr = speciation_rate() + extinction_rate(sum_rate=TRUE)
   }
   while(key == 0 & cbt < next_bt){
   
@@ -95,22 +109,32 @@ draw_speciation <- function(tree,cbt,ct,pars,next_bt,model,soc=2,sampler="emph")
                      control=list(fnscale=-1))$value
   
     u1 = runif(1)
-    cbt = cbt - log(x = u1)/lambda_max
-    u2 = runif(1)
-    pt = nsr(cbt,
-                       tree,
-                       pars,
-                       model,
-                       soc=soc)/lambda_max
-      if(u2<pt){
-        key = 1
-      }
+    if(lambda_max==0){
+      cbt = Inf
+    }else{
+      cbt = cbt - log(x = u1)/lambda_max
+    }
+    
+    if(cbt < next_bt){
+      u2 = runif(1)
+      
+      pt = nsr(cbt,
+               tree,
+               pars,
+               model,
+               soc=soc)/lambda_max
+
+        if(u2<pt){
+          key = 1
+        }
+    }
   }
+  
   return(cbt)
   
 }
 
-draw_extiction <- function(tree,cbt,ct,pars,next_bt,model,soc,sampler="emph"){
+draw_extiction <- function(tree,cbt,ct,pars,model,soc,sampler="emph"){
   
   if(sampler=="unif"){
     cbt = runif(1,min = cbt,max = ct)
@@ -120,14 +144,20 @@ draw_extiction <- function(tree,cbt,ct,pars,next_bt,model,soc,sampler="emph"){
   }
   if(sampler=="emph2"){
     la = max(0,pars[2]+pars[3]*n_from_time(cbt,tree,soc))
-    mu = pars[1]
+    mu = max(0,pars[1])
 
-    mu_t = mu/(1-p(tc,tp))
+    mu_t = mu/(1-p(time = cbt,ct = ct,lambda = la,mu = mu))
     cbt = cbt + truncdist::rtrunc(1,"exp",a = 0, b = (ct-cbt),rate=mu_t)
   }
   if(sampler == "kendall"){
-    key = 0
-    nsr = get(paste("nh_extinction_rate_",sampler))
+    mu_t = nh_extinction_rate_kendall(time = cbt,
+                                      tree = tree,
+                                      pars = pars,
+                                      model = model,
+                                      soc = soc,
+                                      ti = cbt)
+    cbt = cbt + truncdist::rtrunc(1,"exp",a = 0, b = (ct-cbt),rate=mu_t)
+    
    
   }
 
@@ -136,80 +166,125 @@ draw_extiction <- function(tree,cbt,ct,pars,next_bt,model,soc,sampler="emph"){
   
 }
 
-nh_speciation_rate_kendall <- function(time,tree,pars,model=0,soc=1,ti=NULL){
+p <- function(time,ct,lambda,mu){
+  if(lambda != mu){
+    pv = (lambda-mu)/(lambda - mu*exp(-(lambda-mu)*(ct-time)))
+  }else{
+    pv = 1/(1+mu*(ct-time))
+  }
+  return(pv)
+}
+
+nh_speciation_rate_kendall <- function(time,tree,pars,model,soc){
+  rate = speciation_rate(tm = time,tree = tree,
+                         pars = pars,
+                         model = model,
+                         sum_lambda = FALSE,
+                         soc = soc) * (1-p_survival(tc = time,
+                                      model = model,
+                                      pars = pars,
+                                      traits = list(tree=tree,soc = soc)))
   
-  mu <- function(pars) max(0,pars[1])
-  lambda <- function(pars) max(0,pars[2]+pars[3]*n_from_time(time,tree,soc))
-  rate = lambda(pars) * (1-p_survival(time = time,mu = mu,lambda = lambda,ct = max(tree$brts),pars=pars))
+  N = n_from_time(time,tree,soc)+1
   
-  return(rate)
+  return(rate*N)
   
 }
 
 
 nh_extinction_rate_kendall <- function(time,tree,pars,model=0,soc=1,ti){
-  
-  mu <- function(pars) max(0,pars[1])
-  lambda <- function(pars) max(0,pars[2]+pars[3]*n_from_time(time,tree,soc))
-  rate = mu(pars) / (1-p_survival(time = time,mu = mu,lambda = lambda,ct = max(tree$brts),pars=pars))
+  if(is.null(ti)) ti = time
+  psurv = p_survival(tc = ti,
+                     model = model,
+                     pars = pars,
+                     traits = list(tree=tree,soc = soc))
+  if(psurv == 1){
+    rate = 999
+  }else{
+    rate = extinction_rate(tm = time,tree = tree,
+                         pars = pars,
+                         model = model,
+                         sum_rate = FALSE,
+                         soc = soc) / (1-psurv)
+  }
   
   return(rate)
-  
+
 }
 
-p_survival <- function(tc, tp, model, pars, traits, ...){
-  survival = 1 / ( 1 +  pracma:::quad(f = Vectorize(p_int),
-                           xa = time,
-                           xb = tp,
-                           time = tc,
-                           model = model,
-                           pars = pars,
-                           tree = traits$tree, 
-                           soc = traits$soc, ...) )
+
+p_survival <- function(tc, model, pars, traits){
+  survival = 1 / ( 1 +  p_int(time = tc,
+                              model = model,
+                              pars = pars,
+                              tree = traits$tree,
+                              soc = traits$soc) )
   return(survival)
 }
 
-p_int <- function(tau,time,model,pars, tree, soc,...){
-  sigma <- function(time){
-    speciation_rate(tm = time,
-                    tree = tree,
-                    pars=pars,
-                    model=model,
-                    soc = soc)+
-    extinction_rate(tm = time,
+p_int <- function(time,model,pars, tree, soc, ...){
+  integrand <- function(tau){
+    extinction_rate(tm = tau,
                     tree = tree,
                     pars = pars,
                     model = model,
-                    soc = soc)
-    return(sigma)
-  }
-  p_int_return <- function(tau){
-    extinction_rate(tm = time,
-                    tree = tree,
-                    pars=pars,
-                    model=model,
                     soc = soc)*
-      exp(-pracma:::quad(f = Vectorize(sigma),
-                            xa = time,
-                            xb = tau))
+      exp(intensity.rho.numerical(tm = time,
+                                  tau = tau,
+                                  tree = tree,
+                                  pars = pars,
+                                  model = model))
   }
-  return(p_int_return)
+  val = pracma:::quad(f = Vectorize(integrand),xa = time,xb = max(tree$brts))
+  
+     
+  return(val)
 }
 
+intensity.rho.numerical <- function(tm,tau,tree, pars, model){
+  nh_rate <- function(x){
+    extinction_rate(tm=x,
+                    tree = tree,
+                    pars = pars,
+                    model = model,
+                    soc=1,
+                    sum_rate = FALSE)-
+    speciation_rate(tm=x,
+                    tree = tree,
+                    pars = pars,
+                    model = model,
+                    soc=1,
+                    sum_lambda = FALSE)
+      
+  }
+  brts = c(tree$brts[tree$brts>tm & tree$brts<tau],tau)
+  brts_i = brts
+  brts_im1 = c(tm,brts_i[-length(brts_i)])
+  inte = vector(mode="numeric",length = length(brts_i))
+  for(i in 1:length(brts_i)){
+    inte[i] = pracma:::quad(f = Vectorize(nh_rate),xa = brts_im1[i]+0.00000000001,xb = brts_i[i])
+  }
+  return(sum(inte))
+}
 
 ##################################################################
 ## Nee et all augmentation
 
-nh_speciation_rate_nee <- function(time,tree=0,pars,model=0,soc=1){
-  ct=max(tree$brts)
+nh_speciation_rate_nee <- function(time,tree,pars,model,soc){
+  ct = max(tree$brts)
   la = max(0,pars[2]+pars[3]*n_from_time(time,tree,soc))
-  mu = pars[1]
-  
-  rate = la*(mu*(1-exp(-(la-mu)*(ct-time))))/(la-mu*exp(-(la-mu)*(ct-time)))
-  if(la-mu*exp(-(la-mu)*(ct-time)) < 0.0001){
-    rate = 99
+  mu = max(0,pars[1])
+  if(is.na(la)){
+    print(time)
+    print(soc)
+    print(tree)
   }
-  
+  if(la != mu){
+    rate = la*(mu*(1-exp(-(la-mu)*(ct-time))))/(la-mu*exp(-(la-mu)*(ct-time)))
+  }else{
+    pf = 1/(1+mu*(ct-time))
+    rate = la*(1-pf)
+  }
   N = n_from_time(time,tree,soc)+1
   
   return(rate*N)
@@ -218,13 +293,14 @@ nh_speciation_rate_nee <- function(time,tree=0,pars,model=0,soc=1){
 
 nh_extinction_rate_nee <- function(time,tree=0,pars,model=0,soc=0){
   
-  ct=max(tree$brts)
+  ct = max(tree$brts)
   la = max(0,pars[2]+pars[3]*n_from_time(time,tree,soc))
   mu = pars[1]
-  
-  rate = (la-mu*exp(-(la-mu)*(ct-time)))/(1-exp(-(la-mu)*(ct-time)))
-  if(is.na(rate)){
-    rate = 0.000001
+  if(la != mu){
+    rate  = (la-mu*exp(-(la-mu)*(ct-time)))/(1-exp(-(la-mu)*(ct-time)))
+  }else{
+    pf = 1/(1+mu*(ct-time))
+    rate = mu/(1-pf)
   }
   
   return(rate)

@@ -1,19 +1,3 @@
-limit_bt <- function(tree,cbt,model,pars){
-  brts = tree$brts[tree$brts > cbt]
-  tree = rbind(tree[tree$brts <= cbt,],
-               data.frame(brts=cbt+0.000000001,to=1,t_ext=max(tree$brts)),
-               tree[tree$brts > cbt,])
-  sp = sapply(brts,speciation_rate, pars=pars, tree=tree, model=model)
-  s0 = which(sp==0)
-  if(any(s0)){
-    max_bt = min(brts[s0])
-  }else{
-    max_bt = max(brts)
-  }
-  return(max_bt)
-}
-
-# more utilities
 
 n_from_time <- function(tm,tree,soc){
   # return N at tm.
@@ -36,12 +20,6 @@ phylodiversity <- function(tm,tree,soc){
   return(sum(dt*(soc:(length(dt)+soc-1))))
 }
 
-data_to_table <- function(df,replicant,left,right){
-  df = df[df$rep==replicant,]
-  df = df[df$iteration %in% left:right,]
-  summ = data.frame(lfhat = mean(df$fhat),sd_fhat=sd(df$fhat),mad_fhat=mad(df$fhat),replicant=replicant,par1=median(df$par1),par2=median(df$par2),par3=median(df$par3),par4=median(df$par4),E_time = sum(df$E_time)/60, M_time = sum(df$M_time)/60, sample_size=mean(df$sample_size))
-  return(summ)
-}
 
 AIC_llik <- function(LogLik,k){
   aic <- (2*k)-(2*LogLik)
@@ -162,4 +140,41 @@ get.time <- function(time,mode='sec'){
   return(ti)
 }
 
+
+
+multiplot <- function(lp, plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  
+  # Make a list from the ... arguments and plotlist
+  plots <- c(lp, plotlist)
+  
+  numPlots = length(plots)
+  
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                     ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+  
+  if (numPlots==1) {
+    print(plots[[1]])
+    
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+    
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+      
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
 

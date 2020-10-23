@@ -14,28 +14,28 @@ simulation_analysis <- function(pars, model, ct, n_it=100, expectedLTT=TRUE, div
   
   if(model=="rpd1") color = "blue"
   if(model=="rpd5c") color = "Darkgreen"
-  
+  ct=max(S[[1]]$brts)
   for (i in 1:(n_it)){
     
     s = S[[i]]
     df = data.frame(time = s$brts, n = 2:(length(s$brts)+1))
-    gLTT = gLTT + geom_line(data=df,aes(x=time,y=n), colour=color, alpha=0.1)
+    gLTT = gLTT + geom_line(data=df,aes(x=time-ct,y=n), colour=color, alpha=0.1)
     MEANS_N[i,] = sapply(seq(0,ct,length=100), n_spec, brts=df$time)
     
     df = s$tree
-    ggLA = ggLA + geom_line(data=df,aes(x=brts,y=lambda), colour=color, alpha=0.1)
+    ggLA = ggLA + geom_line(data=df,aes(x=brts-ct,y=lambda), colour=color, alpha=0.1)
     MEANS_l[i,] = sapply(seq(0,ct,length=100), speciation_rate,tree=df, pars=pars, model=model, soc=2)
     
   }
   
   dfN = data.frame(time = seq(0,ct,length=100), mean=colMeans(MEANS_N))
-  gLTT = gLTT + geom_line(data = dfN, aes(x=time,y=mean),colour=color)
+  gLTT = gLTT + geom_line(data = dfN, aes(x=time-ct,y=mean),colour=color)
   
   dfR =  sapply(seq(0,ct,length=100), n_spec, brts=brts)
   ltt_stat = sum(abs(dfR-dfN$mean)*0.1)
   
   df = data.frame(time = seq(0,ct,length=100), mean=colMeans(MEANS_l))
-  ggLA = ggLA + geom_line(data = df[-1,], aes(x=time,y=mean),colour=color)
+  ggLA = ggLA + geom_line(data = df[-1,], aes(x=time-ct,y=mean),colour=color)
   
   
   
@@ -97,9 +97,9 @@ emphasis_diagnostics <- function(MC){
   ct = DDD_estimations[DDD_estimations$clade==clade,]$age
   brts = MC$brts
   sim = simulation_analysis(pars=pars,model="rpd5c",ct=ct,brts=brts)
-  G = sim$gLTT + geom_step(data=data.frame(time=cumsum(c(0,-diff(brts))),n=2:(length(brts)+1)),aes(x=time,y=n))
-  sim_ddd = simulation_analysis(pars=MC$pars_dd,model="rpd1",ct=ct,gLTT = G,ggLA = sim$ggLA,brts=brts)
-  ltt_plot = sim_ddd$gLTT  + theme_classic() + ggtitle(clade) + ylab("Number of lineages (log)") + xlab("Time") + scale_y_log10()
+  G = sim$gLTT + geom_step(data=data.frame(time=cumsum(c(0,-diff(brts))),n=2:(length(brts)+1)),aes(x=time-ct,y=n))
+  sim_ddd = simulation_analysis(pars=as.numeric(DDD_estimations[DDD_estimations$clade==clade,5:7]),model="rpd1",ct=ct,gLTT = G,ggLA = sim$ggLA,brts=brts)
+  ltt_plot = sim_ddd$gLTT  + theme_classic() + ggtitle(clade) + ylab("Number of lineages (log)") + xlab("Time (My)") + scale_y_log10()
   sr_plot = sim_ddd$ggLA  + theme_classic() + ggtitle(clade) + ylab("Speciation Rate") + xlab("Time") #+ geom_hline(yintercept = pars[1])
   
   mcem = MC$MCEM

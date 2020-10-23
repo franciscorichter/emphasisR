@@ -17,7 +17,6 @@ sim_brts_bootstrap <- function(pars,model="rpd5c",ct,bootstrap_n=1){
   return(SIMS)
 }
 
-
 ### simulation of trees 
 
 sim.tree_rpd1 <- function(pars,ct,soc){
@@ -114,7 +113,7 @@ sim.tree_rpd5c <- function(pars,ct,soc=2){
 
 #### simulation conditional to n extant species
  
-sim_cond_tree <- function(pars,ct){
+sim_cond_tree_cr <- function(pars,ct){
   
   lambda = pars[2]
   mu = pars[1]
@@ -125,6 +124,35 @@ sim_cond_tree <- function(pars,ct){
     N = 1
     cbt = 0 
     while(cbt<ct & N>0){
+      sigma = N*(lambda+mu)
+      cbt = cbt + rexp(1,sigma)
+      if(cbt < ct){
+        a = sample(c(-1,1),size=1,prob=c(mu,lambda)/(mu+lambda))      
+        N = N+a
+        n = c(n,N)
+        brts = c(brts,cbt)
+      }else{
+        if(N==1){
+          reject=1
+        }
+      }
+    }
+  }
+  return(data.frame(brts=c(brts,ct),n=c(1,n)))
+}
+
+
+
+sim_cond_tree <- function(pars,ct){
+  reject = 0
+  while(reject==0){
+    brts=n=NULL
+    N = 1
+    cbt = 0 
+    while(cbt<ct & N>0){
+      lambda = max(0,pars[2]+pars[3]*N)
+      mu = max(0,pars[1])
+      
       sigma = N*(lambda+mu)
       cbt = cbt + rexp(1,sigma)
       if(cbt < ct){

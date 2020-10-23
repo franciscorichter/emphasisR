@@ -65,7 +65,7 @@ loglik.tree.rpd5c <- function(pars,tree){
 
 ############################################################
 
-loglik.tree.numerical <- function(pars, tree, model){
+loglik.tree.numerical <- function(pars, tree, model,cond=F,condition_polinomal=NULL){
   to = tree$to
   to = head(to,-1)
   to[to!=0] = 1
@@ -76,6 +76,12 @@ loglik.tree.numerical <- function(pars, tree, model){
   # 
   inte = intensity.numerical2(tree, pars, model)
   loglik = sum(log(speciations)) + sum(log(extinctions)) - sum(inte)
+  
+  if(cond){
+    # not tested yet
+    log.lik = log.lik/condition_polinomal(pars,diversification_model)
+  }
+  
   return(loglik)
 }
 
