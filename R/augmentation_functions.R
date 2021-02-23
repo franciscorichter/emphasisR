@@ -31,8 +31,7 @@ augment_tree <- function(
                                          pars,
                                          next_bt,
                                          model,
-                                         soc,
-                                         sampler=sampler_spe)
+                                         soc)
     
     if(next_speciation_time < next_bt){  ## 
       

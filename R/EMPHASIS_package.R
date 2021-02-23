@@ -171,13 +171,13 @@ mcE_step <- function(brts,pars,sample_size,model,no_cores=2,seed=0,parallel=TRUE
 ##############################
 ####### M-step 
 
-M_step <-function(st,init_par,model,reltol=0.001){
+M_step <-function(st,init_par,model,reltol=0.001, gam = NULL){
   
   time0 = proc.time()
   
   sub_st = get_contributing_trees(st)
   
-  po = subplex(par = init_par, fn = Q_approx,st = sub_st, loglik = get(paste0("loglik.tree.", model)), hessian = FALSE,control=list(reltol=reltol))
+  po = subplex(par = init_par, fn = Q_approx,st = sub_st, gam = gam, loglik = get(paste0("loglik.tree.", model)), hessian = FALSE,control=list(reltol=reltol))
 
   M_time = get.time(time0)
   return(list(po=po,M_time=M_time))
@@ -193,9 +193,9 @@ get_contributing_trees <- function(st, exclude_proportion_trees=0){
   return(sub_st)
 }
 
-Q_approx = function(pars,st,loglik){
+Q_approx = function(pars,st,loglik, gam=NULL){
   
-  l = sapply(st$trees, loglik, pars=pars)
+  l = sapply(st$trees, loglik, pars=pars, gam = gam)
   w = st$weights
   Q = -sum(l*w)
   return(Q)

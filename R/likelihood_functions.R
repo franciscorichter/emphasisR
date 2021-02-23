@@ -5,7 +5,7 @@ loglik.tree <- function(model){
 
 # likelihood functions 
 
-loglik.tree.rpd1 <- function(pars,tree){
+loglik.tree.rpd1 <- function(pars,tree,gam=NULL){
   to = tree$to
   to = head(to,-1)
   to[to==2] = 1
@@ -21,10 +21,16 @@ loglik.tree.rpd1 <- function(pars,tree){
   sigma_over_tree = n*(mu+lambda)*wt 
   
   log.lik = -sum(sigma_over_tree) + sum(log(rho))
+  
+  if(!is.null(gam)){
+    log.lik = log.lik/conditional_probability(pars,gam)
+  }
+  
+  
   return(log.lik)
 }
 
-loglik.tree.rpd5c <- function(pars,tree){
+loglik.tree.rpd5c <- function(pars,tree,gam=NULL){
   if(pars[4]==0){
     log.lik = loglik.tree.rpd1(pars,tree)
   }else{
@@ -59,13 +65,18 @@ loglik.tree.rpd5c <- function(pars,tree){
     }
     log.lik = -sum(inte) + sum(log(rho))
   }
+  
+  if(!is.null(gam)){
+    log.lik = log.lik/conditional_probability(pars,gam)
+  }
+  
   return(log.lik)
   
 }
 
 ############################################################
 
-loglik.tree.numerical <- function(pars, tree, model,cond=F,condition_polinomal=NULL){
+loglik.tree.numerical <- function(pars, tree, model,gam=NULL){
   to = tree$to
   to = head(to,-1)
   to[to!=0] = 1
@@ -77,14 +88,22 @@ loglik.tree.numerical <- function(pars, tree, model,cond=F,condition_polinomal=N
   inte = intensity.numerical2(tree, pars, model)
   loglik = sum(log(speciations)) + sum(log(extinctions)) - sum(inte)
   
-  if(cond){
-    # not tested yet
-    log.lik = log.lik/condition_polinomal(pars,diversification_model)
+  if(!is.null(gam)){
+    log.lik = log.lik/conditional_probability(pars,gam)
   }
   
   return(loglik)
 }
 
+conditional_probability <- function(pars,gam){
+  pr = as.numeric(mgcv:::predict.gam(gam,
+               newdata = data.frame(mu=pars[1],
+                                    lambda=pars[2],
+                                    betaN=pars[3],
+                                    betaP=pars[4]),
+               type = "response"))
+  return(pr)
+}
 
 
 intensity.numerical2 <- function(tree, pars, model){
