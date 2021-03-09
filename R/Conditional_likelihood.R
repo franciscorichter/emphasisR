@@ -58,15 +58,15 @@ fit_gam_survival <- function(ct,grid,llim=c(0,0,-0.1),rlim=c(2,5,0),splines="bot
   # gam modeling
   time_gam = proc.time()
   if(splines=="both"){
-    srv.gam = gam(srv~s(mu,lambda, k=10)+s(mu,betaN, k=10)+s(lambda,betaN, k=10),family = binomial,data=dat)
-    srv.gam2 = gam(srv~s(p1)+s(p3)+s(p2),family = binomial,data=dat)
+    srv.gam = mgcv::gam(srv~s(mu,lambda, k=10)+s(mu,betaN, k=10)+s(lambda,betaN, k=10),family = binomial,data=dat)
+    srv.gam2 = mgcv::gam(srv~s(p1)+s(p3)+s(p2),family = binomial,data=dat)
   }
   if(splines=="bivariate"){
-    srv.gam = gam(srv~s(p1,p2)+s(p1,p3)+s(p2,p3),family = binomial,data=dat)
+    srv.gam = mgcv::gam(srv~s(p1,p2)+s(p1,p3)+s(p2,p3),family = binomial,data=dat)
     srv.gam2=NULL
   }
   if(splines=="univariate"){
-    srv.gam = gam(srv~s(p1)+s(p3)+s(p2),family = binomial,data=dat)
+    srv.gam = mgcv::gam(srv~s(p1)+s(p3)+s(p2),family = binomial,data=dat)
     srv.gam2=NULL
   }
   time_gam = emphasis::get.time(time_gam)
